@@ -10,7 +10,7 @@ async function createProject(page: Page, name: string) {
 
 test('项目完整流程：创建、改名、切换、跨页、刷新、关闭重开、取消删除和确认删除', async ({ page, context }) => {
   await page.goto('/');
-  await expect(page.getByText('这里，留给你的第一个研究')).toBeVisible();
+  await expect(page.getByText('留给你的第一个研究')).toBeVisible();
   await createProject(page, '我的 AI 消费研究');
   await page.getByRole('button', { name: '重命名项目 我的 AI 消费研究' }).click();
   await page.getByLabel('项目名称').fill('AI 与消费者信任');
@@ -42,7 +42,7 @@ test('项目完整流程：创建、改名、切换、跨页、刷新、关闭�
   await expect(reopened.getByRole('heading', { name: '短视频里的日常生活', exact: true })).toBeVisible();
   await reopened.getByRole('button', { name: '删除项目 短视频里的日常生活' }).click();
   await reopened.getByRole('button', { name: '确认删除', exact: true }).click();
-  await expect(reopened.getByText('这里，留给你的第一个研究')).toBeVisible();
+  await expect(reopened.getByText('留给你的第一个研究')).toBeVisible();
   await expect(reopened.getByLabel('当前项目', { exact: true })).toBeDisabled();
 });
 
@@ -52,7 +52,7 @@ test('日常观察真实保存到项目；无 AI 回答，空白名称不可保�
   await page.goto('/');
   const observation = '我开始先问 AI 再买东西，这能成为研究问题吗？';
   await page.getByLabel('写下你的日常观察').fill(observation);
-  await page.getByRole('button', { name: '保存想法，开始探索' }).click();
+  await page.getByRole('button', { name: '保存灵感' }).click();
   await page.getByLabel('项目名称').fill('   ');
   await expect(page.getByRole('button', { name: '创建项目', exact: true })).toBeDisabled();
   await page.getByLabel('项目名称').fill('我的第一个想法');
@@ -110,7 +110,7 @@ test('两个标签页同步创建、改名和删除', async ({ page, context }) 
   await expect(other.getByRole('heading', { name: '跨页改名', exact: true })).toBeVisible();
   await other.getByRole('button', { name: '删除项目 跨页改名' }).click();
   await other.getByRole('button', { name: '确认删除', exact: true }).click();
-  await expect(page.getByText('这里，留给你的第一个研究')).toBeVisible();
+  await expect(page.getByText('留给你的第一个研究')).toBeVisible();
 });
 
 for (const width of [1440, 1280, 768, 390]) {
@@ -119,7 +119,7 @@ for (const width of [1440, 1280, 768, 390]) {
     const errors: string[] = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /今天，你对什么\s*感到好奇\s*？/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /此刻，有什么新想法？/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true });
     for (const [route, title] of [['lab', '灵感实验室'], ['literature', '文献探索'], ['map', '文献星图'], ['canvas', '研究设计画布'], ['proposal', '研究方案']]) {
@@ -167,7 +167,7 @@ test('手机端可创建、改名与确认删除，长名称不会撑破页面',
   await page.getByRole('button', { name: '删除项目 手机里的想法' }).click();
   await expect(page.getByRole('button', { name: '取消', exact: true })).toBeFocused();
   await page.getByRole('button', { name: '确认删除', exact: true }).click();
-  await expect(page.getByText('这里，留给你的第一个研究')).toBeVisible();
+  await expect(page.getByText('留给你的第一个研究')).toBeVisible();
 });
 
 test('其他标签页删除了正在改名的项目时，不伪造保存成功', async ({ page, context }) => {
