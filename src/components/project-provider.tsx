@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LocalProjectRepository, STORAGE_KEY, emptySnapshot, type Project, type ProjectSnapshot } from '@/lib/projects';
+import { isExploration, type Exploration } from '@/lib/exploration';
 
 const repository = new LocalProjectRepository();
 type ProjectActions = {
@@ -11,6 +12,7 @@ type ProjectActions = {
   rename: (id: string, name: string) => Promise<boolean>;
   select: (id: string) => Promise<boolean>;
   remove: (id: string) => Promise<boolean>;
+  saveExploration: (id: string, expectedRevision: number, exploration: Exploration) => Promise<boolean>;
 };
 const Context = createContext<ProjectActions | null>(null);
 const errorMessage = (e: unknown) => e instanceof Error ? e.message : '操作失败，请重试。';
@@ -50,6 +52,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
   const actions: ProjectActions = {
     snapshot, ready, busy, error, feedback, reload,
+    saveExploration: (id, expectedRevision, exploration) => commit(s => {
+      const project = s.projects.find(p => p.id === id);
+      if (!project) throw new Error('这个项目已经不存在，请重新读取项目列表。');
+      if ((project.exploration?.revision ?? 0) !== expectedRevision) throw new Error('这段探索已在另一页面更新。请重新读取后再操作，你的编辑未覆盖已保存内容。');
+      const next = { ...exploration, revision: expectedRevision + 1 };
+      if (!isExploration(next)) throw new Error('探索内容格式不完整或已达保存上限，原有记录未被覆盖。');
+      return { ...s, projects: s.projects.map(p => p.id === id ? { ...p, exploration: next, updatedAt: new Date().toISOString() } : p) };
+    }, '探索内容已保存在当前浏览器。'),
     create: async (name, discipline, observation) => {
       if (!name.trim() || name.trim().length > 80 || discipline.length > 60 || observation.length > 2000) { setError('请填写 1–80 字的项目名称，想法最多 2000 字。'); return false; }
       const now = new Date().toISOString();

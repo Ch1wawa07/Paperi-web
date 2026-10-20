@@ -59,10 +59,10 @@ test('日常观察真实保存到项目；无 AI 回答，空白名称不可保�
   await page.getByRole('button', { name: '创建项目', exact: true }).click();
   await page.getByRole('button', { name: '继续项目' }).click();
   await expect(page).toHaveURL('/lab');
-  await expect(page.getByText(observation, { exact: true })).toBeVisible();
-  await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
+  await expect(page.locator('.lab-observation').getByText(observation, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '从一个念头开始', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByText(observation, { exact: true })).toBeVisible();
+  await expect(page.locator('.lab-observation').getByText(observation, { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -127,7 +127,7 @@ for (const width of [1440, 1280, 768, 390]) {
       await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: title }).click();
       await expect(page).toHaveURL(`/${route}`);
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-      await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
+      if (route !== 'lab') await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.getByRole('link', { name: /← 返回/ }).click();
       if (route === 'lab') await expect(page).toHaveURL('/');

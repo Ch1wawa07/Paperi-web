@@ -1,3 +1,5 @@
+import { isExploration, type Exploration } from './exploration';
+
 export type Project = {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export type Project = {
   observation: string;
   createdAt: string;
   updatedAt: string;
+  exploration?: Exploration;
 };
 
 export type ProjectSnapshot = {
@@ -37,7 +40,8 @@ function parseSnapshot(raw: string | null): ProjectSnapshot {
     for (const p of s.projects) {
       if (!p || typeof p !== 'object' || !validText(p.id, 100) || !p.id || ids.has(p.id) ||
           !validText(p.name, 80) || !p.name.trim() || !validText(p.discipline, 60) ||
-          !validText(p.observation, 2000) || p.status !== 'starting' || !validDate(p.createdAt) || !validDate(p.updatedAt)) throw new Error();
+          !validText(p.observation, 2000) || p.status !== 'starting' || !validDate(p.createdAt) || !validDate(p.updatedAt) ||
+          (p.exploration !== undefined && !isExploration(p.exploration))) throw new Error();
       ids.add(p.id);
     }
     if (s.activeId !== null && (typeof s.activeId !== 'string' || !ids.has(s.activeId))) throw new Error();

@@ -1,3 +1,3 @@
-import { ModulePage } from '@/components/module-page';
+import { Lab } from '@/components/lab';
 export const metadata = { title: '灵感实验室' };
-export default function Page() { return <ModulePage module="lab"/>; }
+export default function Page() { return <Lab/>; }

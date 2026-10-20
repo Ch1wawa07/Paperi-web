@@ -38,7 +38,7 @@ export function Home() {
           <textarea id="observation" maxLength={2000} value={observation} onChange={e => setObservation(e.target.value)} placeholder="记下一句话，或一个还没想明白的问题…" rows={2}/>
           <div className="idea-input-bottom"><span>先记下来，慢慢探索。</span><button className="button primary" type="submit" disabled={!ready || busy}>保存灵感<Icon name="arrow" size={17}/></button></div>
         </form>
-        <p className="hero-disclaimer"><span className="status-light"/>本地保存 · AI 探索待接入</p>
+        <p className="hero-disclaimer"><span className="status-light"/>本地保存 · 可继续编辑研究种子</p>
       </section>
 
       <section className="projects-section frosted-surface" aria-labelledby="projects-title">
@@ -57,7 +57,7 @@ export function Home() {
     </div>
 
     <section className="journey-section" aria-labelledby="journey-title">
-      <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">继续探索</h2></div><span className="section-aside">以下模块待接入</span></div>
+      <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">继续探索</h2></div><span className="section-aside">灵感实验室已开放 · 其余模块待接入</span></div>
       <div className="journey-grid">{navigation.slice(1).map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
         <div className="journey-card-top"><span>{item.english}</span><span className="circle-arrow"><Icon name="arrow-up" size={17}/></span></div>
         <span className="journey-number" aria-hidden="true">0{index + 1}</span>
