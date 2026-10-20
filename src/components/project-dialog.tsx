@@ -28,7 +28,7 @@ export function ProjectDialog({ mode, project, observation = '', onClose }: Dial
     const ok = mode === 'create' ? await create(name, discipline, observation) : mode === 'rename' ? await rename(project!.id, name) : await remove(project!.id);
     if (ok) onClose(); else setLocalError('操作未完成，内容仍保留在这里。请关闭此窗口，查看页面中的具体提示，重新读取后再试。');
   }
-  return <dialog ref={dialog} className="project-dialog" aria-labelledby="dialog-title" onCancel={e => { if (busy) e.preventDefault(); else onClose(); }}>
+  return <dialog ref={dialog} className="project-dialog frosted-surface" aria-labelledby="dialog-title" onCancel={e => { if (busy) e.preventDefault(); else onClose(); }}>
     <div className="dialog-top"><span className="eyebrow">YOUR LITTLE BEGINNING</span><button className="icon-button" disabled={busy} onClick={onClose} aria-label="关闭对话框"><Icon name="close"/></button></div>
     <h2 id="dialog-title">{title}</h2>
     <form onSubmit={submit}>

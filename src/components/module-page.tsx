@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useProjects } from './project-provider';
 import { EmptyState, Icon, LoadingState } from './ui';
 import { navigation } from '@/lib/navigation';
+import { GlassBloom } from './glass-art';
 
 const modules = {
   lab: { index: 1, title: '让想法，慢慢清晰起来。', description: '从生活观察出发，探索不同的研究视角。无需一开始就提出完美的问题。', stage: 2, status: 'AI 服务待连接', features: ['连续对话，探索 2–3 种候选视角', '编辑并亲自采纳研究种子', '保留已确认的问题与对话历史'], empty: '你的灵感，值得被认真对待', detail: '阶段 1 已能保存项目与起始观察。AI 聊天和研究种子编辑尚未接入，这里不会生成模拟回答。' },
@@ -19,11 +20,11 @@ export function ModulePage({ module }: { module: ModuleKey }) {
   const previous = navigation[m.index - 1];
   const { ready, snapshot, error } = useProjects();
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
-  return <>
+  return <div className={`module-page module-${module}`}>
     <Link href={previous.href} className="back-link">← 返回{previous.label}</Link>
     <div className="module-heading"><div className="eyebrow">0{m.index} / {nav.english.toUpperCase()}</div><h1>{nav.label}</h1><p>{m.description}</p></div>
     {!ready ? (error ? <p className="muted">当前项目暂不可读取，请先处理上方的存储提示。</p> : <LoadingState/>) : <div className="current-project-panel"><Icon name="leaf"/><div><span>当前项目</span><strong>{project?.name ?? '尚未选择项目'}</strong></div><Link className="text-button" href="/">{project ? '管理 / 切换项目' : '先创建项目'}<Icon name="arrow" size={16}/></Link></div>}
     {module === 'lab' && project?.observation && <section className="observation-card"><span className="eyebrow">你保存的日常观察 · 用户输入</span><p>{project.observation}</p><span className="muted">这是起始想法，尚不是已确认的研究问题。</span></section>}
-    <div className="module-grid"><section className="module-main"><div className="module-panel-top"><span className="soft-badge">阶段 {m.stage} · 待接入</span><span className="muted">{m.status}</span></div><EmptyState icon={nav.icon} title={m.empty}><p>{m.detail}</p><p className="future-note">功能将在后续阶段接入</p></EmptyState><div className="module-bottom-note"><Icon name="lock" size={15}/>本页不会发起 AI 调用或产生 API 费用。</div></section><aside className="module-aside"><span className="eyebrow">THE NEXT LITTLE STEPS</span><h2>{m.title}</h2><p className="muted">后续会在这里实现：</p><ul>{m.features.map((f, i) => <li key={f}><span>0{i + 1}</span>{f}</li>)}</ul><div className="honesty-note">把不确定，诚实地留下。<br/>AI 建议、用户确认和文献依据会分别标明。</div></aside></div>
-  </>;
+    <div className="module-grid"><section className="module-main frosted-surface"><div className="module-panel-top"><span className="soft-badge">阶段 {m.stage} · 待接入</span><span className="muted">{m.status}</span></div><GlassBloom compact/><EmptyState icon={nav.icon} title={m.empty}><p>{m.detail}</p><p className="future-note">功能将在后续阶段接入</p></EmptyState><div className="module-bottom-note"><Icon name="lock" size={15}/>本页不会发起 AI 调用或产生 API 费用。</div></section><aside className="module-aside frosted-surface"><span className="eyebrow">ROOM TO GROW</span><h2>{m.title}</h2><p className="muted">后续会在这里实现：</p><ul>{m.features.map((f, i) => <li key={f}><span>0{i + 1}</span>{f}</li>)}</ul><div className="honesty-note">把不确定，诚实地留下。<br/>AI 建议、用户确认和文献依据会分别标明。</div></aside></div>
+  </div>;
 }
