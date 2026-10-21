@@ -16,7 +16,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return <div className="app-shell">
     <a className="skip-link" href="#main">跳到主要内容</a>
     <header className="site-header">
-      <Link href="/" className="brand" aria-label="Paperi 纸里首页">
+      <Link href="/" className="brand mobile-brand" aria-label="Paperi 纸里首页">
         <span className="brand-symbol" aria-hidden="true"><Icon name="leaf" size={24}/></span>
         <span className="brand-word">paperi<span>纸里</span></span>
       </Link>
@@ -33,12 +33,14 @@ export function Shell({ children }: { children: ReactNode }) {
         <button className="mobile-toggle icon-button" aria-label={mobileOpen ? '收起导航' : '展开导航'} aria-expanded={mobileOpen} aria-controls="main-navigation" onClick={() => setMobileOpen(v => !v)}><Icon name={mobileOpen ? 'close' : 'menu'}/></button>
       </div>
     </header>
-    <div className="navigation-wrap">
-      <nav id="main-navigation" aria-label="主要导航" className={mobileOpen ? 'navigation is-open' : 'navigation'}>
-        {navigation.map(item => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined} className={`nav-link ${pathname === item.href ? 'active' : ''}`} onClick={() => setMobileOpen(false)}><Icon name={item.icon} size={17}/><span>{item.label}</span></Link>)}
+    <aside className={`workspace-sidebar ${mobileOpen?'sidebar-mobile-open':''}`} aria-label="研究进程导航">
+      <Link href="/" className="brand sidebar-brand" aria-label="Paperi 纸里首页"><span className="brand-symbol"><Icon name="leaf" size={22}/></span><span className="brand-word">paperi<span>纸里</span></span></Link>
+      <div className="sidebar-intro"><span className="eyebrow">YOUR RESEARCH JOURNEY</span><p>从好奇，到自己的问题。</p></div>
+      <nav id="main-navigation" aria-label="主要导航" className={mobileOpen?'navigation is-open':'navigation'}>
+        {navigation.map((item,index)=><Link key={item.href} href={item.href} aria-current={pathname===item.href?'page':undefined} className={`nav-link ${pathname===item.href?'active':''}`} onClick={()=>setMobileOpen(false)}><Icon name={item.icon} size={18}/><span>{item.label}<small>{index===0?'工作间':index===1?(active?.exploration?.seed?'问题已确认':'理解现象与概念'):index===2?`${active?.library?.items.length??0} 篇收藏`: '待接入'}</small></span><i>{String(index).padStart(2,'0')}</i></Link>)}
       </nav>
-      <span className="navigation-note"><span className="local-dot"/>你的私人研究工作间</span>
-    </div>
+      <div className="sidebar-note"><span className="local-dot"/><p>阶段之间可自由往返<br/>确认的内容由你决定</p></div>
+    </aside>
     <main id="main" tabIndex={-1}>
       <div className="global-feedback" role="status" aria-live="polite">{feedback}</div>
       {error && <ErrorNotice message={error} onRetry={() => void reload()}/>}

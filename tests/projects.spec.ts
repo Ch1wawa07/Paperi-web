@@ -46,24 +46,18 @@ test('项目完整流程：创建、改名、切换、跨页、刷新、关闭�
   await expect(reopened.getByLabel('当前项目', { exact: true })).toBeDisabled();
 });
 
-test('日常观察真实保存到项目；无 AI 回答，空白名称不可保存', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', e => errors.push(e.message));
+test('首页观察直接进入同一探索；无密钥时保留原话与待重试消息', async ({ page }) => {
   await page.goto('/');
-  const observation = '我开始先问 AI 再买东西，这能成为研究问题吗？';
+  const observation='我开始先问 AI 再买东西，这能成为研究问题吗？';
   await page.getByLabel('写下你的日常观察').fill(observation);
-  await page.getByRole('button', { name: '保存灵感' }).click();
-  await page.getByLabel('项目名称').fill('   ');
-  await expect(page.getByRole('button', { name: '创建项目', exact: true })).toBeDisabled();
-  await page.getByLabel('项目名称').fill('我的第一个想法');
-  await page.getByRole('button', { name: '创建项目', exact: true }).click();
-  await page.getByRole('button', { name: '继续项目' }).click();
+  await page.getByRole('button',{name:'开始探索',exact:true}).click();
   await expect(page).toHaveURL('/lab');
-  await expect(page.locator('.lab-observation').getByText(observation, { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '从一个念头开始', exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.locator('.lab-observation').getByText(observation, { exact: true })).toBeVisible();
-  expect(errors).toEqual([]);
+  await expect(page.locator('.lab-observation')).toContainText(observation);
+  await expect(page.locator('.chat-user')).toHaveCount(1);
+  await expect(page.locator('.chat-assistant')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'重试 AI 回复'})).toBeDisabled();
+  await page.reload();await expect(page.locator('.chat-user')).toHaveCount(1);
+  const p=await page.evaluate(()=>JSON.parse(localStorage.getItem('paperi.projects.v1')!).projects[0]);expect(p.name).not.toBe(observation);expect(p.observation).toBe(observation);
 });
 
 test('损坏的数据受到保护，不被新数据覆盖', async ({ page }) => {
@@ -122,17 +116,17 @@ for (const width of [1440, 1280, 768, 390]) {
     await expect(page.getByRole('heading', { name: /此刻，有什么新想法？/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true });
-    for (const [route, title] of [['lab', '灵感实验室'], ['literature', '文献探索'], ['map', '文献星图'], ['canvas', '研究设计画布'], ['proposal', '研究方案']]) {
-      if (width <= 640) await page.getByRole('button', { name: '展开导航' }).click();
+    for (const [route, title] of [['lab', '灵感探索'], ['literature', '文献探索'], ['map', '文献星图'], ['canvas', '研究设计'], ['proposal', '研究方案']]) {
+      if (width <= 900) await page.getByRole('button', { name: '展开导航' }).click();
       await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: title }).click();
       await expect(page).toHaveURL(`/${route}`);
-      await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: route==='lab'?'灵感实验室':title, exact: true })).toBeVisible();
       if (route !== 'lab' && route !== 'literature') await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.getByRole('link', { name: /← 返回/ }).click();
       if (route === 'lab') await expect(page).toHaveURL('/');
     }
-    if (width <= 640) await page.getByRole('button', { name: '展开导航' }).click();
+    if (width <= 900) await page.getByRole('button', { name: '展开导航' }).click();
     await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: '首页' }).click();
     await expect(page).toHaveURL('/');
     expect(errors).toEqual([]);

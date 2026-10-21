@@ -1,9 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
+import records from './fixtures/metadata-records.json';
+import { mapCrossref } from '../src/lib/literature-mapping';
+import { emptyLibrary } from '../src/lib/literature';
 
 // All generated replies here are explicitly labelled fixtures, isolated to browser request interception.
-const fixture = (tag = '第一轮') => ({ reply: `测试夹具 ${tag}：从不同角度讨论这个观察。`, directions: [1, 2].map(i => ({
+const fixture = (tag = '第一轮',stage='phenomenon',evidenceIds:string[]=[]) => ({guide:{stage,understanding:'测试现象梳理',concepts:[{term:'测试概念',explanation:'测试解释，非真实定义',everyday:'测试日常区别',uncertainty:'待核实'}],keywords:{zh:[],en:[]},threads:[]}, reply: `测试夹具 ${tag}：从不同角度讨论这个观察。`, directions: (stage==='questions'?[1,2]:[]).map(i => ({
   title: `测试夹具 ${tag}方向${i}`, description: '仅用于功能验证，不是真实 AI 建议。', concepts: ['测试概念'],
-  rationale: '测试采纳和保存流程。', question: `${tag}的候选问题${i}？`, uncertainties: ['需要真实研究进一步核实'],
+  evidenceIds, rationale: '测试采纳和保存流程。', question: `${tag}的候选问题${i}？`, uncertainties: ['需要真实研究进一步核实'],
 })) });
 async function create(page: Page, name = '实验室测试项目') {
   await page.goto('/');
@@ -15,8 +18,7 @@ async function create(page: Page, name = '实验室测试项目') {
 }
 async function mockAI(page: Page) {
   let turn = 0;
-  await page.route('**/api/lab', route => route.fulfill({ json: route.request().method() === 'GET'
-    ? { configured: true, message: '测试夹具接口，非真实 AI' } : fixture(++turn === 1 ? '第一轮' : '第二轮') }));
+  await page.route('**/api/lab', route => {const body=route.request().method()==='POST'?route.request().postDataJSON():null;return route.fulfill({json:!body?{configured:true,message:'测试夹具接口，非真实 AI'}:fixture(++turn===1?'第一轮':'第二轮',body.stage,body.evidence.map((e:{id:string})=>e.id))});});
 }
 
 test('无密钥仍可手动确认种子、编辑并刷新恢复；旧阶段项目兼容', async ({ page }) => {
@@ -43,6 +45,8 @@ test('无密钥仍可手动确认种子、编辑并刷新恢复；旧阶段项�
 
 test('候选编辑采纳、取消与确认替换、继续聊天不覆盖、丢弃及项目隔离', async ({ page }) => {
   await mockAI(page); await create(page);
+  const paper=mapCrossref(records.crossref,'2026-10-21T08:00:00Z')!;
+  await page.evaluate(({paper,library})=>{const s=JSON.parse(localStorage.getItem('paperi.projects.v1')!);const p=s.projects.find((p:{id:string})=>p.id===s.activeId);p.library={...library,items:[{id:'fixture-evidence',paper,categoryIds:[],note:'测试笔记',savedAt:paper.retrievedAt,updatedAt:paper.retrievedAt}]};p.exploration={revision:0,messages:[],directions:[],seed:null,navigation:{stage:'questions',concepts:[{id:'fixture-concept',term:'测试概念',explanation:'测试解释',everyday:'',uncertainty:'待核实',status:'selected',origin:'user'}],evidenceIds:['fixture-evidence'],guide:null}};localStorage.setItem('paperi.projects.v1',JSON.stringify(s));},{paper,library:emptyLibrary()});await page.reload();
   await page.getByLabel('给 AI 的消息').fill('测试观察：买东西先问 AI');
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.locator('.direction-card')).toHaveCount(2);

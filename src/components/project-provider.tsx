@@ -2,14 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LocalProjectRepository, STORAGE_KEY, emptySnapshot, type Project, type ProjectSnapshot } from '@/lib/projects';
-import { isExploration, type Exploration } from '@/lib/exploration';
+import { emptyExploration, isExploration, type Exploration } from '@/lib/exploration';
 import { isLibrary, type Library } from '@/lib/literature';
+import { emptyNavigation } from '@/lib/research-navigation';
 
 const repository = new LocalProjectRepository();
 type ProjectActions = {
   snapshot: ProjectSnapshot; ready: boolean; busy: boolean; error: string; feedback: string;
   reload: () => Promise<void>;
   create: (name: string, discipline: string, observation: string) => Promise<boolean>;
+  startExploration: (observation: string, projectId: string) => Promise<boolean>;
   rename: (id: string, name: string) => Promise<boolean>;
   select: (id: string) => Promise<boolean>;
   remove: (id: string) => Promise<boolean>;
@@ -70,6 +72,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (!isExploration(next)) throw new Error('探索内容格式不完整或已达保存上限，原有记录未被覆盖。');
       return { ...s, projects: s.projects.map(p => p.id === id ? { ...p, exploration: next, updatedAt: new Date().toISOString() } : p) };
     }, '探索内容已保存在当前浏览器。'),
+    startExploration: async (observation, projectId) => {
+      const content = observation.trim();
+      if (!content || content.length > 2000) { setError('请先写下 1–2000 字的生活观察。'); return false; }
+      return commit(s => {
+        const existing = s.projects.find(p => p.id === projectId);
+        if (existing) return { ...s, activeId: existing.id };
+        const now = new Date().toISOString(), messageId = crypto.randomUUID();
+        const title = new Intl.DateTimeFormat('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+        const project: Project = { id: projectId, name: `新探索 · ${title}`, discipline: '', observation: content, status: 'starting', createdAt: now, updatedAt: now,
+          exploration: { ...emptyExploration(), messages: [{id:messageId,role:'user',content,createdAt:now}], navigation:emptyNavigation(), launch:{messageId,attempted:false} } };
+        return { ...s, projects: [project,...s.projects], activeId: projectId };
+      }, '观察已保存，正在进入灵感探索。项目名称可稍后修改。');
+    },
     create: async (name, discipline, observation) => {
       if (!name.trim() || name.trim().length > 80 || discipline.length > 60 || observation.length > 2000) { setError('请填写 1–80 字的项目名称，想法最多 2000 字。'); return false; }
       const now = new Date().toISOString();

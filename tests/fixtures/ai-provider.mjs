@@ -1,15 +1,16 @@
 // Test fixture only. This local process is never imported by the app or used as a production fallback.
 import { createServer } from 'node:http';
-const reply = text => JSON.stringify({ reply: `测试夹具回复：${text}`, directions: [0, 1].map(i => ({
-  title: `测试候选 ${i + 1}`, description: '测试数据，不是真实 AI 研究建议', concepts: ['测试概念'],
-  rationale: '仅用于验证接口和保存逻辑', question: `测试问题 ${i + 1}？`, uncertainties: ['测试待确认项'],
-})) });
+const reply = (text,context) => {
+  const stage=context.stage??'phenomenon',ids=(context.evidence??[]).map(e=>e.id);
+  return JSON.stringify({reply:`测试夹具回复：${text}`,guide:{stage,understanding:'测试现象梳理，非真实研究结论。',concepts:['phenomenon','concepts'].includes(stage)?[{term:'测试概念',explanation:'测试候选解释',everyday:'与日常用语的区别待查',uncertainty:'需要真实文献核实'}]:[],keywords:{zh:stage==='literature'?['测试概念 消费']:[],en:stage==='literature'?['fixture trust consumer']:[]},threads:stage==='context'&&ids.length?[{title:'测试脉络',description:'仅基于测试摘要',evidenceIds:ids,uncertainty:'未读全文'}]:[]},directions:stage==='questions'?[{title:'测试候选 1',description:'测试数据，不是真实 AI 研究建议',concepts:['测试概念'],rationale:'仅用于验证接口和保存逻辑',question:'测试问题 1？',uncertainties:['测试待确认项'],evidenceIds:ids}]:[]});
+};
 createServer(async (request, response) => {
   response.setHeader('Content-Type', 'application/json');
   if (request.url === '/health') { response.end('{}'); return; }
   let raw = '';
   for await (const chunk of request) raw += chunk;
   const body = JSON.parse(raw);
+  if(body.max_tokens===700 && body.messages?.[0]?.content?.includes('Paperi 的双语检索词助手')) {response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'测试独立检索组合',zh:['测试概念 消费','测试概念 对象'],en:['fixture trust consumer','fixture concept study']})}}]}));return;}
   if(body.max_tokens===700 && body.model==='fixture-model' && body.response_format?.type==='json_object' && request.headers.authorization==='Bearer test-only-not-a-real-key') {
     response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({zh:['测试主题','测试概念','测试对象'],en:['fixture topic','fixture concept','fixture population']})}}]})); return;
   }
@@ -19,8 +20,12 @@ createServer(async (request, response) => {
     response.statusCode = 400; response.end('{"error":"incorrect adapter contract"}'); return;
   }
   const text = body.messages.at(-1).content;
+  const context=JSON.parse(body.messages[1].content.slice(body.messages[1].content.indexOf('{')));
   if (text === 'UPSTREAM_BALANCE') { response.statusCode = 402; response.end('{"error":"Insufficient Balance"}'); return; }
   if (text === 'UPSTREAM_UNAUTHORIZED') { response.statusCode = 401; response.end('{"error":"test-only-not-a-real-key"}'); return; }
   if (text === 'UPSTREAM_LIMIT') { response.statusCode = 429; response.end('{}'); return; }
-  response.end(JSON.stringify({ choices: [{ finish_reason: text === 'UPSTREAM_TRUNCATED' ? 'length' : 'stop', message: { content: text === 'UPSTREAM_BADJSON' ? 'invalid-json' : reply(text) } }] }));
+  const generated=JSON.parse(reply(text,context));
+  if(text==='UPSTREAM_NESTED'){generated.guide.directions=generated.directions;delete generated.directions;}
+  if(text==='UPSTREAM_BADREF')generated.guide.threads=[{title:'测试非法引用',description:'应被拒绝',evidenceIds:['not-provided'],uncertainty:'测试'}];
+  response.end(JSON.stringify({ choices: [{ finish_reason: text === 'UPSTREAM_TRUNCATED' ? 'length' : 'stop', message: { content: text === 'UPSTREAM_EMPTY' ? '   ' : text === 'UPSTREAM_BADJSON' ? 'invalid-json' : JSON.stringify(generated) } }] }));
 }).listen(3110, '127.0.0.1');

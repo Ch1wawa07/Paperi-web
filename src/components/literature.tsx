@@ -8,25 +8,25 @@ import type { Project } from '@/lib/projects';
 import { useProjects } from './project-provider';
 import { Icon, LoadingState } from './ui';
 
-const initialSearch = (project?: Project): SearchOptions => ({ query: project?.exploration?.seed?.concepts.slice(0,2).map(c=>c.replace(/（待核实）|\(待核实\)/g,'')).join(' ') ?? '', provider: 'auto', sort: 'relevance', yearFrom: '', yearTo: '', journalsOnly: true, doiOnly: true, coreOnly: true, page: 1 });
+const initialSearch = (project?: Project, query?:string): SearchOptions => ({ query: query ?? project?.exploration?.seed?.concepts.slice(0,2).map(c=>c.replace(/（待核实）|\(待核实\)/g,'')).join(' ') ?? '', provider: 'auto', sort: 'relevance', yearFrom: '', yearTo: '', journalsOnly: true, doiOnly: true, coreOnly: true, page: 1 });
 const sourceName = (p: Paper) => p.source === 'openalex' ? 'OpenAlex' : 'Crossref';
 const kindName = (kind: string) => ({ article: '文章', review: '综述', 'journal-article': '期刊文章', 'book-chapter': '书籍章节', 'proceedings-article': '会议论文', preprint: '预印本', 'posted-content': '预发布内容' } as Record<string,string>)[kind] ?? kind;
 const fold = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 
-export function Literature() {
+export function Literature({initialQuery}:{initialQuery?:string}) {
   const { ready, snapshot, error } = useProjects();
   const project = snapshot.projects.find(p=>p.id===snapshot.activeId);
   return <div className="module-page module-literature"><Link href="/lab" className="back-link">← 返回灵感实验室</Link><div className="module-heading"><div className="eyebrow">02 / LITERATURE</div><h1>文献探索</h1><p>从真实来源出发，找到与你的问题有关的依据。</p></div>
-    {!ready ? error ? <p className="muted">请先处理上方存储提示，原有项目和收藏没有被清除。</p> : <LoadingState/> : <LiteratureWorkspace key={project?.id ?? 'browse'} project={project}/>}
+    {!ready ? error ? <p className="muted">请先处理上方存储提示，原有项目和收藏没有被清除。</p> : <LoadingState/> : <LiteratureWorkspace key={`${project?.id??'browse'}:${initialQuery??''}`} project={project} initialQuery={initialQuery}/>}
   </div>;
 }
 
-function LiteratureWorkspace({ project }: { project?: Project }) {
+function LiteratureWorkspace({ project, initialQuery }: { project?: Project;initialQuery?:string }) {
   const { busy, saveLibrary } = useProjects();
   const library = project?.library ?? emptyLibrary();
   const seed = project?.exploration?.seed;
   const [view, setView] = useState<'search'|'saved'>('search');
-  const [draft, setDraft] = useState<SearchOptions>(()=>initialSearch(project));
+  const [draft, setDraft] = useState<SearchOptions>(()=>initialSearch(project,initialQuery));
   const [activeSearch, setActiveSearch] = useState<SearchOptions | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false), [generating, setGenerating] = useState(false);
