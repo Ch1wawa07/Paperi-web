@@ -100,6 +100,7 @@ export async function requestAI(input: Input, signal: AbortSignal): Promise<AIRe
     });
     if (!response.ok) {
       await response.body?.cancel();
+      if (response.status === 402) throw new AIError(402, 'AI 服务账户余额不足。请在所用服务商控制台检查 API 余额，或换用已有额度的接口；你的提问仍已本地保存。');
       if (response.status === 401 || response.status === 403) throw new AIError(502, 'AI 服务拒绝了接口凭证，请维护者检查密钥、模型权限和地址。');
       if (response.status === 429) throw new AIError(429, 'AI 服务额度不足或请求过于频繁，请稍后再试并检查服务商额度。');
       throw new AIError(502, 'AI 服务暂时没有完成回复，请稍后重试。');

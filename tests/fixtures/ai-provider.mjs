@@ -16,6 +16,7 @@ createServer(async (request, response) => {
     response.statusCode = 400; response.end('{"error":"incorrect adapter contract"}'); return;
   }
   const text = body.messages.at(-1).content;
+  if (text === 'UPSTREAM_BALANCE') { response.statusCode = 402; response.end('{"error":"Insufficient Balance"}'); return; }
   if (text === 'UPSTREAM_UNAUTHORIZED') { response.statusCode = 401; response.end('{"error":"test-only-not-a-real-key"}'); return; }
   if (text === 'UPSTREAM_LIMIT') { response.statusCode = 429; response.end('{}'); return; }
   response.end(JSON.stringify({ choices: [{ finish_reason: text === 'UPSTREAM_TRUNCATED' ? 'length' : 'stop', message: { content: text === 'UPSTREAM_BADJSON' ? 'invalid-json' : reply(text) } }] }));
