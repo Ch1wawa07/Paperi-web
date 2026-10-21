@@ -57,7 +57,7 @@ export function Home() {
     </div>
 
     <section className="journey-section" aria-labelledby="journey-title">
-      <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">继续探索</h2></div><span className="section-aside">灵感实验室已开放 · 其余模块待接入</span></div>
+      <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">继续探索</h2></div><span className="section-aside">灵感与文献已开放 · 星图与设计待接入</span></div>
       <div className="journey-grid">{navigation.slice(1).map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
         <div className="journey-card-top"><span>{item.english}</span><span className="circle-arrow"><Icon name="arrow-up" size={17}/></span></div>
         <span className="journey-number" aria-hidden="true">0{index + 1}</span>

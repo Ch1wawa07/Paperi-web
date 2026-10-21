@@ -1,0 +1,403 @@
+{
+  "date": "2026-10-21T06:30:58.658Z",
+  "source": "Paperi production UI -> real OpenAlex/Crossref/doi.org, no interception/preloader",
+  "queries": [
+    {
+      "query": "algorithmic trust consumer",
+      "status": 200,
+      "provider": "openalex",
+      "total": 82438,
+      "items": [
+        {
+          "title": "Algorithmic pricing: Effects on consumer trust and price search",
+          "authors": [
+            "Arnd Vomberg",
+            "Christian Homburg",
+            "Panagiotis Sarantopoulos"
+          ],
+          "year": 2024,
+          "venue": "International Journal of Research in Marketing",
+          "doi": "10.1016/j.ijresmar.2024.10.006",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4403735999"
+        },
+        {
+          "title": "The role of trust and algorithms in consumers’ front-of-pack labels acceptance: a cross-country investigation",
+          "authors": [
+            "Marco Francesco Mazzù",
+            "Angelo Baccelloni",
+            "Simona Romani",
+            "Alberto Andria"
+          ],
+          "year": 2022,
+          "venue": "European Journal of Marketing",
+          "doi": "10.1108/ejm-10-2021-0764",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4292109341"
+        },
+        {
+          "title": "Too Smart to Trust? Algorithmic Intelligence and the Erosion of Consumer Autonomy",
+          "authors": [
+            "Israk Fabian Hasan"
+          ],
+          "year": 2026,
+          "venue": "Journal of Global Marketing",
+          "doi": "10.1080/08911762.2026.2689093",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W7165110605"
+        },
+        {
+          "title": "Trust beyond Technology Algorithms: A Theoretical Exploration of Consumer Trust and Behavior in Technological Consumption and AI Projects",
+          "authors": [
+            "David Oyewumi Taiwo Oyekunle",
+            "Ugochukwu Okwudili Matthew",
+            "David Preston",
+            "David Boohene"
+          ],
+          "year": 2024,
+          "venue": "Journal of Computer and Communications",
+          "doi": "10.4236/jcc.2024.126006",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4400009952"
+        },
+        {
+          "title": "Can algorithms care? Algorithmic empathy and consumer trust in AI-mediated service encounters",
+          "authors": [
+            "Wenxiao Zou",
+            "Fei Wan"
+          ],
+          "year": 2026,
+          "venue": "Journal of Retailing and Consumer Services",
+          "doi": "10.1016/j.jretconser.2026.104982",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W7171598296"
+        },
+        {
+          "title": "Algorithmic Service Failures and Brand Trust: Evidence from Multinational Consumer Reviews",
+          "authors": [
+            "Sofía Blanco-Moreno",
+            "Ana M. González-Fernández"
+          ],
+          "year": 2025,
+          "venue": "Journal of Global Marketing",
+          "doi": "10.1080/08911762.2025.2601069",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W7115004882"
+        },
+        {
+          "title": "Consumer Trust in AI Algorithms Used in E-Commerce: A Case Study of College Students at a Romanian Public University",
+          "authors": [
+            "Daniel Teodorescu",
+            "Kamer-Ainur Aivaz",
+            "Diane Paula Corina Vancea",
+            "Elenа Condreа",
+            "Cristian Drăgan",
+            "Ana Cornelia Olteanu"
+          ],
+          "year": 2023,
+          "venue": "Sustainability",
+          "doi": "10.3390/su151511925",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4385555366"
+        },
+        {
+          "title": "Do consumers’ perceptions of algorithms and trusting beliefs in providers affect perceived structural assurances of AI-powered applications?",
+          "authors": [
+            "Yun-Peng Yuan",
+            "Li Liu",
+            "Garry Wei‐Han Tan",
+            "Keng‐Boon Ooi"
+          ],
+          "year": 2024,
+          "venue": "Telematics and Informatics",
+          "doi": "10.1016/j.tele.2024.102188",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4402629949"
+        },
+        {
+          "title": "When AI summary is inconsistent with aggregated rating: The role of trust, valence, and algorithmic explanation in consumer attitudes",
+          "authors": [
+            "Lijuan Luo",
+            "Ling Liu",
+            "Yujie Zheng"
+          ],
+          "year": 2025,
+          "venue": "Telematics and Informatics",
+          "doi": "10.1016/j.tele.2025.102361",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W4417505499"
+        },
+        {
+          "title": "Digital Trust and Phygital Responsibility: A User-Centered Model for Sustainable Consumer Behavior in Algorithmic Environments",
+          "authors": [
+            "Marija Gombar",
+            "Marija Boban",
+            "Mirjana Pejić Bach"
+          ],
+          "year": 2026,
+          "venue": "World",
+          "doi": "10.3390/world7050086",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W7162337336"
+        }
+      ]
+    },
+    {
+      "query": "10.1016/j.ijresmar.2024.10.006",
+      "status": 200,
+      "provider": "crossref",
+      "total": 1,
+      "items": [
+        {
+          "title": "Algorithmic pricing: Effects on consumer trust and price search",
+          "authors": [
+            "Arnd Vomberg",
+            "Christian Homburg",
+            "Panagiotis Sarantopoulos"
+          ],
+          "year": 2025,
+          "venue": "International Journal of Research in Marketing",
+          "doi": "10.1016/j.ijresmar.2024.10.006",
+          "sourceIsCore": null,
+          "recordUrl": "https://api.crossref.org/works/10.1016%2Fj.ijresmar.2024.10.006"
+        }
+      ]
+    },
+    {
+      "query": "\"sense of community\" participation",
+      "status": 200,
+      "provider": "openalex",
+      "total": 35555,
+      "items": [
+        {
+          "title": "Sense of community and participation in urban contexts",
+          "authors": [
+            "Monica Colombo",
+            "Cristina Onesta Mosso",
+            "Norma De Piccoli"
+          ],
+          "year": 2001,
+          "venue": "Journal of Community & Applied Social Psychology",
+          "doi": "10.1002/casp.645",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W1994841417"
+        },
+        {
+          "title": "Empowerment and Sense of Community: Clarifying Their Relationship in Community Organizations",
+          "authors": [
+            "Joseph B. Hughey",
+            "N. Andrew Peterson",
+            "John B. Lowe",
+            "Florin Oprescu"
+          ],
+          "year": 2006,
+          "venue": "Health Education & Behavior",
+          "doi": "10.1177/1090198106294896",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W2160676837"
+        },
+        {
+          "title": "Sense of responsible togetherness, sense of community and participation: Looking at the relationships in a university campus",
+          "authors": [
+            "Fortuna Procentese",
+            "Flora Gatti",
+            "Annarita Falanga"
+          ],
+          "year": 2019,
+          "venue": "Human Affairs",
+          "doi": "10.1515/humaff-2019-0020",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W2946403408"
+        },
+        {
+          "title": "Coworking spaces: Empowerment for entrepreneurship and innovation in the digital and sharing economy",
+          "authors": [
+            "Ricarda B. Bouncken",
+            "Martin Ratzmann",
+            "Roman Barwinski",
+            "Sascha Kraus"
+          ],
+          "year": 2020,
+          "venue": "Journal of Business Research",
+          "doi": "10.1016/j.jbusres.2020.03.033",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W3015719517"
+        },
+        {
+          "title": "Empowerment praxis in community coalitions",
+          "authors": [
+            "Bradley McMillan",
+            "Paul R. Florin",
+            "John F. Stevenson",
+            "Ben Kerman",
+            "Roger E. Mitchell"
+          ],
+          "year": 1995,
+          "venue": "American Journal of Community Psychology",
+          "doi": "10.1007/bf02506988",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W1986238928"
+        },
+        {
+          "title": "Sense of community in the urban environment: A catalyst for participation and community development",
+          "authors": [
+            "David M. Chavis",
+            "Abraham H. Wandersman"
+          ],
+          "year": 1990,
+          "venue": "American Journal of Community Psychology",
+          "doi": "10.1007/bf00922689",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W1969062436"
+        },
+        {
+          "title": "Sense of community and political participation",
+          "authors": [
+            "William B. Davidson",
+            "Patrick R. Cotte"
+          ],
+          "year": 1989,
+          "venue": "Journal of Community Psychology",
+          "doi": "10.1002/1520-6629(198904)17:2<119::aid-jcop2290170203>3.0.co;2-c",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W1965706469"
+        },
+        {
+          "title": "Sense of Community and Community Participation: A Meta-Analytic Review",
+          "authors": [
+            "Cosimo Talò",
+            "Terri Mannarini",
+            "Alessia Rochira"
+          ],
+          "year": 2013,
+          "venue": "Social Indicators Research",
+          "doi": "10.1007/s11205-013-0347-2",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W2071463483"
+        },
+        {
+          "title": "Validation of A brief sense of community scale: Confirmation of the principal theory of sense of community",
+          "authors": [
+            "N. Andrew Peterson",
+            "Paul W. Speer",
+            "David W. McMillan"
+          ],
+          "year": 2007,
+          "venue": "Journal of Community Psychology",
+          "doi": "10.1002/jcop.20217",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W2019116200"
+        },
+        {
+          "title": "Creating sense of community: The role of public space",
+          "authors": [
+            "Jacinta Francis",
+            "Billie Giles‐Corti",
+            "Lisa Jane Wood",
+            "Matthew William Knuiman"
+          ],
+          "year": 2012,
+          "venue": "Journal of Environmental Psychology",
+          "doi": "10.1016/j.jenvp.2012.07.002",
+          "sourceIsCore": true,
+          "recordUrl": "https://api.openalex.org/works/W2009629943"
+        }
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "status": 200,
+      "title": "Algorithmic pricing: Effects on consumer trust and price search",
+      "authors": [
+        "Arnd Vomberg",
+        "Christian Homburg",
+        "Panagiotis Sarantopoulos"
+      ],
+      "year": 2025,
+      "doi": "10.1016/j.ijresmar.2024.10.006",
+      "resolves": true,
+      "checkedAt": "2026-10-21T06:31:06.602Z"
+    },
+    {
+      "status": 200,
+      "title": "Sense of community and participation in urban contexts",
+      "authors": [
+        "Monica Colombo",
+        "Cristina Mosso",
+        "Norma De Piccoli"
+      ],
+      "year": 2001,
+      "doi": "10.1002/casp.645",
+      "resolves": true,
+      "checkedAt": "2026-10-21T06:31:13.470Z"
+    }
+  ],
+  "checks": {
+    "crossSourceDOIDeduplicated": true,
+    "projectIsolation": true,
+    "reloadRestored": true,
+    "categoryRenamed": true,
+    "mobileNoOverflow": true,
+    "noteSearch": true,
+    "tabReopenRestored": true,
+    "finalYearMismatchDisplayed": true
+  },
+  "keywords": {
+    "status": 200,
+    "zh": [
+      "AI推荐信任判断",
+      "大学生日常消费决策",
+      "决策外包与消费者自主性",
+      "消费者能动性与算法推荐",
+      "AI推荐可信度感知",
+      "认知负荷与消费决策"
+    ],
+    "en": [
+      "trust in AI recommendations",
+      "college students' consumption decisions",
+      "decision outsourcing and consumer autonomy",
+      "consumer agency and algorithmic recommendations",
+      "perceived credibility of AI recommendations",
+      "cognitive load in consumer decisions"
+    ]
+  },
+  "runtimeErrors": [],
+  "additionalChecks": [
+    {
+      "name": "legacy",
+      "status": 200,
+      "paper": {
+        "key": "doi:10.1002/1520-6629(198601)14:1<6::aid-jcop2290140103>3.0.co;2-i",
+        "title": "Sense of community: A definition and theory",
+        "doi": "10.1002/1520-6629(198601)14:1<6::aid-jcop2290140103>3.0.co;2-i",
+        "openAlexId": null,
+        "authors": [
+          "David W. McMillan",
+          "David M. Chavis"
+        ],
+        "authorsTruncated": false,
+        "year": 1986,
+        "venue": "Journal of Community Psychology",
+        "sourceIsCore": null,
+        "kind": "journal-article",
+        "abstract": null,
+        "abstractTruncated": false,
+        "citations": 2185,
+        "retracted": null,
+        "oaUrl": null,
+        "landingUrl": "https://doi.org/10.1002/1520-6629(198601)14:1%3C6::aid-jcop2290140103%3E3.0.co;2-i",
+        "source": "crossref",
+        "recordUrl": "https://api.crossref.org/works/10.1002%2F1520-6629(198601)14%3A1%3C6%3A%3Aaid-jcop2290140103%3E3.0.co%3B2-i",
+        "retrievedAt": "2026-10-21T06:31:35.066Z"
+      },
+      "resolves": true
+    },
+    {
+      "name": "crossref",
+      "status": 200,
+      "provider": "crossref",
+      "returned": 10
+    }
+  ]
+}

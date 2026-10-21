@@ -1,0 +1,32 @@
+{
+  "crossref": {
+    "DOI": "10.5555/paperi-fixture-a",
+    "title": ["Fixture algorithmic trust study — 测试夹具，非真实论文"],
+    "author": [{"given":"Fixture","family":"Author"}],
+    "published":{"date-parts":[[2024,3,1]]},
+    "container-title":["Fixture Journal（测试数据）"],
+    "type":"journal-article",
+    "is-referenced-by-count":12,
+    "abstract":"<jats:p>Fixture abstract on algorithmic trust. 仅为自动测试。</jats:p>",
+    "URL":"https://example.org/fixture-a"
+  },
+  "missing": {
+    "DOI":"10.5555/paperi-fixture-b",
+    "title":["Fixture missing metadata — 测试夹具"],
+    "type":"journal-article"
+  },
+  "openalex": {
+    "id":"https://openalex.org/W9999999991",
+    "doi":"https://doi.org/10.5555/PAPERI-FIXTURE-A",
+    "display_name":"Fixture algorithmic trust study — 测试夹具，非真实论文",
+    "authorships":[{"author":{"display_name":"Fixture Author"}}],
+    "publication_year":2024,
+    "primary_location":{"source":{"display_name":"Fixture Journal（测试数据）","type":"journal","is_core":true},"landing_page_url":"https://example.org/fixture-a"},
+    "open_access":{"is_oa":true},
+    "best_oa_location":{"pdf_url":"https://example.org/fixture-a.pdf"},
+    "abstract_inverted_index":{"Fixture":[0],"algorithmic":[1],"trust":[2],"abstract.":[3]},
+    "cited_by_count":12,
+    "type":"article",
+    "is_retracted":false
+  }
+}

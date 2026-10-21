@@ -1,4 +1,5 @@
 import { isExploration, type Exploration } from './exploration';
+import { isLibrary, type Library } from './literature';
 
 export type Project = {
   id: string;
@@ -9,6 +10,7 @@ export type Project = {
   createdAt: string;
   updatedAt: string;
   exploration?: Exploration;
+  library?: Library;
 };
 
 export type ProjectSnapshot = {
@@ -41,7 +43,8 @@ function parseSnapshot(raw: string | null): ProjectSnapshot {
       if (!p || typeof p !== 'object' || !validText(p.id, 100) || !p.id || ids.has(p.id) ||
           !validText(p.name, 80) || !p.name.trim() || !validText(p.discipline, 60) ||
           !validText(p.observation, 2000) || p.status !== 'starting' || !validDate(p.createdAt) || !validDate(p.updatedAt) ||
-          (p.exploration !== undefined && !isExploration(p.exploration))) throw new Error();
+          (p.exploration !== undefined && !isExploration(p.exploration)) ||
+          (p.library !== undefined && !isLibrary(p.library))) throw new Error();
       ids.add(p.id);
     }
     if (s.activeId !== null && (typeof s.activeId !== 'string' || !ids.has(s.activeId))) throw new Error();

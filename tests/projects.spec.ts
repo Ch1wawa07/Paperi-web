@@ -127,7 +127,7 @@ for (const width of [1440, 1280, 768, 390]) {
       await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: title }).click();
       await expect(page).toHaveURL(`/${route}`);
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-      if (route !== 'lab') await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
+      if (route !== 'lab' && route !== 'literature') await expect(page.getByText('功能将在后续阶段接入', { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.getByRole('link', { name: /← 返回/ }).click();
       if (route === 'lab') await expect(page).toHaveURL('/');

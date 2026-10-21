@@ -10,6 +10,9 @@ createServer(async (request, response) => {
   let raw = '';
   for await (const chunk of request) raw += chunk;
   const body = JSON.parse(raw);
+  if(body.max_tokens===700 && body.model==='fixture-model' && body.response_format?.type==='json_object' && request.headers.authorization==='Bearer test-only-not-a-real-key') {
+    response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({zh:['测试主题','测试概念','测试对象'],en:['fixture topic','fixture concept','fixture population']})}}]})); return;
+  }
   if (request.url !== '/v1/chat/completions' || request.headers.authorization !== 'Bearer test-only-not-a-real-key' ||
     body.model !== 'fixture-model' || body.max_tokens !== 1800 || body.response_format?.type !== 'json_object' ||
     body.messages?.[0]?.role !== 'system' || !body.messages[0].content.includes('不能声称已替用户修改')) {

@@ -1,3 +1,24 @@
+# 当前测试结果 · 阶段 3
+
+2026-10-21，`/workspace/Paperi-web`，Node 24.19.0 / npm 11.9.0 / Chromium / Playwright 1.64.1。
+
+| 实际命令 | 结果 |
+|---|---|
+| `npm run typecheck` | 通过，包含 Next 路由类型与 TypeScript strict |
+| `npm run lint` | 通过，0 错误、0 警告 |
+| `NODE_USE_ENV_PROXY=1 npm run build` | 通过，六页面及 `/api/literature`、`/verify`、`/keywords` 动态接口 |
+| `NODE_USE_ENV_PROXY=1 CI=1 npm run test:e2e` | **37 通过，0 失败、0 跳过，51.5 秒** |
+
+新增 15 项：DOI 规范化及合法历史标点、跨源去重、缺失字段与安全链接、文献库边界、输入约束、OpenAlex 实际适配器的筛选/年份/排序/页码传递、有界缓存、空结果/异常/限额、明确来源切换、核心来源条件不被备用源悄悄放宽、DOI 登记/解析/标识不一致、中英文检索词、研究隔离与多分类笔记、分类改名/删除保留论文、收藏失败保留编辑、跨标签冲突、手机搜索/键盘与溢出。相关断言归入 10 个数据/API 与 5 个界面测试。
+
+自动测试服务器使用空真实配置或本地假凭证，3102 进程以 test-only fetch preloader 拦截官方元数据请求；生产代码没有夹具分支。上述隔离测试不消耗外部 AI/文献额度，也不作为论文真实性的实际验收。
+
+**另行真实验收：** 两主题各返回 10 条 OpenAlex 论文，Crossref 备用检索返回 10 条；三篇 Crossref DOI 登记与解析抽查通过，包括合法历史 DOI。真实 DeepSeek 检索词建议 1 次通过。浏览器验证多分类收藏、跨源去重、研究隔离、笔记搜索、分类改名、刷新与重开恢复及 390px 无横向溢出。发现两源年份差异后补充明确提示并完成最终全套回归与实际页面复验。详见 [阶段 3 实际记录](STAGE3_ACCEPTANCE.md)。
+
+以下保留阶段 1/2 历史测试记录；最新状态以上方和阶段 3 记录为准。
+
+---
+
 # 阶段 1 测试记录
 
 日期：2026-10-20。执行位置：`/workspace/Paperi-web`。环境：Node.js 24.19.0、npm 11.9.0，Linux 系统 Chromium，Playwright 1.64.1。

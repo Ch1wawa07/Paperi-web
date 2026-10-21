@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { LocalProjectRepository, STORAGE_KEY, emptySnapshot, type Project, type ProjectSnapshot } from '@/lib/projects';
 import { isExploration, type Exploration } from '@/lib/exploration';
+import { isLibrary, type Library } from '@/lib/literature';
 
 const repository = new LocalProjectRepository();
 type ProjectActions = {
@@ -13,6 +14,7 @@ type ProjectActions = {
   select: (id: string) => Promise<boolean>;
   remove: (id: string) => Promise<boolean>;
   saveExploration: (id: string, expectedRevision: number, exploration: Exploration) => Promise<boolean>;
+  saveLibrary: (id: string, expectedRevision: number, library: Library) => Promise<boolean>;
 };
 const Context = createContext<ProjectActions | null>(null);
 const errorMessage = (e: unknown) => e instanceof Error ? e.message : '操作失败，请重试。';
@@ -52,6 +54,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
   const actions: ProjectActions = {
     snapshot, ready, busy, error, feedback, reload,
+    saveLibrary: (id, expectedRevision, library) => commit(s => {
+      const project = s.projects.find(p => p.id === id);
+      if (!project) throw new Error('这个研究项目已经不存在，请重新读取后选择项目。');
+      if ((project.library?.revision ?? 0) !== expectedRevision) throw new Error('文献库已在其他页面更新，请重新读取后再保存。你的修改没有覆盖已保存内容。');
+      const next = { ...library, revision: expectedRevision + 1 };
+      if (!isLibrary(next)) throw new Error('文献库内容不完整、重复或超过容量，原有收藏未被覆盖。每项目最多 300 篇、30 个分类。');
+      return { ...s, projects: s.projects.map(p => p.id === id ? { ...p, library: next, updatedAt: new Date().toISOString() } : p) };
+    }, '文献库已保存在当前浏览器。'),
     saveExploration: (id, expectedRevision, exploration) => commit(s => {
       const project = s.projects.find(p => p.id === id);
       if (!project) throw new Error('这个项目已经不存在，请重新读取项目列表。');
