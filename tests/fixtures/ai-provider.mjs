@@ -10,6 +10,16 @@ createServer(async (request, response) => {
   let raw = '';
   for await (const chunk of request) raw += chunk;
   const body = JSON.parse(raw);
+  if(body.messages?.[0]?.content?.includes('你是 Paperi 人文社科研究助手')){
+    const system=body.messages[0].content,input=JSON.parse(body.messages[1].content),context=input.context??input;
+    let value;
+    if(system.includes('逐篇审查相关性'))value={assessments:context.evidence.map(e=>({id:e.id,level:e.title.includes('irrelevant')?'unrelated':'direct',reason:'测试相关性理由',use:'理论背景',basis:e.title,limitation:'测试数据，未读全文'}))};
+    else if(system.includes('只给有来源'))value={threads:[{title:'测试脉络',kind:'主题',body:'测试摘要归纳，非真实研究结论',evidenceIds:[context.evidence[0].id],uncertainty:'未读全文'}]};
+    else if(system.includes('个可编辑节点'))value={nodes:[{id:'n1',kind:'研究问题',title:'测试候选问题',body:'测试研究内容',evidenceIds:context.evidence.map(e=>e.id),uncertainty:'待核实'}],edges:[]};
+    else value={zh:['测试信任 消费','测试推荐 商业'],en:['fixture trust consumer','fixture advertising persuasion']};
+    if(input.query==='FORGED')value={assessments:[{id:'forged',level:'direct',reason:'假引用测试',use:'不应通过',basis:'不存在',limitation:'测试'}]};
+    response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify(value)}}]}));return;
+  }
   if(body.max_tokens===700 && body.messages?.[0]?.content?.includes('Paperi 的双语检索词助手')) {response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'测试独立检索组合',zh:['测试概念 消费','测试概念 对象'],en:['fixture trust consumer','fixture concept study']})}}]}));return;}
   if(body.max_tokens===700 && body.model==='fixture-model' && body.response_format?.type==='json_object' && request.headers.authorization==='Bearer test-only-not-a-real-key') {
     response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({zh:['测试主题','测试概念','测试对象'],en:['fixture topic','fixture concept','fixture population']})}}]})); return;

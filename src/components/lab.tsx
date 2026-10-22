@@ -7,6 +7,7 @@ import type { Project } from '@/lib/projects';
 import { useProjects } from './project-provider';
 import { Icon, LoadingState } from './ui';
 import { emptyNavigation, mergeConcepts, researchStages } from '@/lib/research-navigation';
+import { WorkspaceToolbar } from './workspace-common';
 import { ResearchGuidePanel } from './research-guide';
 
 type Editor = { direction?: Direction; seed?: ResearchSeed; revision: number };
@@ -16,8 +17,7 @@ export function Lab() {
   const { snapshot, ready, error } = useProjects();
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
   return <div className="module-page module-lab">
-    <Link href="/" className="back-link">← 返回首页</Link>
-    <div className="module-heading"><div className="eyebrow">01 / IDEA LAB</div><h1>灵感实验室</h1><p>聊聊你的观察，让一个问题慢慢清晰。</p></div>
+    <WorkspaceToolbar title="灵感实验室" project={project}/>
     {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <LabProject key={project.id} project={project}/> :
       <section className="lab-no-project frosted-surface"><Icon name="leaf" size={32}/><h2>为想法留一个位置</h2><p className="muted">先创建项目，对话和研究种子会保存在这个项目里。</p><Link className="button primary" href="/">去创建项目<Icon name="arrow" size={16}/></Link></section>}
   </div>;
@@ -125,9 +125,7 @@ function LabProject({ project }: { project: Project }) {
   const suggested = exploration.directions.filter(d => d.status === 'suggested').slice().reverse();
   const locked = busy || pending;
   return <>
-    <div className="current-project-panel"><Icon name="leaf"/><div><span>当前项目 · 本地保存</span><strong>{project.name}</strong></div><Link className="text-button" href="/">管理 / 切换项目<Icon name="arrow" size={16}/></Link></div>
-    <div className="research-stage-bar" aria-label="探索阶段">{researchStages.map((stage,index)=><button key={stage.id} aria-label={stage.label} aria-pressed={nav.stage===stage.id} disabled={busy||pending} onClick={()=>void saveExploration(project.id,exploration.revision,{...exploration,navigation:{...nav,stage:stage.id}})}><span>{String(index+1).padStart(2,'0')}</span>{stage.label}</button>)}</div>
-    <div className="stage-overview"><p>{researchStages.find(s=>s.id===nav.stage)!.hint} <span>可自由往返，切换不会自动调用 AI。</span></p><button className="button secondary" disabled={busy||pending||!status?.configured||(nav.stage==='questions'&&!questionsReady)} onClick={()=>void send(false,false,`请继续当前「${researchStages.find(s=>s.id===nav.stage)!.label}」环节，结合我的原始观察、已选/已排除概念和已提供的真实文献资料，给出适合这一阶段的探索建议。`)}>探索这一环节<Icon name="spark" size={15}/></button></div>
+    <div className="lab-compact-actions"><div className="research-stage-bar" aria-label="探索阶段">{researchStages.slice(0,2).map(stage=><button key={stage.id} aria-pressed={nav.stage===stage.id} disabled={locked} onClick={()=>void saveExploration(project.id,exploration.revision,{...exploration,navigation:{...nav,stage:stage.id}})}>{stage.label}</button>)}</div><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,'结合我的观察和已选概念，继续解释可能的研究切入点、边界和需要查证的内容。')}>继续探索</button><Link className="text-button" href="/map">文献脉络 →</Link><Link className="text-button" href="/canvas">研究设计 →</Link></div>
     <div className="lab-grid">
       <section className="lab-chat frosted-surface" aria-labelledby="chat-title">
         <div className="lab-panel-heading"><h2 id="chat-title">从一个念头开始</h2><span className="soft-badge">{status?.configured ? 'AI 已配置' : 'AI 待连接'}</span></div>
@@ -148,14 +146,14 @@ function LabProject({ project }: { project: Project }) {
       </section>
       <aside className="lab-directions" aria-label="探索辅助与研究种子">
         <details className="assistant-drawer" open><summary>探索辅助面板<span>可收起</span></summary>
-        <ResearchGuidePanel navigation={nav} papers={papers} seed={exploration.seed} revision={exploration.revision} disabled={locked} onChange={next=>saveExploration(project.id,exploration.revision,{...exploration,navigation:next})} onAsk={message=>setDraft(message)}/>
+        <ResearchGuidePanel projectId={project.id} navigation={nav} papers={papers} seed={exploration.seed} revision={exploration.revision} disabled={locked} onChange={next=>saveExploration(project.id,exploration.revision,{...exploration,navigation:next})} onAsk={message=>setDraft(message)}/>
 
-        <section className="lab-seed frosted-surface" aria-labelledby="seed-title"><div className="lab-panel-heading"><h2 id="seed-title">研究种子</h2><span className="seed-status">{exploration.seed ? '用户已确认' : '尚未确认'}</span></div>
+        <details className="seed-advanced"><summary>高级编辑 · 已确认研究种子</summary><section className="lab-seed frosted-surface" aria-labelledby="seed-title"><div className="lab-panel-heading"><h2 id="seed-title">研究种子</h2><span className="seed-status">{exploration.seed ? '用户已确认' : '探索中'}</span></div>
           {exploration.seed ? <><h3>{exploration.seed.angle}</h3><p className="seed-question">{exploration.seed.workingQuestion}</p><div className="concept-tags">{exploration.seed.concepts.map((c, i) => <span key={i}>{c}</span>)}</div><p className="muted">第 {exploration.seed.version} 版 · 文献依据待核实</p><button className="text-button" disabled={locked} onClick={() => setEditor({ seed: exploration.seed!, revision: exploration.revision })}>编辑研究种子<Icon name="arrow" size={15}/></button></> :
             <><p className="muted">先探索概念与文献，再确认问题；也可手动记录。手动记录不代表文献已验证。</p><button className="text-button" disabled={locked} onClick={() => setEditor({ revision: exploration.revision })}>手动写研究种子<Icon name="plus" size={15}/></button></>}
           <p className="seed-note">继续对话不会自动覆盖你确认的内容。</p>
         </section>
-        <details className="candidate-history" open={nav.stage==='questions'||(!exploration.navigation&&suggested.length>0)}><summary>{nav.stage==='questions'?'候选研究问题':'已保存 / 旧版候选方向'} · {suggested.length}</summary>
+        </details><details className="candidate-history" open={nav.stage==='questions'||(!exploration.navigation&&suggested.length>0)}><summary>{nav.stage==='questions'?'候选研究问题':'已保存 / 旧版候选方向'} · {suggested.length}</summary>
         <div className="lab-candidates-heading"><h2>候选问题</h2><span>AI 建议 · 待核实</span></div>
         {!suggested.length && <div className="lab-candidates-empty"><Icon name="spark" size={24}/><p>方向，会在交流中浮现。</p><span>选择概念与文献依据后，在候选问题环节请求 AI 辅助收敛。</span></div>}
         <div className="lab-candidate-list">{suggested.map(d => <article className="direction-card frosted-surface" key={d.id}><h3>{d.title}</h3><p>{d.description}</p><div className="concept-tags">{d.concepts.map((c, i) => <span key={i}>{c}</span>)}</div><details><summary>为什么值得探索</summary><p>{d.rationale}</p><p>候选问题：{d.question}</p>{d.evidenceIds?.map(id=>{const item=papers.find(p=>p.id===id);return item?<a key={id} className="direction-evidence" href={item.paper.recordUrl} target="_blank" rel="noopener noreferrer">文献依据：{item.paper.title}</a>:<p key={id} className="muted">该文献已不在当前收藏中，依据需重新核实。</p>;})}{!!d.uncertainties.length && <ul>{d.uncertainties.map((q, i) => <li key={i}>{q}</li>)}</ul>}</details><div className="direction-actions"><button className="text-button" disabled={locked} onClick={() => setEditor({ direction: d, revision: exploration.revision })}>编辑并采纳<Icon name="arrow" size={15}/></button><button className="small-button" disabled={locked} onClick={async () => { setError(''); if (!await saveExploration(project.id, exploration.revision, { ...exploration, directions: exploration.directions.map(x => x.id === d.id ? { ...x, status: 'discarded' } : x) })) setError('未能丢弃该方向，请处理存储提示后重试。'); }}>丢弃</button></div></article>)}</div>

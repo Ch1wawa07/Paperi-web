@@ -50,8 +50,8 @@ test.describe('文献服务端适配器隔离集成验证（本地夹具，不�
   test('自动源切换明确标识 Crossref，保持原检索词与缺失字段',async({request})=>{
     const r=await request.get('/api/literature?query=fixture-fallback&provider=auto&coreOnly=false');expect(r.status()).toBe(200);const d=await r.json();expect(d.provider).toBe('crossref');expect(d.query).toBe('fixture-fallback');expect(d.notices.join(' ')).toContain('Crossref');expect(d.items[1].abstract).toBeNull();
   });
-  test('核心来源要求不会因备用源缺少标记而静默放宽',async({request})=>{
-    const r=await request.get('/api/literature?query=fixture-strict&provider=crossref');expect(r.status()).toBe(503);expect((await r.json()).error).toContain('没有放宽筛选');
+  test('Crossref 自动关闭不兼容核心来源筛选并明确告知',async({request})=>{
+    const r=await request.get('/api/literature?query=fixture-strict&provider=crossref');expect(r.status()).toBe(200);expect((await r.json()).notices.join(' ')).toContain('已为你关闭');
     const d=await(await request.get('/api/literature?query=fixture-core&provider=openalex')).json();expect(d.items.every((p:{sourceIsCore:boolean})=>p.sourceIsCore===true)).toBe(true);
   });
   test('DOI 精确查登记与解析；404 和标识不一致不报告成功',async({request})=>{

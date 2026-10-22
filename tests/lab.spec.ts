@@ -26,7 +26,7 @@ test('无密钥仍可手动确认种子、编辑并刷新恢复；旧阶段项�
   await expect(page.getByRole('status').filter({ hasText: '尚未配置' })).toBeVisible();
   await page.getByLabel('给 AI 的消息').fill('我的观察');
   await expect(page.getByRole('button', { name: '发送', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: '手动写研究种子' }).click();
+  await page.locator('.seed-advanced>summary').click();await page.getByRole('button', { name: '手动写研究种子' }).click();
   await expect(page.getByLabel('研究视角', { exact: true })).toBeFocused();
   await page.getByLabel('研究视角', { exact: true }).fill('人工确认的视角');
   await page.getByLabel('研究问题', { exact: true }).fill('社区活动为什么难以吸引新居民？');
@@ -35,7 +35,7 @@ test('无密钥仍可手动确认种子、编辑并刷新恢复；旧阶段项�
   await expect(page.locator('.lab-seed')).toContainText('用户已确认');
   await page.reload();
   await expect(page.locator('.lab-seed')).toContainText('社区活动为什么难以吸引新居民？');
-  await page.getByRole('button', { name: '编辑研究种子' }).click();
+  await page.locator('.seed-advanced').evaluate(e=>e.setAttribute('open',''));await page.getByRole('button', { name: '编辑研究种子' }).click();
   await page.getByLabel('研究问题', { exact: true }).fill('哪些因素影响新居民参与社区活动？');
   await page.getByRole('button', { name: '保存研究种子', exact: true }).click();
   await expect(page.locator('.lab-seed')).toContainText('第 2 版');
@@ -75,7 +75,7 @@ test('候选编辑采纳、取消与确认替换、继续聊天不覆盖、丢�
   await page.reload();await expect(page.locator('.direction-card')).toHaveCount(count - 1);
   await create(page, '另一个独立项目');
   await expect(page.locator('.chat-message')).toHaveCount(0);
-  await expect(page.locator('.lab-seed')).toContainText('尚未确认');
+  await expect(page.locator('.lab-seed')).toContainText('探索中');
   await page.getByLabel('当前项目', { exact: true }).selectOption({ label: '实验室测试项目' });
   await expect(page.locator('.chat-assistant')).toHaveCount(2);
 });
@@ -122,14 +122,14 @@ test('回复保存失败时保留用户消息并显示未保存内容，不报�
 
 test('手机种子编辑与跨标签冲突不会静默覆盖', async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 });await create(page);
-  await page.getByRole('button', { name: '手动写研究种子' }).click();
+  await page.locator('.seed-advanced>summary').click();await page.getByRole('button', { name: '手动写研究种子' }).click();
   await page.getByLabel('研究视角', { exact: true }).fill('初始视角');
   await page.getByLabel('研究问题', { exact: true }).fill('初始问题');
   await page.getByRole('button', { name: '保存研究种子', exact: true }).click();
   const other = await context.newPage();await other.goto('/lab');
-  await page.getByRole('button', { name: '编辑研究种子' }).click();
+  await page.locator('.seed-advanced').evaluate(e=>e.setAttribute('open',''));await page.getByRole('button', { name: '编辑研究种子' }).click();
   await page.getByLabel('研究问题', { exact: true }).fill('过期窗口中的修改');
-  await other.getByRole('button', { name: '编辑研究种子' }).click();
+  await other.locator('.seed-advanced>summary').click();await other.getByRole('button', { name: '编辑研究种子' }).click();
   await other.getByLabel('研究问题', { exact: true }).fill('其他标签页已保存的问题');
   await other.getByRole('button', { name: '保存研究种子', exact: true }).click();
   await expect(page.locator('.lab-seed')).toContainText('其他标签页已保存的问题');

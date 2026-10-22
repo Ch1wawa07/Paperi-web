@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { LocalProjectRepository, STORAGE_KEY, emptySnapshot, type Project, type ProjectSnapshot } from '@/lib/projects';
 import { emptyExploration, isExploration, type Exploration } from '@/lib/exploration';
 import { isLibrary, type Library } from '@/lib/literature';
+import { isWorkbench, type Workbench } from '@/lib/workbench';
 import { emptyNavigation } from '@/lib/research-navigation';
 
 const repository = new LocalProjectRepository();
@@ -16,6 +17,7 @@ type ProjectActions = {
   select: (id: string) => Promise<boolean>;
   remove: (id: string) => Promise<boolean>;
   saveExploration: (id: string, expectedRevision: number, exploration: Exploration) => Promise<boolean>;
+  saveWorkbench: (id: string, expectedRevision: number, workbench: Workbench) => Promise<boolean>;
   saveLibrary: (id: string, expectedRevision: number, library: Library) => Promise<boolean>;
 };
 const Context = createContext<ProjectActions | null>(null);
@@ -56,6 +58,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
   const actions: ProjectActions = {
     snapshot, ready, busy, error, feedback, reload,
+    saveWorkbench: (id, expectedRevision, workbench) => commit(s => {
+      const project=s.projects.find(p=>p.id===id);
+      if(!project||(project.workbench?.revision??0)!==expectedRevision)throw new Error('研究工作台已在其他页面更新，请重新读取后再保存。你的编辑尚未覆盖原有内容。');
+      const next={...workbench,revision:expectedRevision+1};
+      if(!isWorkbench(next))throw new Error('工作台内容不完整或超过容量，原有内容未被覆盖。');
+      return {...s,projects:s.projects.map(p=>p.id===id?{...p,workbench:next,updatedAt:new Date().toISOString()}:p)};
+    }, '研究工作台已保存。'),
     saveLibrary: (id, expectedRevision, library) => commit(s => {
       const project = s.projects.find(p => p.id === id);
       if (!project) throw new Error('这个研究项目已经不存在，请重新读取后选择项目。');

@@ -1,3 +1,4 @@
+import { isWorkbench, type Workbench } from './workbench';
 import { isExploration, type Exploration } from './exploration';
 import { isLibrary, type Library } from './literature';
 
@@ -11,6 +12,7 @@ export type Project = {
   updatedAt: string;
   exploration?: Exploration;
   library?: Library;
+  workbench?: Workbench;
 };
 
 export type ProjectSnapshot = {
@@ -44,7 +46,8 @@ function parseSnapshot(raw: string | null): ProjectSnapshot {
           !validText(p.name, 80) || !p.name.trim() || !validText(p.discipline, 60) ||
           !validText(p.observation, 2000) || p.status !== 'starting' || !validDate(p.createdAt) || !validDate(p.updatedAt) ||
           (p.exploration !== undefined && !isExploration(p.exploration)) ||
-          (p.library !== undefined && !isLibrary(p.library))) throw new Error();
+          (p.library !== undefined && !isLibrary(p.library)) ||
+          (p.workbench !== undefined && !isWorkbench(p.workbench))) throw new Error();
       ids.add(p.id);
     }
     if (s.activeId !== null && (typeof s.activeId !== 'string' || !ids.has(s.activeId))) throw new Error();

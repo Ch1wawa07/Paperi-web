@@ -1,3 +1,2 @@
-import { ModulePage } from '@/components/module-page';
-export const metadata = { title: '文献星图' };
-export default function Page() { return <ModulePage module="map"/>; }
+import { ResearchMap } from '@/components/research-map';
+export default async function Page({searchParams}:{searchParams:Promise<{view?:string}>}) {const {view}=await searchParams;return <ResearchMap initialMode={view==='context'?'context':'citations'}/>;}

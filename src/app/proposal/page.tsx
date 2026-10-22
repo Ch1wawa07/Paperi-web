@@ -1,3 +1,2 @@
-import { ModulePage } from '@/components/module-page';
-export const metadata = { title: '研究方案' };
-export default function Page() { return <ModulePage module="proposal"/>; }
+import { DesignCanvas } from '@/components/design-canvas';
+export default function Page() { return <DesignCanvas proposal/>; }

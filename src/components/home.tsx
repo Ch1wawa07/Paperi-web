@@ -11,7 +11,7 @@ import { EmptyState, Icon, LoadingState } from './ui';
 import { GlassBloom } from './glass-art';
 
 type Modal = { mode: 'create' | 'rename' | 'delete'; project?: Project };
-const journeyCopy = ['理解现象，探索概念', '用真实文献验证', '沿引用继续发现 · 待接入', '衔接定量或质化 · 待接入', '整理自己的方案 · 待接入'];
+const journeyCopy = ['理解现象，探索概念', '用真实文献验证', '沿引用继续发现', '衔接定量或质化', '整理自己的方案'];
 
 export function Home() {
   const [observation, setObservation] = useState('');

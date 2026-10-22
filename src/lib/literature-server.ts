@@ -25,7 +25,7 @@ export function parseSearch(params: URLSearchParams): SearchOptions {
   return { query, provider: provider as SearchOptions['provider'], sort: sort as SearchOptions['sort'], yearFrom: from, yearTo: to,
     page, journalsOnly: params.get('journalsOnly') !== 'false', doiOnly: params.get('doiOnly') !== 'false', coreOnly: params.get('coreOnly') !== 'false' };
 }
-async function fetchJSON(url: URL, signal: AbortSignal): Promise<unknown> {
+export async function fetchJSON(url: URL, signal: AbortSignal): Promise<unknown> {
   let response: Response;
   try { response = await fetch(url, { redirect: 'error', cache: 'no-store', signal: AbortSignal.any([signal, AbortSignal.timeout(16_000)]), headers: { Accept: 'application/json', 'User-Agent': 'Paperi/0.1 (research metadata discovery)' } }); }
   catch { throw new MetadataError(502, '文献数据源连接中断或超时，请检查网络后重试。没有用示例论文代替结果。'); }
@@ -80,7 +80,7 @@ async function searchOpenAlex(o: SearchOptions, signal: AbortSignal): Promise<Se
   return result(o,'openalex',data.results,Number(data.meta.count),mapOpenAlex,o.coreOnly ? ['已限定 OpenAlex 标记的 CWTS 核心来源，按照当前选择的排序展示；这是一项来源筛选依据，不保证单篇论文质量。'] : []);
 }
 async function searchCrossref(o: SearchOptions, signal: AbortSignal, notices: string[] = []): Promise<SearchResults> {
-  if (o.coreOnly) throw new MetadataError(503,'Crossref 不提供 CWTS 核心来源标记。为保留你的来源要求，本次没有放宽筛选；请重试 OpenAlex，或主动取消「仅 CWTS 核心来源」后检索。');
+  if(o.coreOnly){notices.push('Crossref 不支持 CWTS 来源筛选，已为你关闭。');o={...o,coreOnly:false};}
   const url = new URL('https://api.crossref.org/works');
   url.searchParams.set('query.bibliographic',o.query); url.searchParams.set('rows',String(pageSize)); url.searchParams.set('offset',String((o.page-1)*pageSize));
   const filters = [];

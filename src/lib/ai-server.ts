@@ -99,14 +99,14 @@ design 设计衔接：只梳理用户已确认的问题、概念、文献与尚�
 directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。concepts最多4项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
 
 
-async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800): Promise<unknown> {
+export async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800): Promise<unknown> {
   const config = configuration();
   const release = reserve();
   try {
     const response = await fetch(config.url, {
       method: 'POST', redirect: 'error', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.key}` },
-      signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(maxTokens>1800?60_000:30_000)]),
       body: JSON.stringify({ model: config.model, max_tokens: maxTokens, response_format: { type: 'json_object' }, messages: [
         { role: 'system', content: system }, ...messages,
       ] }),

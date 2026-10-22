@@ -10,6 +10,14 @@ globalThis.fetch=async function(input,init){
   if(query.includes('fixture-rate'))return Response.json({error:'test rate limit'},{status:429});
   if(query.includes('fixture-malformed'))return Response.json({unexpected:true});
   if(query.includes('fixture-fallback')&&u.hostname==='api.openalex.org')return Response.json({error:'test auth required'},{status:401});
+  if(u.hostname==='api.openalex.org' && !u.searchParams.has('search')){
+    const center={...records.openalex,referenced_works:['https://openalex.org/W9999999911']};
+    const ref={...records.openalex,id:'https://openalex.org/W9999999911',doi:'https://doi.org/10.5555/reference-fixture',display_name:'Reference fixture',referenced_works:[]};
+    const citing={...records.openalex,id:'https://openalex.org/W9999999912',doi:'https://doi.org/10.5555/citing-fixture',display_name:'Citing fixture',referenced_works:[center.id]};
+    if(u.pathname.includes('/works/'))return Response.json(center);
+    if(u.searchParams.get('filter')?.startsWith('cites:'))return Response.json({results:[citing,{...ref,id:'https://openalex.org/W9999999913',referenced_works:[]}]});
+    if(u.searchParams.get('filter')?.startsWith('openalex_id:'))return Response.json({results:[ref]});
+  }
   if(u.pathname.startsWith('/works/')){
     const doi=decodeURIComponent(u.pathname.slice('/works/'.length)).toLowerCase();
     if(doi.includes('missing'))return Response.json({error:'test not found'},{status:404});
