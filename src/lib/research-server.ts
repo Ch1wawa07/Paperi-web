@@ -72,10 +72,10 @@ export async function researchRequest(v: unknown, signal: AbortSignal) {
     if (!evidence.length) throw new AIError(400, "没有可评估的真实记录。");
     const r = await requestStructured(
       safety +
-        ' 逐篇审查相关性，不能把高被引、DOI、期刊声誉当作相关性。必须对全部id给出一条。direct需要与当前主题、对象、机制直接相关；background为理论定义/方法背景；unrelated为领域或含义不相干；insufficient为信息不足。摘要缺失时保守评估，不能推断方法结论。机械工程中的reverse、医学中的reactance等不能因词面相同称为高相关。basis只引用题名/摘要中确有的短原文，不得编造。JSON: {"assessments":[{"id":"原id","level":"direct|background|unrelated|insufficient","reason":"匹配或不匹配的理由，50字以内","use":"直接研究/理论背景/概念定义/研究方法/不推荐/待核实","basis":"支持判断的原文片段","limitation":"信息限制，40字以内"}]}。',
+        ' 逐篇审查相关性，不能把高被引、DOI、期刊声誉当作相关性。必须对全部id给出一条。direct需要与当前主题、对象、机制直接相关；background为理论定义/方法背景；unrelated为领域或含义不相干；insufficient为信息不足。摘要缺失时保守评估，不能推断方法结论。机械工程中的reverse、医学中的reactance等不能因词面相同称为高相关。basis只引用题名/摘要中确有的短原文，最多120字符，不得编造。每篇理由与限制分别不超过40字。JSON: {"assessments":[{"id":"原id","level":"direct|background|unrelated|insufficient","reason":"匹配或不匹配的理由，50字以内","use":"直接研究/理论背景/概念定义/研究方法/不推荐/待核实","basis":"支持判断的原文片段","limitation":"信息限制，40字以内"}]}。',
       [{ role: "user", content: JSON.stringify({ context, query }) }],
       signal,
-      3500,
+      5000,
     );
     if (
       !isRecord(r) ||

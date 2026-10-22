@@ -20,7 +20,7 @@ export function Literature({initialQuery,requestProject,fromConcepts=false}:{ini
   return <div className="module-page module-literature"><WorkspaceToolbar title="文献探索" project={project}/>{!ready?error?<p>{error}</p>:<LoadingState/>:<BoundLiterature project={project} initialQuery={initialQuery} requestProject={requestProject} fromConcepts={fromConcepts}/>}</div>;
 }
 function BoundLiterature({project,initialQuery,requestProject,fromConcepts}:{project?:Project;initialQuery?:string;requestProject?:string;fromConcepts:boolean}){
- const [binding]=useState(project?.id??'browse');const matches=(requestProject??binding)===(project?.id??'browse');
+ const id=project?.id??'browse';const [binding]=useState(id);const [entry,setEntry]=useState({id,consumed:false});if(entry.id!==id)setEntry({id,consumed:true});const matches=!entry.consumed&&(requestProject??binding)===id;
  return <LiteratureWorkspace key={project?.id??'browse'} project={project} initialQuery={matches?initialQuery:undefined} fromConcepts={matches&&fromConcepts}/>;
 }
 

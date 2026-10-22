@@ -47,6 +47,7 @@ function Designer({
   const w = p.workbench ?? emptyWorkbench();
   const [draft, setDraft] = useState<Design>(w.design),
     [revision, setRevision] = useState(w.revision),
+    [baseline,setBaseline]=useState(JSON.stringify(w.design)),
     [selected, setSelected] = useState<string | null>(null),
     [pending, setPending] = useState(false),
     [suggestion, setSuggestion] = useState<Design | null>(null),
@@ -102,6 +103,7 @@ function Designer({
     ...w.designSources.map((paper) => ({ id: paper.key, paper })),
   ];
   function change(next: Design) {
+    if(!dirty&&baseline!==JSON.stringify(w.design)){setError("设计已在其他页面更新，请先读取已保存版本再编辑。");return;}
     if (!dirty) setRevision(w.revision);
     setDraft(next);
     setDirty(true);
@@ -117,9 +119,11 @@ function Designer({
   }
   async function save() {
     setError("");
-    const expected = dirty ? revision : w.revision;
+    if(!dirty)return;
+    const expected = revision;
     if (await saveWorkbench(p.id, expected, { ...w, design: draft })) {
       setRevision(expected + 1);
+      setBaseline(JSON.stringify(draft));
       setDirty(false);
     } else setError("设计尚未保存，编辑仍保留。请核对上方存储提示。");
   }
@@ -235,9 +239,10 @@ function Designer({
         >
           添加节点
         </button>
+        <button className="text-button" disabled={!draft.nodes.length} onClick={()=>change({...draft,nodes:draft.nodes.map((n,i)=>({...n,x:40+(i%3)*270,y:50+Math.floor(i/3)*180}))})}>整理节点布局</button>
         <button
           className="button primary"
-          disabled={busy}
+          disabled={busy || !dirty}
           onClick={() => void save()}
         >
           保存研究设计
@@ -257,13 +262,14 @@ function Designer({
           {error}
         </p>
       )}
-      {dirty && revision !== w.revision && (
+      {((dirty && revision !== w.revision)||(!dirty&&baseline!==JSON.stringify(w.design))) && (
         <p className="source-notice">
           项目资料已更新。当前编辑保留；可先复制节点内容，再
           <button
             onClick={() => {
               if (confirm("放弃未保存设计编辑，读取已保存内容？")) {
                 setDraft(w.design);
+                setBaseline(JSON.stringify(w.design));
                 setRevision(w.revision);
                 setDirty(false);
               }

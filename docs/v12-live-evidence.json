@@ -1,0 +1,2446 @@
+{
+  "date": "2026-10-22",
+  "scope": "真实 DeepSeek/OpenAlex 调用；示例研究情境，无测试夹具替代。保留开发中失败与人工重试记录。",
+  "api": [
+    {
+      "path": "/api/lab",
+      "query": "",
+      "status": 200,
+      "data": {
+        "reply": "你观察到的是一个挺有意思的落差：一边是品牌在想办法让 AI「主动提到自己」（GEO，生成引擎优化），另一边是消费者可能把 AI 的回答当成中立的技术结论来接收。先把这件事拆成几块看清楚。\n\n对象：品牌方（做优化的人）、生成式 AI 产品（输出推荐的一方）、消费者（读回答并做决定的人）。\n行为：品牌投放内容→AI 抓取/引用→输出推荐→消费者判断是否相信。\n矛盾：AI 回答常被感知为「没有广告位、比较客观」，但内容来源其实可能被商业力量安排过；而消费者即使隐约知道，也未必会降低信任。\n未知：「相信」到底是采纳建议、减少自己再搜索，还是愿意下单？消费者有没有可能识别商业影响？识别之后信任会不会变，还是反而因为「省事」照旧？\n\n几个想请你补充的：\n1）你设想的场景是哪种？比如有明确购买需求时去问 AI，还是随口闲聊被推荐？两种的信任逻辑可能不一样。\n2）「相信」你更在意哪一层：觉得信息真实、觉得适合自己的需要、还是直接照做？\n3）有没有一个具体的例子或经历让你觉得这个矛盾真实存在？\n4）你更想站在消费者一侧看，还是品牌与平台一侧？\n\n下面几个概念只是候选，帮你区分日常说法与学术说法，不是定义，也没经过文献核验，你可以直接否掉或改。",
+        "guide": {
+          "stage": "phenomenon",
+          "understanding": "现象可拆为一条链条：品牌为被生成式 AI 引用而优化内容（GEO）→AI 输出推荐→消费者形成信任并可能据此行动。目前含三个待理清的点：（1）信任的层次不清，可能指信息真实性判断、需求匹配感、行动倾向三者之一或混合；（2）消费者对「推荐背后存在商业影响」的觉察程度未知，且 AI 回答通常不像广告有明确标识；（3）觉察与信任的关系不明，可能降低信任，也可能因便利而无关。此外尚未限定具体使用场景（有明确购买意图 vs 无意图浏览）、AI 产品类型与消费者群体，这些都会改变现象形态。下一步优先把「相信」落实成可观察的行为或判断，并找到一个具体发生过的例子。",
+          "concepts": [
+            {
+              "term": "生成引擎优化（GEO）",
+              "explanation": "品牌为了让自己的内容更容易被生成式 AI 在回答里引用、提到或列入推荐，而对内容结构、来源分布等做的调整。可以理解为「面向 AI 回答的优化」。",
+              "everyday": "日常说的 SEO 是争搜索结果排名，用户点进网页；GEO 争的是被 AI 直接说出来的那几句，用户可能不点任何链接。",
+              "uncertainty": "这是较新的行业术语，定义和做法都还没有统一说法，实践中是否稳定存在、规模多大，都需要你自己先观察核实。"
+            },
+            {
+              "term": "说服知识（persuasion knowledge）",
+              "explanation": "消费者研究里用来描述「我看出你是在说服我」这种觉察，以及觉察后采取的应对（打折看待、抗拒、跳过）。大致对应你说的「是否意识到商业影响」。",
+              "everyday": "日常说「我知道这是广告」；学术上更强调觉察是否被激活、激活的时机与后果，而不只是知道。",
+              "uncertainty": "AI 推荐是否会触发这种觉察、以什么线索触发，目前不能想当然。此处为概念性说明，具体定义与测量需查文献确认。"
+            },
+            {
+              "term": "算法信任与建议采纳",
+              "explanation": "指人对机器给出的建议赋予多大可信度、在多大程度上照此行动。可用来刻画「为什么相信 AI 推荐」这一侧。",
+              "everyday": "日常说「AI 说的应该比较客观」；研究上要把对系统的信任、对内容的信任、对品牌的信任分开看。",
+              "uncertainty": "三者容易混在一起，需明确你关注哪一层；且信任与实际采纳行为未必一致。"
+            },
+            {
+              "term": "商业披露识别",
+              "explanation": "指用户是否注意到内容带有商业来源或赞助标识，以及注意到之后怎么处理。可用来刻画「是否意识到商业影响」这一侧。",
+              "everyday": "日常指看到「广告」「赞助」标签；AI 回答里往往没有这类标签，识别线索更隐蔽。",
+              "uncertainty": "在生成式回答场景下，什么算有效披露、如何测量识别，都还没有成熟答案，属于需要验证的部分。"
+            }
+          ],
+          "keywords": {
+            "zh": [],
+            "en": []
+          },
+          "threads": []
+        },
+        "directions": []
+      }
+    },
+    {
+      "path": "/api/research",
+      "query": "",
+      "task": "keywords",
+      "status": 200,
+      "data": {
+        "zh": [
+          "生成引擎优化 消费者 说服知识 信任",
+          "AI推荐 算法信任 建议采纳 商业披露",
+          "消费者 识别商业影响 AI建议 信任"
+        ],
+        "en": [
+          "generative engine optimization consumer persuasion knowledge trust",
+          "algorithmic trust advice adoption AI recommendation disclosure",
+          "consumer awareness commercial influence AI recommendation trust"
+        ]
+      }
+    },
+    {
+      "path": "/api/literature",
+      "query": "?query=generative+engine+optimization+consumer+persuasion+knowledge+trust&provider=auto&sort=relevance&yearFrom=&yearTo=&journalsOnly=false&doiOnly=false&coreOnly=false&page=1",
+      "status": 200,
+      "data": {
+        "query": "generative engine optimization consumer persuasion knowledge trust",
+        "provider": "openalex",
+        "items": [
+          {
+            "key": "openalex:https://openalex.org/W7164453734",
+            "title": "Responsible Generative Engine Optimization: Optimizing LLM Rankings via Trustworthy Text Generation",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W7164453734",
+            "authors": [
+              "Tianle Huang",
+              "Xusen Cheng",
+              "Ang Zeng"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Journal of the Association for Information Systems",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Generative AI (GenAI) search engines are changing digital marketing by giving users direct answers and reducing traffic to original content sources. In response, generative engine optimization (GEO) has emerged to restore brand visibility. However, most existing GEO methods rely on adversarial changes that can lower content quality and increase consumer skepticism. To address this limitation, this study proposes a responsible GEO framework grounded in persuasion knowledge model (PKM) theory. We model GEO as a constrained optimization problem and use Langevin dynamics to generate text perturbations that improve ranking while reducing perceptions of manipulative intent. To preserve content quality and factual consistency, the framework combines evidence-based initialization, multi-objective energy optimization, and gradient masking. This approach offers a human-centered and theory-driven way to improve brand visibility in GenAI search without weakening user trust.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://aisel.aisnet.org/cgi/viewcontent.cgi?article=1141&context=amcis2026",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7164453734",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.2139/ssrn.7117338",
+            "title": "E-GEO: A Testbed for Generative Engine Optimization in E-Commerce",
+            "doi": "10.2139/ssrn.7117338",
+            "openAlexId": "https://openalex.org/W4416779147",
+            "authors": [
+              "Puneet S. Bagga",
+              "Vivek F. Farias",
+              "Tamar Korkotashvili",
+              "Tianyi Peng",
+              "Yuhang Wu"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "SSRN Electronic Journal",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 1,
+            "retracted": false,
+            "oaUrl": "https://doi.org/10.2139/ssrn.7117338",
+            "landingUrl": "https://doi.org/10.2139/ssrn.7117338",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4416779147",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.3390/jtaer20020093",
+            "title": "Consumer Responses to Generative AI Chatbots Versus Search Engines for Product Evaluation",
+            "doi": "10.3390/jtaer20020093",
+            "openAlexId": "https://openalex.org/W4410081533",
+            "authors": [
+              "Soyoung Kim",
+              "Randi Lynn Priluck"
+            ],
+            "authorsTruncated": false,
+            "year": 2025,
+            "venue": "Journal of theoretical and applied electronic commerce research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "This research examines differences in consumer responses to large language model AI chatbots versus search engines when reviewing and evaluating product information in the information search stage of the purchase decision process. Building on the mere exposure effect, the consumer–brand relationships literature, and consumer decision-making research, this research investigates consumer search preferences and self-disclosure willingness along with a psychological mechanism. We conducted an experiment comparing two types of product search tools and tested a moderated mediation using Process Model 15. The findings suggest that consumers prefer search engines over AI chatbots and are more willing to self-disclose their personal information to search engines (vs. AI chatbots) due to perceived familiarity. However, we find that the quality of consumers’ relationship with the source of information moderates this effect. Further, we show that consumers evaluate AI chatbot-based results as less biased than traditional search engine results. Contrary to previous research that has mainly focused on AI chatbots’ functional aspects in consumer adoption, the current research emphasizes the psychological and relational aspects of product search perception and preference. In this way, we offer novel insights into a purchase decision-making process and consumer engagement as consumers adopt AI chatbot technology for product search.",
+            "abstractTruncated": false,
+            "citations": 18,
+            "retracted": false,
+            "oaUrl": "https://www.mdpi.com/0718-1876/20/2/93/pdf?version=1746454955",
+            "landingUrl": "https://doi.org/10.3390/jtaer20020093",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4410081533",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.48550/arxiv.2605.21948",
+            "title": "SCI-Defense: Defending Manipulation Attacks from Generative Engine Optimization",
+            "doi": "10.48550/arxiv.2605.21948",
+            "openAlexId": "https://openalex.org/W7162076847",
+            "authors": [
+              "Xucheng Yu",
+              "Haibo Jin",
+              "Huimin Zeng",
+              "Haohan Wang"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "arXiv (Cornell University)",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": "LLM-based ranking systems are vulnerable to Generative Engine Optimization (GEO) attacks, where adversaries inject semantic signals into product descriptions to artificially boost rankings. We propose SCI-Defense, a three-component defense framework combining Perplexity detection (PPL), Semantic Integrity Scoring (SIS), and Inter-Candidate Detection (ICD). SIS evaluates four manipulation dimensions: Authority Attribution (AA), Narrative Purposiveness (NP), Comparative Claims (CA), and Temporal Claims (TC). Evaluated on 600 Amazon product descriptions across 6 categories, SCI-Defense achieves Precision=1.000 and FPR=0.000, with Recall of 1.000, 0.952, and 0.830 against String, Reasoning, and Review attacks respectively. On 600 MS MARCO web passages, String attacks are blocked with perfect recall while Review attacks yield near-zero recall, as web passages lack the persuasion-oriented signals that SIS targets in product descriptions. We demonstrate that existing defenses -- PPL-only filters, SafetyClf content classifiers, and paraphrasing -- achieve zero recall against semantic manipulation attacks. We further demonstrate new attacks such as Specification Amplification and Use-Case Saturation can expose semantic relevance manipulation as a structural defense blind spot that suggests directions for future research.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://arxiv.org/pdf/2605.21948",
+            "landingUrl": "https://arxiv.org/abs/2605.21948",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7162076847",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.1002/pra2.1021",
+            "title": "Generative AI Search Engines as Arbiters of Public Knowledge: An Audit of Bias and Authority",
+            "doi": "10.1002/pra2.1021",
+            "openAlexId": "https://openalex.org/W4403433286",
+            "authors": [
+              "Alice Li",
+              "Luanne S. Sinnamon"
+            ],
+            "authorsTruncated": false,
+            "year": 2024,
+            "venue": "Proceedings of the Association for Information Science and Technology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "ABSTRACT This paper reports on an audit study of generative AI systems (ChatGPT, Bing Chat, and Perplexity), which investigates how these new search engines construct responses and establish authority for topics of public importance. We collected system responses using a set of 48 authentic queries for 4 topics over 7 days, and analyzed the data using sentiment analysis, inductive coding, and source classification. Results provide an overview of the nature of system responses across these systems, and provide evidence of sentiment bias based on the queries and topics, and commercial and geographic biases in sources. The quality of sources used to support claims is uneven, relying heavily on News and Media, Business and Digital Media websites. Implications for system users emphasize the need to critically examine Generative AI system outputs when making decisions related to public interest and personal well‐being.",
+            "abstractTruncated": false,
+            "citations": 11,
+            "retracted": false,
+            "oaUrl": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/pra2.1021",
+            "landingUrl": "https://doi.org/10.1002/pra2.1021",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4403433286",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.70269/10.70269/7348479369",
+            "title": "From Seo To Answer Engine Optimization (aeo): Generative Ai and the Transformation of Search Visibility",
+            "doi": "10.70269/10.70269/7348479369",
+            "openAlexId": "https://openalex.org/W7117889499",
+            "authors": [
+              "HİDAYET KARAMUK"
+            ],
+            "authorsTruncated": false,
+            "year": 2025,
+            "venue": "Bidge Yayınları eBooks",
+            "sourceIsCore": false,
+            "kind": "book-chapter",
+            "abstract": "This book chapter examines the transformation of search visibility from traditional Search Engine Optimization (SEO) to Answer Engine Optimization (AEO) in the context of generative artificial intelligence and large language models. As AI-driven search engines increasingly provide direct, synthesized answers rather than ranked links, the logic of digital visibility, content production, and brand discoverability is undergoing a fundamental shift. The chapter conceptually analyzes how generative AI reshapes information retrieval, user search behavior, and the criteria through which content gains prominence in answer-based search environments. Building on this transformation, the study discusses the limitations of keyword-centered SEO practices and highlights the growing importance of semantic relevance, user intent, structured data, topical authority, and trust signals in AI-mediated search ecosystems. The chapter further explores how brands and content creators must adapt their digital marketing strategies to align with answer engines that prioritize contextual understanding, credibility, and usefulness over traditional ranking metrics. By integrating insights from digital marketing, information systems, and AI studies, this chapter offers a comprehensive framework for understanding AEO as an emerging paradigm of search visibility. The study aims to contribute to the academic literature while providing strategic implications for marketers navigating AI-driven search environments.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://avesis.kocaeli.edu.tr/publication/details/d484d872-4228-4b17-b048-56365f8c55bf/oai/document.pdf",
+            "landingUrl": "https://doi.org/10.70269/10.70269/7348479369",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7117889499",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.48550/arxiv.2606.12439",
+            "title": "Position: Generative Engine Optimization Creates Underexamined Risks, Governance Must Target Concentration, Disclosure, and Academic Blind Spots",
+            "doi": "10.48550/arxiv.2606.12439",
+            "openAlexId": "https://openalex.org/W7164585760",
+            "authors": [
+              "Yizhu Wen",
+              "Nan Zhang",
+              "Haohan Yuan",
+              "Xun Chen",
+              "Haopeng Zhang",
+              "H. Guo"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "arXiv (Cornell University)",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": "Large language model (LLM) answer engines are increasingly used for information seeking, shifting visibility from ranked lists to synthesized answers. This enables Generative Engine Optimization (GEO), which targets LLM answer engines' evidence pool and generation. We analyze the search engine optimization (SEO) to GEO transition to identify two risks: (i) concentrated influence from low contestability and system sensitivity, and (ii) undisclosed commercial influence embedded in evidence and reasoning. We then formalize a general GEO pipeline to locate where optimization acts and compare academic and industry practices, revealing a third risk: (iii) academic-industry blind spots driven by visibility and evaluation asymmetries between offline setups and deployed systems. This position argues the need for answer-level governance and measurement: stronger contestability, high-precision disclosure, black-box auditing of material influence, and deployment-aligned metrics for exposure persistence.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://arxiv.org/pdf/2606.12439",
+            "landingUrl": "https://arxiv.org/abs/2606.12439",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7164585760",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.48550/arxiv.2405.14034",
+            "title": "Generative AI Search Engines as Arbiters of Public Knowledge: An Audit of Bias and Authority",
+            "doi": "10.48550/arxiv.2405.14034",
+            "openAlexId": "https://openalex.org/W4398796468",
+            "authors": [
+              "Alice Li",
+              "Luanne S. Sinnamon"
+            ],
+            "authorsTruncated": false,
+            "year": 2024,
+            "venue": "arXiv (Cornell University)",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": "This paper reports on an audit study of generative AI systems (ChatGPT, Bing Chat, and Perplexity) which investigates how these new search engines construct responses and establish authority for topics of public importance. We collected system responses using a set of 48 authentic queries for 4 topics over a 7-day period and analyzed the data using sentiment analysis, inductive coding and source classification. Results provide an overview of the nature of system responses across these systems and provide evidence of sentiment bias based on the queries and topics, and commercial and geographic bias in sources. The quality of sources used to support claims is uneven, relying heavily on News and Media, Business and Digital Media websites. Implications for system users emphasize the need to critically examine Generative AI system outputs when making decisions related to public interest and personal well-being.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://arxiv.org/pdf/2405.14034",
+            "landingUrl": "http://arxiv.org/abs/2405.14034",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4398796468",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "doi:10.1007/s12599-023-00834-7",
+            "title": "Generative AI",
+            "doi": "10.1007/s12599-023-00834-7",
+            "openAlexId": "https://openalex.org/W4386693657",
+            "authors": [
+              "Stefan Feuerriegel",
+              "Jochen Hartmann",
+              "Christian Janiesch",
+              "Patrick Zschech"
+            ],
+            "authorsTruncated": false,
+            "year": 2023,
+            "venue": "Business & Information Systems Engineering",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Tom Freston is credited with saying “Innovation is taking two things that exist and putting them together in a new way”. For a long time in history, it has been the prevailing assumption that artistic, creative tasks such as writing poems, creating software, designing fashion, and composing songs could only be performed by humans. This assumption has changed drastically with recent advances in artificial intelligence (AI) that can generate new content in ways that cannot be distinguished anymore from human craftsmanship.",
+            "abstractTruncated": false,
+            "citations": 1459,
+            "retracted": false,
+            "oaUrl": "https://link.springer.com/content/pdf/10.1007/s12599-023-00834-7.pdf",
+            "landingUrl": "https://doi.org/10.1007/s12599-023-00834-7",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4386693657",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W7141781517",
+            "title": "The influence of generative AI on consumer perceptions and decision-making: a study on personalization, trust and ethical implications",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W7141781517",
+            "authors": [
+              "Davide Camaioni"
+            ],
+            "authorsTruncated": false,
+            "year": null,
+            "venue": "AMS Degree Thesis (University of Bologna)",
+            "sourceIsCore": false,
+            "kind": "other",
+            "abstract": "The rapid diffusion of generative artificial intelligence is transforming how firms design, personalize and deliver marketing communication. While artificial intelligence (AI) promises improvements in efficiency, engagement and targeting accuracy, its impact on consumer perceptions and behavioural outcomes remains theoretically and empirically debated. This thesis investigates the influence of generative AI on marketing effectiveness, trust, authenticity, with a specific focus on email communication, besides ethical evaluations. Integrating performance metrics with consumer psychology, the study examines whether AI-driven content and humanization cues influence perceived humanness and trust, and whether these perceptions translate into behavioural intentions. A between-subjects experimental design was implemented to test the effects of typographical imperfections and non-rounded send-time cues in promotional emails. The findings indicate that forced humanization does not significantly enhance perceived authenticity or trust, while timing precision exerts no measurable effect. Moreover, the results reveal a divergence between click intention and purchase intention, suggesting that improvements in engagement do not automatically translate into downstream conversion-related intentions. By linking AI effectiveness to perceptual mechanisms and ethical considerations, this thesis contributes to a more nuanced understanding of generative AI in marketing and highlights the importance of balancing automation, transparency and consumer trust in AI-mediated communication strategies.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://amslaurea.unibo.it/id/eprint/38299/1/Davide%20Camaioni%20-%20The%20Influence%20Of%20Generative%20AI%20On%20Consumer%20Perceptions%20And%20Decision-Making%20A%20Study%20On%20Personalization%2C%20Trust%20And%20Ethical%20Implications.pdf",
+            "landingUrl": "https://amslaurea.unibo.it/view/cds/CDS5891/%3E",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7141781517",
+            "retrievedAt": "2026-10-22T09:03:50.988Z"
+          }
+        ],
+        "total": 925,
+        "page": 1,
+        "pageSize": 10,
+        "notices": [],
+        "cached": false,
+        "hasMore": true
+      }
+    },
+    {
+      "path": "/api/research",
+      "query": "",
+      "task": "assess",
+      "status": 200,
+      "data": {
+        "assessments": [
+          {
+            "id": "openalex:https://openalex.org/W7164453734",
+            "level": "direct",
+            "reason": "直接结合GEO、说服知识模型与用户信任/操纵感知",
+            "use": "直接研究",
+            "basis": "grounded in persuasion knowledge model (PKM) theory",
+            "limitation": "方法论文，未见消费者实证"
+          },
+          {
+            "id": "doi:10.2139/ssrn.7117338",
+            "level": "insufficient",
+            "reason": "仅题名显示电商GEO测试床，无摘要无法判断信任机制",
+            "use": "待核实",
+            "basis": "E-GEO: A Testbed for Generative Engine Optimization in E-Commerce",
+            "limitation": "摘要缺失，无法核实对象与方法"
+          },
+          {
+            "id": "doi:10.3390/jtaer20020093",
+            "level": "direct",
+            "reason": "直接比较消费者对AI与搜索引擎产品信息的感知偏差",
+            "use": "直接研究",
+            "basis": "evaluate AI chatbot-based results as less biased than traditional search engine results",
+            "limitation": "未涉及GEO商业影响与说服知识"
+          },
+          {
+            "id": "doi:10.48550/arxiv.2605.21948",
+            "level": "background",
+            "reason": "聚焦GEO操纵检测，非消费者信任或说服知识",
+            "use": "方法背景",
+            "basis": "adversaries inject semantic signals into product descriptions to artificially boost rankings",
+            "limitation": "产品描述攻击场景，未测消费者反应"
+          },
+          {
+            "id": "doi:10.1002/pra2.1021",
+            "level": "background",
+            "reason": "审计AI搜索来源商业偏差，未涉及消费者信任机制",
+            "use": "理论背景",
+            "basis": "commercial and geographic biases in sources",
+            "limitation": "公共议题审计，非推荐信任实验"
+          },
+          {
+            "id": "doi:10.70269/10.70269/7348479369",
+            "level": "background",
+            "reason": "概念梳理SEO到AEO的可见性逻辑，非消费者反应",
+            "use": "理论背景",
+            "basis": "From SEO to Answer Engine Optimization (AEO)",
+            "limitation": "概念章节，无消费者实证"
+          },
+          {
+            "id": "doi:10.48550/arxiv.2606.12439",
+            "level": "direct",
+            "reason": "直接分析GEO未披露商业影响及披露治理",
+            "use": "概念定义/理论框架",
+            "basis": "undisclosed commercial influence embedded in evidence and reasoning",
+            "limitation": "立场论文，无消费者信任实证"
+          },
+          {
+            "id": "doi:10.48550/arxiv.2405.14034",
+            "level": "insufficient",
+            "reason": "与W4403433286同文，审计AI搜索商业偏差",
+            "use": "理论背景",
+            "basis": "AI 未提供可在题名/摘要中核对的原文片段。",
+            "limitation": "无法充分评估，请阅读原始来源。"
+          },
+          {
+            "id": "doi:10.1007/s12599-023-00834-7",
+            "level": "unrelated",
+            "reason": "泛论生成式AI创意能力，与GEO和消费者信任无关",
+            "use": "不推荐",
+            "basis": "can generate new content",
+            "limitation": "短评类，无相关机制"
+          },
+          {
+            "id": "openalex:https://openalex.org/W7141781517",
+            "level": "background",
+            "reason": "研究生成式AI营销内容的信任，非AI推荐或GEO",
+            "use": "理论背景",
+            "basis": "influence of generative AI on marketing effectiveness, trust, authenticity",
+            "limitation": "邮件情境，未涉及推荐与说服知识"
+          }
+        ]
+      }
+    },
+    {
+      "path": "/api/literature/graph",
+      "query": "?id=https%3A%2F%2Fopenalex.org%2FW7164453734",
+      "status": 200,
+      "data": {
+        "center": "openalex:https://openalex.org/W7164453734",
+        "papers": [
+          {
+            "key": "openalex:https://openalex.org/W7164453734",
+            "title": "Responsible Generative Engine Optimization: Optimizing LLM Rankings via Trustworthy Text Generation",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W7164453734",
+            "authors": [
+              "Tianle Huang",
+              "Xusen Cheng",
+              "Ang Zeng"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Journal of the Association for Information Systems",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Generative AI (GenAI) search engines are changing digital marketing by giving users direct answers and reducing traffic to original content sources. In response, generative engine optimization (GEO) has emerged to restore brand visibility. However, most existing GEO methods rely on adversarial changes that can lower content quality and increase consumer skepticism. To address this limitation, this study proposes a responsible GEO framework grounded in persuasion knowledge model (PKM) theory. We model GEO as a constrained optimization problem and use Langevin dynamics to generate text perturbations that improve ranking while reducing perceptions of manipulative intent. To preserve content quality and factual consistency, the framework combines evidence-based initialization, multi-objective energy optimization, and gradient masking. This approach offers a human-centered and theory-driven way to improve brand visibility in GenAI search without weakening user trust.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://aisel.aisnet.org/cgi/viewcontent.cgi?article=1141&context=amcis2026",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7164453734",
+            "retrievedAt": "2026-10-22T09:04:17.377Z"
+          }
+        ],
+        "edges": [],
+        "notices": [
+          "仅展开一层：最多10篇参考文献、10篇引用文献。箭头从引用方指向被引用方。缺失关系不代表不存在。"
+        ],
+        "retrievedAt": "2026-10-22T09:04:17.377Z"
+      }
+    },
+    {
+      "path": "/api/research",
+      "query": "",
+      "task": "context",
+      "status": 200,
+      "data": {
+        "threads": [
+          {
+            "title": "GEO 与说服知识的张力：优化可见性 vs 引发怀疑",
+            "kind": "主题",
+            "body": "给定资料指出，生成式引擎优化（GEO）旨在恢复品牌在生成式 AI 搜索中的可见度，但多数既有 GEO 方法依赖对抗性改写，可能降低内容质量、提高消费者的怀疑（skepticism）。这就构成你观察到的落差的文献侧表述：品牌争取被 AI「提到」，而消费者可能把回答当中立结论接收，一旦察觉操纵意图则信任受损。该文将「减少操纵意图感知」设为优化目标之一，说明商业影响的可感知性被当作关键变量。",
+            "evidenceIds": [
+              "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+            ],
+            "uncertainty": "仅一篇论文，且为其自述的问题背景，不能当作领域共识；消费者是否真的识别商业影响、识别后信任如何变化，摘要未提供实证数据。下一步需查该文全文及其引用的怀疑/说服知识实证研究。"
+          },
+          {
+            "title": "说服知识模型（PKM）作为解释信任的核心理论视角",
+            "kind": "理论",
+            "body": "该文明确以说服知识模型（PKM）为理论根基，构建「负责任的 GEO」框架：把 GEO 形式化为带约束的优化问题，在提升排名的同时降低操纵意图感知。对你关心的「消费者为什么会相信」而言，PKM 提供了一个可借用但尚待检验的解释路径——消费者动用说服知识识别说服意图，进而调整信任与态度。这与你列出的「说服知识」概念直接吻合，可作为理论入口。",
+            "evidenceIds": [
+              "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+            ],
+            "uncertainty": "摘要只说明该框架「grounded in PKM」，未给出具体的说服知识测量量表或操作化定义；不能据此宣称 PKM 已被验证适用于 AI 推荐场景。需核查原文的构念界定与测量方式。"
+          },
+          {
+            "title": "方法线索：约束优化 + Langevin 动力学生成文本扰动",
+            "kind": "方法",
+            "body": "在方法层面，该文把 GEO 建模为约束优化问题，用 Langevin 动力学生成文本扰动以提升排名，并结合证据初始化、多目标能量优化与梯度掩码来保持内容质量与事实一致性。这提示一种可能的交叉研究设计：把「品牌侧优化手段」作为自变量，把「消费者操纵意图感知/信任」作为因变量。但需注意，摘要呈现的是优化算法与效果目标，而非消费者实验。",
+            "evidenceIds": [
+              "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+            ],
+            "uncertainty": "摘要未说明是否包含用户实验、样本与测量工具；「减少操纵意图感知」是设计目标还是实证结果尚不清楚。若你要做消费者侧研究，需另找测量信任与说服知识的成熟量表并核实其适用性。"
+          },
+          {
+            "title": "候选交叉点：算法信任/建议采纳 与 说服知识",
+            "kind": "交叉点",
+            "body": "给定资料把两条线索接在一起：一条是品牌通过 GEO 争取 LLM 排名（技术/营销侧），一条是消费者对操纵意图的感知与信任维持（消费者心理侧），并用 PKM 桥接。你提出的「算法信任与建议采纳」可作为第二条腿，但该摘要并未讨论算法信任、采纳意愿或下单行为，只谈到 skepticism 与 user trust 的保持。因此交叉点目前只是待建构的假设，而非文献已确立的结论。",
+            "evidenceIds": [
+              "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+            ],
+            "uncertainty": "「信任」在该文中未区分信息真实性、个人适配性与直接照做等层次；算法信任与建议采纳的相关文献未在给定资料中出现，不可引用为支撑。建议检索后再确定构念边界。"
+          },
+          {
+            "title": "待查不足：消费者是否意识到商业影响、意识后行为如何",
+            "kind": "待查不足",
+            "body": "你的核心疑问——消费者是否意识到 AI 推荐背后的商业影响，以及意识之后信任是否改变——在给定资料中只以「降低操纵意图感知」这一优化目标的形式间接出现，缺少消费者侧的直接证据：谁在什么场景下察觉、察觉程度如何、信任与采纳是否随之下降或不变。该文立场偏向品牌与平台侧（帮助优化而不损害信任），消费者视角仍是空白。",
+            "evidenceIds": [
+              "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+            ],
+            "uncertainty": "不能据此宣称存在已被证实的研究空白，只能说在给定单篇摘要范围内未见相关实证。需系统检索 persuasion knowledge、AI 推荐信任、广告披露等文献后再判断空白是否成立。"
+          }
+        ]
+      }
+    },
+    {
+      "path": "/api/research",
+      "query": "",
+      "task": "design",
+      "status": 200,
+      "data": {
+        "design": {
+          "path": "quantitative",
+          "nodes": [
+            {
+              "id": "n1",
+              "kind": "研究问题",
+              "title": "GEO商业影响与AI推荐信任",
+              "body": "RQ候选1：品牌通过生成引擎优化（GEO）影响AI推荐时，消费者的说服知识如何被激活，并影响其对AI推荐的信任与采纳？",
+              "evidenceIds": [
+                "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+              ],
+              "uncertainty": "GEO效果与消费者反应待核实；该文为框架研究，非实证结论。",
+              "x": 50,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n2",
+              "kind": "研究问题",
+              "title": "消费者是否识别商业影响",
+              "body": "RQ候选2：消费者在多大程度上意识到AI推荐背后可能存在品牌GEO，其识别如何改变信任、再搜索与购买意向？",
+              "evidenceIds": [
+                "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+              ],
+              "uncertainty": "识别程度与后果缺直接证据；需预实验检验材料是否可操纵。",
+              "x": 320,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n3",
+              "kind": "理论候选",
+              "title": "说服知识与算法信任双路径",
+              "body": "以说服知识模型解释对操纵意图的感知，以算法信任与建议采纳解释对AI输出的依赖；两条路径可能交互而非替代。",
+              "evidenceIds": [
+                "e64684fb-fcce-42d7-85e9-56f4b22f91a7"
+              ],
+              "uncertainty": "PKM在GEO情境的适用性待核实；算法信任文献未提供，需另检。",
+              "x": 590,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n4",
+              "kind": "构念/变量",
+              "title": "GEO披露、说服知识与信任",
+              "body": "候选变量：GEO商业影响披露（有/无）、说服知识激活、感知操纵意图、算法信任、建议采纳意向、再搜索意向。",
+              "evidenceIds": [],
+              "uncertainty": "均为候选操作化；无量表经本资料验证，需预调查与信效度检验。",
+              "x": 50,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n5",
+              "kind": "假设关系",
+              "title": "披露经说服知识影响信任",
+              "body": "待检验：GEO披露提高说服知识激活与感知操纵意图，进而降低算法信任；若消费者更重视省事，效应可能减弱。",
+              "evidenceIds": [],
+              "uncertainty": "方向与调节均待检验；不能据现有摘要断言因果。",
+              "x": 320,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n6",
+              "kind": "研究方法",
+              "title": "2×2情境实验加过程测量",
+              "body": "建议：GEO披露（有/无）×购买需求（明确/探索）组间实验；测量说服知识、操纵意图、信任、采纳与再搜索，辅以开放式归因。",
+              "evidenceIds": [],
+              "uncertainty": "实验材料需预测试；生态效度与需求操纵待核实。",
+              "x": 590,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n7",
+              "kind": "样本与测量建议",
+              "title": "消费者样本与测量预测试",
+              "body": "建议招募有生成式AI使用经验的消费者；先做认知访谈与小样本预测试，检验操纵检查、信度与共同方法偏差。",
+              "evidenceIds": [],
+              "uncertainty": "样本量、抽样框与量表来源待定；不可宣称已验证量表。",
+              "x": 50,
+              "y": 410,
+              "status": "suggested"
+            },
+            {
+              "id": "n8",
+              "kind": "可行性",
+              "title": "小规模预实验先行",
+              "body": "可行性：先做单场景预实验与刺激材料测试，再扩展为组间实验；需记录AI平台版本与推荐输出，控制品牌熟悉度。",
+              "evidenceIds": [],
+              "uncertainty": "平台输出变动、伦理告知与预算待评估。",
+              "x": 320,
+              "y": 410,
+              "status": "suggested"
+            }
+          ],
+          "edges": [
+            {
+              "from": "n1",
+              "to": "n3",
+              "label": "以理论候选界定信任机制",
+              "id": "e0"
+            },
+            {
+              "from": "n2",
+              "to": "n3",
+              "label": "将识别纳入理论路径",
+              "id": "e1"
+            },
+            {
+              "from": "n3",
+              "to": "n4",
+              "label": "由理论派生候选变量",
+              "id": "e2"
+            },
+            {
+              "from": "n4",
+              "to": "n5",
+              "label": "待检验假设关系",
+              "id": "e3"
+            },
+            {
+              "from": "n5",
+              "to": "n6",
+              "label": "设计检验路径",
+              "id": "e4"
+            },
+            {
+              "from": "n6",
+              "to": "n7",
+              "label": "确定样本与测量",
+              "id": "e5"
+            },
+            {
+              "from": "n7",
+              "to": "n8",
+              "label": "预测试后评估可行性",
+              "id": "e6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/lab",
+      "query": "",
+      "status": 200,
+      "data": {
+        "reply": "这个现象挺有意思：品牌明明在说“别买”，结果反而让人更想买。先不急着把它变成研究问题，我们可以把现象拆细一点再看。\n\n几个可以先分清的点：\n1）“劝退”是怎么表达的？是“不建议你现在买”“这款不适合所有人”，还是限量、道歉式声明？不同措辞带来的心理机制可能不一样。\n2）它是真心劝退，还是营销表演？消费者会不会察觉到这种“反向”本身也是套路，然后反应反而变弱？\n3）被刺激的到底是“购买欲”，还是只是好奇、点击、讨论？这三者并不等同。\n4）是不是所有人都会被刺激？本来就想要的人，和原本不感兴趣的人，反应可能相反。\n\n可以先想一想：你看到的案例集中在哪些品类或平台？你手上有哪些可以观察的材料，比如广告文案、评论区的说法、自己的感受？这些会影响你后面能研究什么。这里先给几个候选概念供你排除或修改，它们只是方向，不是已确定的定义。",
+        "guide": {
+          "stage": "phenomenon",
+          "understanding": "当前现象可以初步描述为：品牌在传播中主动表达“不建议购买”“不适合所有人”等劝退性话语，部分消费者却报告购买意愿或兴趣上升。这里至少有三个方面尚未分清：一是话语形式（温和提醒、限时限量、道歉声明等）；二是消费者的反应层次（好奇、讨论、点击、实际购买）；三是被劝退与被吸引之间的落差，是否与消费者原本的需求强度有关。下一步值得补充的是：具体品牌与品类、话语出现的渠道、你能接触到的消费者反应材料，以及你自己是通过什么途径注意到这个现象的。",
+          "concepts": [
+            {
+              "term": "心理逆反",
+              "explanation": "当人感到自己“被要求做什么”或“被禁止做什么”时，可能产生反向动机，去做被限制的事。可以用来理解“你说别买，我偏想买”。",
+              "everyday": "日常说的“越不让干越想干”比较接近，但学术用法通常强调自由受到威胁这一触发条件，不泛指所有反着来的行为。",
+              "uncertainty": "此处只作方向性解释，没有对应具体文献依据；是否适用于品牌劝退场景、在什么强度下发生，都需要另行核实。"
+            },
+            {
+              "term": "稀缺与独特性感知",
+              "explanation": "当某物显得数量有限或只适合少数人时，人可能更看重它。“不适合所有人”暗含“你可能是那少数人”。",
+              "everyday": "日常说“物以稀为贵”，但学术讨论会区分数量稀缺和身份稀缺，两者机制未必相同。",
+              "uncertainty": "该解释尚未与你的具体案例对照，是否真是主因尚不确定。"
+            },
+            {
+              "term": "说服知识",
+              "explanation": "消费者对“这是广告、这是在套路我”的警觉。反向话语也可能被识别为一种营销手法，从而效果打折。",
+              "everyday": "类似“我一看就知道是营销”，但学术概念关注的是这种知识如何被激活并影响反应。",
+              "uncertainty": "没有具体文献支持，属于待检验的解释可能性。"
+            },
+            {
+              "term": "反向营销／劝退式话语",
+              "explanation": "对这类传播手法的描述性称呼，方便你先给现象命名，而不是解释它为何有效。",
+              "everyday": "常被当作褒义创意手法，但作为描述词，它不预设效果好坏。",
+              "uncertainty": "不是成熟学术术语，使用时需要自己界定范围（哪些话语算、哪些不算）。"
+            }
+          ],
+          "keywords": {
+            "zh": [],
+            "en": []
+          },
+          "threads": []
+        },
+        "directions": []
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "keywords",
+      "status": 200,
+      "data": {
+        "zh": [
+          "品牌劝退 心理逆反 购买意愿",
+          "反向营销 逆反心理 消费者反应",
+          "劝退文案 稀缺 好奇 购买欲"
+        ],
+        "en": [
+          "brand discouragement psychological reactance purchase intention",
+          "reverse marketing reactance consumer response",
+          "scarcity warning reactance curiosity buying desire"
+        ]
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/literature",
+      "query": "?query=brand+discouragement+psychological+reactance+purchase+intention&provider=auto&sort=relevance&yearFrom=&yearTo=&journalsOnly=false&doiOnly=false&coreOnly=false&page=1",
+      "status": 200,
+      "data": {
+        "query": "brand discouragement psychological reactance purchase intention",
+        "provider": "openalex",
+        "items": [
+          {
+            "key": "doi:10.34917/2493183",
+            "title": "The Modern Brand: A Guide to the Intigration of CSR Practices into Hotel Branding",
+            "doi": "10.34917/2493183",
+            "openAlexId": "https://openalex.org/W77421214",
+            "authors": [
+              "Warren, Matthew"
+            ],
+            "authorsTruncated": false,
+            "year": 2020,
+            "venue": "Digital Scholarship - UNLV (University of Nevada Reno)",
+            "sourceIsCore": false,
+            "kind": "article",
+            "abstract": "Introduction: There are certain components of the hospitality industry that make it unique in comparison to other industries. One of those components is the perishability that is associated with the hotel product. When it comes to hotel rooms, if a room is left empty then there is instantly lost profit for that property with no way of recovering it. In order to make maximum profit all rooms must be filled each night, this makes the task of attracting customers of the upmost importance within the industry. One of the primary ways in which hospitality companies have strived to attract customers is through brand development and extension. They have sought to create segments and styles of hotels that will appeal to different portions of the public and in turn make any type of customer happy. Brands have become a central component of the hospitality industry and hotel companies are always looking for new ways to brand their services in order to make it appealing to the consumer. Purpose: The purpose of this professional paper is to explore the use of corporate social responsibility practices and branding tactics being used in the hospitality industry. Then use that information to form a guide hotel organizations could use in order to integrate the two concepts in order to create competitive advantages.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://digitalscholarship.unlv.edu/thesesdissertations/1107",
+            "landingUrl": "https://digitalscholarship.unlv.edu/thesesdissertations/1107",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W77421214",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2980823765",
+            "title": "Brands as Politicians - How Consumers Morally Judge Advocacy Advertising",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2980823765",
+            "authors": [
+              "Lena Maria Halberstadt",
+              "Carolin Schumacher"
+            ],
+            "authorsTruncated": false,
+            "year": 2019,
+            "venue": "Lund University Publications Student Papers (Lund University)",
+            "sourceIsCore": false,
+            "kind": "other",
+            "abstract": "Purpose: The purpose of this research was to understand how consumers morally judge advocacy advertising in contemporary consumer culture. The phenomenon was explored with the help of three case studies, namely Nike, Gillette, and Pepsi, all being brands who have taken a political stance in their advertisement campaigns. Theoretical Perspective: To analyse the empirical material, we first delved into the concept of moral identity, partly referring to the social identity in connection to advertisements. Subsequently, we thoroughly delineated concepts on morality, including moral judgments, the cynicism of morality, and moral authenticity. Thereafter, we discussed the existing model of how consumers perceive advocacy advertising. Methodology: The present study was conducted in terms of the social constructionist and interpretivist worldview. By using an inductive approach, we designed a two-sequenced qualitative research, beginning with virtual observations and followed by three focus groups. The derived findings were analysed based on the narrative technique, enabling us to explore the phenomenon from a multi-sided perspective and revealing the role underlying circumstances play for consumers morally judging advocacy advertisements. Empirical Findings: The collected empirical material supported the notion that consumers morally judge advocacy advertising. When forming judgments, consumers rely on their moral beliefs, moral enlightenment, and moral feelings, which are underlying elements of the moral identity. Further, consumers judge the alignment of the brand and issue in advocacy advertising based upon evaluation criteria, involving the (1) brand’s moral motives, (2) brand’s moral responsibility, (3) brand’s moral image, (4) brand’s moral choice of the spokesperson and (5) moral brand parodies. Conclusion: The present study provides essential insights, including a practical framework, brands can use to handle the paradox of solving political issues through their branding strategies. The paper thereby demonstrates how consumers morally judge brands taking a political stance in their advertisements, further providing an in-depth understanding of how advocacy",
+            "abstractTruncated": false,
+            "citations": 1,
+            "retracted": false,
+            "oaUrl": "http://lup.lub.lu.se/student-papers/record/8980554",
+            "landingUrl": "http://lup.lub.lu.se/student-papers/record/8980554",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2980823765",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "doi:10.17185/duepublico/47920",
+            "title": "Sustainable decision making: empirical studies on psychological factors",
+            "doi": "10.17185/duepublico/47920",
+            "openAlexId": "https://openalex.org/W2935873131",
+            "authors": [
+              "Gerrit Stöckigt"
+            ],
+            "authorsTruncated": false,
+            "year": 2018,
+            "venue": "DuEPublico (University of Duisburg-Essen)",
+            "sourceIsCore": false,
+            "kind": "dissertation",
+            "abstract": "Sustainable decision making is a key element in the fight against natural disasters, shrinking habitats, famine, and poverty. In western economies, such as the social market economy, all players – i.e., consumers, businesses, and governments – must be responsible for sustainable decision making. Examining consumer choices, this dissertation comprises three empirical studies to analyze decision making in shopping situations. The studies aim to provide new insights into predisposing factors of sustainable consumer decision making. These insights are used to deduce recommendations for policymakers to foster sustainable consumption. Study 1 focuses on the effect of the Big Five personality traits, delay-discounting tendencies, and materialism on the consideration of sustainability in buying decisions. Study 2 builds on Study 1 by adding altruism and general self-efficacy as potential predictors and decision-making abilities as possible moderators. The assessment of considering sustainability in buying decisions (by means of choice-based conjoint tasks) is complemented by measures of attitudes toward sustainability (by means of questionnaires) in Study 2. Since Studies 1 and 2 reveal a considerable influence of materialistic and altruistic tendencies, Study 3 was designed to examine the interplay of these two characteristics in the prediction of considering environmental, social, and economic sustainability in more general buying decisions. Results indicate high potential of unequivocal sustainability information in shopping situations. Further, discounting tendencies and materialism affect the consideration of sustainability in buying decisions negatively, while conscientiousness, openness to experience, and altruism have a positive effect. Decision-making abilities moderate the effect of altruism on attitudes toward sustainability, while general self-efficacy has no effect on the consideration of sustainability in buying decisions or attitudes toward sustainability. It is recommended to increase the availability of unambiguous sustainability information in stores and online shops to enable consumers to make an informed decision. Further, materialistic reinforcements in society (e.g., in media and public communication) should be limited to stop persuading consumers to buy unneeded products. Instead, altruistic tendencies should be strongly reinforced in society. Future studies are advised to examine nudge strategies to promote sustainable buying decisions in consumers with personality structures that do not favor a sustainable lifestyle. Furthermore, the role of situational factors of consumer decision making that have not been investigated should be addressed in future research, such as consumer knowledge and understanding.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://duepublico2.uni-due.de/receive/duepublico_mods_00047920",
+            "landingUrl": "https://duepublico2.uni-due.de/receive/duepublico_mods_00047920",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2935873131",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "doi:10.5281/zenodo.10360519",
+            "title": "The Behavioral Intention to Adopt Proptech Services in Vietnam Real Estate Market",
+            "doi": "10.5281/zenodo.10360519",
+            "openAlexId": "https://openalex.org/W4389714088",
+            "authors": [
+              "Bach, Le Tung"
+            ],
+            "authorsTruncated": false,
+            "year": 2023,
+            "venue": "RePEc: Research Papers in Economics",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": "One of the main stages for achieving success is the adoption of new technology by its users. Several studies show that Property technology is advantageous for real estate stakeholders. Hence, the purpose of this paper is to investigate the users' engagement behavior to adopt Property technology in the Vietnamese real estate market. To that end, a purposive sample of 142 participants was recruited to complete an online quantitative approach based survey. The survey consisted of a modified and previously validated measure of acceptance based on the extended demographic version of the unified theory of acceptance and use of technology), as well as usage scale items. The empirical findings confirm that participants were generally accepting of Property technology in the Vietnamese real estate market. The highest mean values were associated with the subscales of effort expectancy and performance expectancy, while we can easily identify the lowest mean value in the social influence subscale. The usage of Property technology was slightly more concerned with the gathering of information on properties and markets than transactions or portfolio management. This study provides an in depth understanding of Property technology for firms' managers and marketers. Online social interactions might be either harmful or fruitful for firms depending on the type of interaction and engagement behavior. This is especially true of property portals and social media forums that would help investors to connect, communicate and learn. Findings can help users to improve their strategies for digital marketing. By providing robust findings by addressing issues like omitted variables and endogeneity, the findings of this study are promising for developing new hypotheses and theoretical models in the context of the Vietnamese real estate market.",
+            "abstractTruncated": false,
+            "citations": 2,
+            "retracted": false,
+            "oaUrl": "https://arxiv.org/pdf/2312.06994",
+            "landingUrl": "http://arxiv.org/pdf/2312.06994",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4389714088",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "doi:10.31390/gradschool_dissertations.3590",
+            "title": "Unconscious Awareness of a Branded Life: Consumer Disillusionment and the Cultivated Commercialization of Public Health",
+            "doi": "10.31390/gradschool_dissertations.3590",
+            "openAlexId": "https://openalex.org/W2759180162",
+            "authors": [
+              "Laura H. Crosswell"
+            ],
+            "authorsTruncated": false,
+            "year": 2013,
+            "venue": null,
+            "sourceIsCore": null,
+            "kind": "dissertation",
+            "abstract": "By unraveling the intricately powerful influences of pharmaceutical funding, this project examines ways in which product marketing infiltrates and contaminates public awareness efforts in the healthcare industry. Specifically, the following work deconstructs ways in which Merck Pharmaceuticals & Co. crafted a product endorsement through social marketing and nationwide lobbying efforts to most efficiently profit from the company’s Gardasil vaccination. Through means of textual analysis, interviews, focus groups, and eyetracking experimentation, I use Merck’s product endorsement efforts to illuminate the complex dynamics muddling direct-to-consumer marketing and social marketing campaigns. Social cognitive theory (SCT) offers a strong supportive foundation from which to dissect viewer healthcare message processing. In conjunction with the behaviorally-oriented cannons of SCT, social trust theory and contemporary marketing scholarship further highlight the complicated ties uniting public policy, corporatized health-marketing operations, audience cognitions, and consumer behavior. By piecing together the various ways in which Merck Pharmaceuticals puppeteered public understanding of HPV and cervical cancer, this work encourages greater awareness for the corporate influence and political agendas that work hand in hand in delivering meaning to American reality. Results indicate viewer awareness of brand markings in Merck’s HPV social marketing campaign limit message effectiveness and negatively influence consumer trust. As such, my grounded analysis conceptualizes “unconscious awareness” as it relates to branded health communication. Emergent findings showcase broader societal implications by unveiling patterns of conditioned ambivalence toward commercialized messaging. This project speaks to the capitalized communications contaminating consumer trust and public health, and presents an argument for regulation realignment in the healthcare industry. Given the sensitive nature of public health message processing, and in light of the findings collected throughout this work, my multi-layered analysis petitions for regulatory guidelines which separately address and more clearly define executional protocols for social awareness efforts and direct-to-consumer marketing operations.",
+            "abstractTruncated": false,
+            "citations": 1,
+            "retracted": false,
+            "oaUrl": "https://repository.lsu.edu/cgi/viewcontent.cgi?article=4589&context=gradschool_dissertations",
+            "landingUrl": "https://doi.org/10.31390/gradschool_dissertations.3590",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2759180162",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W3212273761",
+            "title": "Exploring the non-complaining intention and behaviour of dissatisfied customers: an extended reasoned action approach",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W3212273761",
+            "authors": [
+              "Sherine Kwok"
+            ],
+            "authorsTruncated": false,
+            "year": 2021,
+            "venue": "UWL Repository (University of West London)",
+            "sourceIsCore": false,
+            "kind": "dissertation",
+            "abstract": "Customer complaints are a valuable source of information for service providers to identify problems and improve their products or services. Evidence has shown that more than two-thirds of dissatisfied customers do not necessarily express dissatisfaction with the service providers through complaints. Some dissatisfied customers would rather spread negative word-of-mouth or switch to other service providers, which adversely affects the reputation and revenue of the service provider. Customer complaining behaviour has been extensively researched, however, very few researchers have explored the customer non-complaining behaviour (CNCB). The concept of CNCB and why some dissatisfied customers do not complain after service failure are relatively unclear. Therefore, this study aims to explore the non-complaining behaviour of dissatisfied customers by determining and explaining the factors that influence non-complaining intention and behaviour through an extended model of the reasoned action approach. Using the Reasoned Action Approach (RAA) model as a starting point but extended it by adding more relevant factors (situational factors and, service provider and marketplace-related factors), two-stage data collection fieldworks were conducted to gain a comprehensive understanding of non-complaining behaviour. In the first stage, 555 questionnaires were collected from non-complainers and analysed to identify factors that influence non-complaining intention and behaviour. In the second stage, 20 semi-structured interviews were conducted with survey respondents to gain a deeper understanding of the factors that affected their non-complaining intention and behaviour. The findings show that the extended RAA model is a valid model to explain dissatisfied customers’ non-complaining intention and behaviour. Inclusion of additional factors was supported in the RAA as they can help better explain the non-complaining behaviour. Attitude against complaining, social group pressure, perceived control of complaining circumstances have a positive influence on intention not to complain. Although dissatisfied customers are inclined not to complain, their non-complaining behaviour is predominantly determined by their actual control of complaining circumstances (e.g., the inability to communicate with the service provider), situational factors (e.g., time and energy required, perceived low benefits from complaining, etc) and, service provider and marketplace-related factors (e.g., perceived management ineffectiveness in collecting feedback and service recovery, etc). RAA proved to be a sufficient model to explain why people complain, but it is insufficient to explain why people do not complain. This study contributes by providing an extended RAA model of CNCB, with the inclusion of situational factors and, service provider and marketplace-related factors to explain non-complaining intention and behaviour. The model can serve as a theoretical foundation for future CNCB research. Managerially, the findings in this study reinforce the importance of manager and staff proactiveness to solicit feedback and establish long-term service improvement efforts and a customer engagement system.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://repository.uwl.ac.uk/id/eprint/8280/1/PhD%20Thesis-%20Shi%20Ling%20Kwok-%2021112495-FINAL%20-27-9-2021.pdf",
+            "landingUrl": "https://repository.uwl.ac.uk/id/eprint/8280/1/PhD%20Thesis-%20Shi%20Ling%20Kwok-%2021112495-FINAL%20-27-9-2021.pdf",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W3212273761",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "doi:10.1007/s43039-024-00103-9",
+            "title": "Does user-generated content influence value co-creation in the context of luxury fashion brand communities? Matching inclusivity and exclusivity",
+            "doi": "10.1007/s43039-024-00103-9",
+            "openAlexId": "https://openalex.org/W4403156090",
+            "authors": [
+              "Vincenzo Basile",
+              "Amélia Brandão",
+              "Mariana da Silva Ferreira"
+            ],
+            "authorsTruncated": false,
+            "year": 2024,
+            "venue": "Italian Journal of Marketing",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Abstract Given the rise of digital technologies, brands must retain complete control and accountability for user content creation and diffusion. This paper investigates the influence of user-generated content on multiple luxury consumers’ value perceptions that arise within brand communities. A type of non-participatory netnography is performed on three fashion brand communities to analyze the content published by community members non-intrusively. Findings show that brand-related content allows users to share their perceived experiential benefits with their networks, ultimately reinforcing the brand’s experiential and symbolic dimensions. Moreover, user content influences one’s perception of value and attitude. However, if the sense of social homophily and membership is evident, diminishing a brand’s perceived value through brand dilution is unlikely. While previous studies revising the outcomes of online exposure for luxury firms have primarily focused on firm-controlled messages, this investigation acknowledges the importance of brand communities in creating and spreading brand-related content and their effect on luxury appeals. This study appears timely as the digital era empowers consumers to be proactive in Value Co-Creation dynamics and freely define the meaning of inclusivity in exclusive luxury.",
+            "abstractTruncated": false,
+            "citations": 15,
+            "retracted": false,
+            "oaUrl": "https://link.springer.com/content/pdf/10.1007/s43039-024-00103-9.pdf",
+            "landingUrl": "https://doi.org/10.1007/s43039-024-00103-9",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4403156090",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W7119392219",
+            "title": "How cultural background affects online purchase decisions: a survey of international students in Finland",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W7119392219",
+            "authors": [
+              "Fernando, Kanishka",
+              "Poornima Kukulage"
+            ],
+            "authorsTruncated": false,
+            "year": 2025,
+            "venue": "Theseus (Ammattikorkeakoulujen)",
+            "sourceIsCore": false,
+            "kind": "dissertation",
+            "abstract": "The market of e-commerce is getting globalized and digitally linked, and thus, consumer behavior is becoming a vital element of business success. The exposure to both the home cultures and Finland environment has created a large consumer group by international students in Finland. The thesis was meant to determine whether the online purchasing behavior of international students in Finland was still shaped by the cultural values. Quantitative research design was utilized and data gathered using a structured survey to international students studying in the Finnish universities. The Theory of Cultural Dimensions developed by Hofstede was used as the primary theoretical framework, and it addressed the aspects of Individualism/Collectivism, Power Distance, Uncertainty Avoidance, Masculinity/Femininity and Long-Term Orientation. The research examined the important variables in the online decision-making process, such as search and information in the current online seller, trust of the online seller, sensitivity price, security, social influence and the usability of the web site. The findings indicated definite connections between the cultural dimensions and the online buying attitude. High uncertainty avoidance students would like to see more information about the product and have guaranteed payment method whereas collectivist students would depend more on peer reviews and social recommendations. The conclusion made was that cultural background was still a major predictor of online consumer behaviour even though e-commerce in Finland is global. These results provided the need to have culturally sensitive e-commerce to multicultural consumers.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "http://www.theseus.fi/bitstream/10024/909299/2/Fernando_Kukulage.pdf",
+            "landingUrl": "http://www.theseus.fi/handle/10024/909299",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7119392219",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2276053616",
+            "title": "The faces of feminine devotion in Ibsen's theatre",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2276053616",
+            "authors": [
+              "Cynthia Paula Dan"
+            ],
+            "authorsTruncated": false,
+            "year": 2007,
+            "venue": "NORA - Norwegian Open Research Archives",
+            "sourceIsCore": false,
+            "kind": "dissertation",
+            "abstract": "The theme of my thesis is the sacrifice of female characters in some of Ibsen’s plays. The questions that I want to ask are the following: Why do these heroines sacrifice their lives and what does their sacrifice consist of and is there any connection between the character\\nof these heroines and their sacrifice? Certainly the heroines are different from each other in the same way as the structure of the plot of the plays is. Between the good and faithful Agnes from Brand and the evil Hedda Gabler from the homonymous play, there is a great variety of female characters who are Eve’s descendants. Catching a glimpse, one can notice that there are more reliable and steadfast women who are typical of Ibsen’s plays. (...)",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "http://hdl.handle.net/10852/27205",
+            "landingUrl": "http://hdl.handle.net/10852/27205",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2276053616",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          },
+          {
+            "key": "doi:10.22004/ag.econ.230054",
+            "title": "Consumer Preference for Sampling at Farmers Markets",
+            "doi": "10.22004/ag.econ.230054",
+            "openAlexId": "https://openalex.org/W2492776697",
+            "authors": [
+              "Lijun Chen",
+              "Joe L. Parcell",
+              "Jill Moreland",
+              "Chen, Lijun",
+              "Parcell, Joe",
+              "Moreland, Jill"
+            ],
+            "authorsTruncated": false,
+            "year": 2016,
+            "venue": "RePEc: Research Papers in Economics",
+            "sourceIsCore": false,
+            "kind": "preprint",
+            "abstract": "From a survey of farmers’ markets shoppers,this study aims to investigate the factors that differentiate samplers and non-samplers,factors that motivate and discourage consumers to take free samples presented by vendors,and estimate to what extent sampling affects consumer behavior and perceptions about products. A survey questionnaire was conducted yielding 1145 usable responses. A simultaneous equation model and exploratory factor analysis assessment was conducted. Results show that consumers’ trust in farmers’ markets food system have a significant impact on sampling decisions,and affiliation towards persons distributing samples motivate consumers to sample. The post sampling effect can be reflected by consumers’ immediate purchase,generating word of mouth and an increase in unplanned purchase.",
+            "abstractTruncated": false,
+            "citations": 2,
+            "retracted": false,
+            "oaUrl": "https://ageconsearch.umn.edu/record/230054/files/SAEA2016-%20Consumer%20Preference%20for%20Sampling%20at%20Farmers%20Markets.pdf",
+            "landingUrl": "https://ageconsearch.umn.edu/record/230054/files/SAEA2016-%20Consumer%20Preference%20for%20Sampling%20at%20Farmers%20Markets.pdf",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2492776697",
+            "retrievedAt": "2026-10-22T09:08:05.742Z"
+          }
+        ],
+        "total": 256,
+        "page": 1,
+        "pageSize": 10,
+        "notices": [],
+        "cached": false,
+        "hasMore": true
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "assess",
+      "status": 200,
+      "data": {
+        "assessments": [
+          {
+            "id": "doi:10.34917/2493183",
+            "level": "unrelated",
+            "reason": "酒店品牌与CSR整合，未讨论劝退营销或心理逆反。",
+            "use": "不推荐",
+            "basis": "brand development and extension",
+            "limitation": "仅摘要，未涉及消费者逆反。"
+          },
+          {
+            "id": "openalex:https://openalex.org/W2980823765",
+            "level": "unrelated",
+            "reason": "研究品牌倡导广告的道德判断，非劝退与逆反购买。",
+            "use": "不推荐",
+            "basis": "consumers morally judge advocacy advertising",
+            "limitation": "未测量逆反或购买意愿。"
+          },
+          {
+            "id": "doi:10.17185/duepublico/47920",
+            "level": "unrelated",
+            "reason": "探讨可持续消费的人格与利他因素，与品牌劝退无关。",
+            "use": "不推荐",
+            "basis": "sustainable consumer decision making",
+            "limitation": "主题属可持续消费。"
+          },
+          {
+            "id": "doi:10.5281/zenodo.10360519",
+            "level": "unrelated",
+            "reason": "越南房地产科技采用意愿，不涉及品牌劝退或逆反。",
+            "use": "不推荐",
+            "basis": "adopt Property technology",
+            "limitation": "技术接受模型背景。"
+          },
+          {
+            "id": "doi:10.31390/gradschool_dissertations.3590",
+            "level": "unrelated",
+            "reason": "药品公关营销批判，未涉及故意劝退刺激购买。",
+            "use": "不推荐",
+            "basis": "product marketing infiltrates and contaminates public awareness efforts",
+            "limitation": "关注公共卫生营销伦理。"
+          },
+          {
+            "id": "openalex:https://openalex.org/W3212273761",
+            "level": "unrelated",
+            "reason": "研究不满顾客不抱怨行为，非心理逆反。",
+            "use": "不推荐",
+            "basis": "non-complaining behaviour",
+            "limitation": "服务失败情境。"
+          },
+          {
+            "id": "doi:10.1007/s43039-024-00103-9",
+            "level": "unrelated",
+            "reason": "奢侈品社群UGC与价值共创，未涉及劝退营销。",
+            "use": "不推荐",
+            "basis": "user-generated content influence value co-creation",
+            "limitation": "社群内容非品牌劝退。"
+          },
+          {
+            "id": "openalex:https://openalex.org/W7119392219",
+            "level": "unrelated",
+            "reason": "文化维度影响网购决策，与心理逆反无直接关系。",
+            "use": "不推荐",
+            "basis": "cultural dimensions and the online buying attitude",
+            "limitation": "国际学生样本。"
+          },
+          {
+            "id": "openalex:https://openalex.org/W2276053616",
+            "level": "unrelated",
+            "reason": "易卜生戏剧女性牺牲主题，与消费者行为无关。",
+            "use": "不推荐",
+            "basis": "sacrifice of female characters",
+            "limitation": "文学研究。"
+          },
+          {
+            "id": "doi:10.22004/ag.econ.230054",
+            "level": "unrelated",
+            "reason": "农夫市集免费试吃对购买影响，非劝退或逆反。",
+            "use": "不推荐",
+            "basis": "sampling affects consumer behavior",
+            "limitation": "促销试吃情境。"
+          }
+        ]
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "keywords",
+      "status": 200,
+      "data": {
+        "zh": [
+          "心理逆反 消费行为",
+          "品牌劝退 购买反应",
+          "劝退式广告 消费者好奇"
+        ],
+        "en": [
+          "psychological reactance consumer behavior",
+          "reverse psychology brand messaging",
+          "anti-selling brand messages"
+        ]
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/literature",
+      "query": "?query=psychological+reactance+consumer+behavior&provider=auto&sort=relevance&yearFrom=&yearTo=&journalsOnly=false&doiOnly=false&coreOnly=false&page=1",
+      "status": 200,
+      "data": {
+        "query": "psychological reactance consumer behavior",
+        "provider": "openalex",
+        "items": [
+          {
+            "key": "doi:10.1086/208782",
+            "title": "Consumer Behavior and Psychological Reactance",
+            "doi": "10.1086/208782",
+            "openAlexId": "https://openalex.org/W2018832113",
+            "authors": [
+              "Mona A. Clee",
+              "Robert A. Wicklund"
+            ],
+            "authorsTruncated": false,
+            "year": 1980,
+            "venue": "Journal of Consumer Research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "A theory about psychological freedom is reviewed in terms of its broad applicability to consumer behavior. Promotional influence, manipulative advertisements, product unavailability, and government regulations are all cast as potentially freedom-threatening events, and a theory of psychological reactance details the consumer's reply to reductions in freedom.",
+            "abstractTruncated": false,
+            "citations": 646,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1086/208782",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2018832113",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.3389/fpsyg.2022.952964",
+            "title": "Unveiling the effects of consumers' psychological distance on their reactance and related behavioral outcomes: Do lockdown restrictions matter?",
+            "doi": "10.3389/fpsyg.2022.952964",
+            "openAlexId": "https://openalex.org/W4300863153",
+            "authors": [
+              "Xianglan Chen",
+              "Yachao Duan",
+              "Yachao Duan",
+              "Huma Ittefaq",
+              "Yahui Duan",
+              "Yahui Duan"
+            ],
+            "authorsTruncated": false,
+            "year": 2022,
+            "venue": "Frontiers in Psychology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "This study examined consumers' psychological reactance, which is insufficiently explored in the literature. This research fills the gaps found in the literature reviewed and investigates how the psychological reactance of restaurant consumers developed because of social, temporal, and spatial distancing measures during COVID-19. This study also explored ways in which the restaurant industry can increase its compliance with COVID-19 restrictions in such a situation. We explored the effects of social, temporal, and spatial distancing on psychological reactance. We also identified the moderating effect of lockdown restrictions, which strengthen the psychological reactance developed because of (a) social distancing, (b) temporal distancing, and (c) spatial distancing. We collected data from restaurant consumers in Lahore. This study applied quantitative techniques (i.e., a test of normality, measurement model assessment, structural model assessment, and common method variance). The data were analyzed using IBM SPSS 25 and AMOS 24 and the results were interpreted and presented accordingly. This study added to the literature on psychological reactance, service management, and psychological distance. We could also help the restaurant industry overcome the challenges that occurred during the COVID-19 pandemic and the closures. This study could assist the restaurant industry to understand consumer behavior and attract potential consumers.",
+            "abstractTruncated": false,
+            "citations": 5,
+            "retracted": false,
+            "oaUrl": "https://www.frontiersin.org/articles/10.3389/fpsyg.2022.952964/pdf",
+            "landingUrl": "https://doi.org/10.3389/fpsyg.2022.952964",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4300863153",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2376742630",
+            "title": "Study of Consumers' Psychological Reactance and Behavior Tendency in Stock out Context: Based on Mediation Effect of Promotion in Online Shopping Goods",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2376742630",
+            "authors": [
+              "Xiaofen Liu"
+            ],
+            "authorsTruncated": false,
+            "year": 2014,
+            "venue": "Tongji yu xinxi luntan",
+            "sourceIsCore": false,
+            "kind": "article",
+            "abstract": "This paper mainly studies consumers' psychological reactance and different behavioral tendency confronted with the context that the promotion product online is out of stock.Based on relevant psychology and marketing theory,we explore the impact of psychological reactance on consumer's behavioral tendency.The findings of experiments show that,when the product is out of stock,the level of psychological reactance is determined by the attribution of stock out.The higher the psychological reactance is,the worse the shopper has to be faced with the tendency that consumer will switch to the competitor;whether the out of stock product is in promotion will play a median effect;Last but not least, the shoppers can use substitute product to be promoted and offer arrival notice as several efficient ways to lower consumers' psychological reactance level as well as to lead consumers not switch to the competitors.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://en.cnki.com.cn/Article_en/CJFDTOTAL-TJLT201401024.htm",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2376742630",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.47067/ramss.v9i2.660",
+            "title": "Trust, Privacy Concerns, and Psychological Reactance in AI-Targeted Marketing: Effects on Consumer Attitudes and Behavioral Intentions",
+            "doi": "10.47067/ramss.v9i2.660",
+            "openAlexId": "https://openalex.org/W7203688505",
+            "authors": [
+              "Khadija Hassan",
+              "Muhammad Bilal Javed",
+              "Sehar Zehra"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Review of Applied Management and Social Sciences",
+            "sourceIsCore": false,
+            "kind": "article",
+            "abstract": "The rapid advancement of Artificial Intelligence (AI) has transformed contemporary marketing by enabling personalized advertising, predictive recommendations, and data-driven consumer engagement. Despite these technological advancements, the increasing adoption of AI-targeted marketing has generated growing concerns regarding consumer trust, privacy protection, and psychological resistance toward automated personalization. This study examined the effects of trust, privacy concerns, and psychological reactance on consumer attitudes toward AI-targeted marketing The quantitative research methodology was used with a cross sectional survey design, and data were gathered from 250 respondents from five main cities of Punjab, Pakistan, using a structured questionnaire, which had five-point Likert scale. Correlation analysis, multiple regression, analysis of variance (ANOVA), and independent samples t-test were used to analyses the collected data. The results showed that trust has a positive impact on consumer attitudes toward AI-driven marketing, while privacy concerns and psychological reactance have strong negative impacts. Moreover, there were found to be differences in consumer attitudes between gender and age groups. The results indicate that to boost consumer acceptance and the impact of AI-influenced marketing strategies, fostering consumer trust, transparency in AI-driven marketing practices, protecting consumer data, and reducing psychological resistance play key roles. The study adds to the existing literature on AI-powered marketing by offering empirical insights from the Pakistani context and practical implications for marketers and organizations aiming to create AI marketing strategies that are ethical, consumer-centric, and privacy-aware.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://ramss.spcrd.org/index.php/ramss/article/download/660/660",
+            "landingUrl": "https://doi.org/10.47067/ramss.v9i2.660",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7203688505",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.1016/j.tifs.2026.105892",
+            "title": "Consumer resistance and behavioral responses to front-of-pack nutrition labels: a systematic review through cognitive dissonance and psychological reactance frameworks",
+            "doi": "10.1016/j.tifs.2026.105892",
+            "openAlexId": "https://openalex.org/W7165177752",
+            "authors": [
+              "Carolina S. Portel",
+              "Júlia B. Sousa",
+              "Carolina Pinto de Carvalho Martins",
+              "Mônica Marques Pagani",
+              "Eliane Teixeira Mársico",
+              "Monica Q. Freitas",
+              "Adriano G. da Cruz",
+              "Erick A. Esmerino"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Trends in Food Science & Technology",
+            "sourceIsCore": true,
+            "kind": "review",
+            "abstract": "Background Front-of-pack nutrition labeling (FOPNL) has been increasingly adopted across several countries as a public health policy aimed at improving dietary choices and reducing the burden of diet-related diseases. By presenting simplified nutritional information at the point of purchase, FOPNL are expected to support informed consumer decisions and stimulate product reformulation by the food industry. However, empirical evidence regarding their effectiveness remains heterogeneous. While some studies report improvements in food choices, others identify limited effects or even defensive consumer responses. Scope and approach This systematic review synthesizes empirical evidence on consumer responses to front-of-pack labels through the theoretical lenses of cognitive dissonance and psychological reactance. Following PRISMA 2020 guidelines, studies were identified through systematic searches in PubMed , Scopus , ScienceDirect , and Web of Science . Eligible studies included experimental, quasi-experimental, qualitative, and mixed-methods research examining psychological responses to nutrition labeling interventions in food choice contexts. Key findings and conclusions Psychological reactance emerged when labels were perceived as threatening consumer autonomy, particularly in warning-based systems. Cognitive dissonance occurred when label information conflicted with prior beliefs about product healthfulness. Responses varied across food categories and were influenced by message framing, label format, and perceived costs of behavioral change. Defensive reactions did not necessarily prevent behavioral change, suggesting that resistance and increased risk awareness may coexist. By integrating insights from consumer psychology, this review provides insights into factors that may contribute to heterogeneous consumer responses to front-of-pack labeling (FOPL) policies sometimes succeed or fail and provides guidance for designing labeling strategies that reduce defensive responses while strengthening public health interventions.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://www.sciencedirect.com/science/article/pii/S092422442600364X/pdf",
+            "landingUrl": "https://doi.org/10.1016/j.tifs.2026.105892",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7165177752",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2580621562",
+            "title": "Study of Consumers’ Psychological reactance and Behavior Tendency in Stock out Context—based on median effect of promotion",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2580621562",
+            "authors": [
+              "刘晓凤"
+            ],
+            "authorsTruncated": false,
+            "year": 2014,
+            "venue": null,
+            "sourceIsCore": null,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "http://or.nsfc.gov.cn/handle/00001903-5/353603",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2580621562",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.1080/02642069.2020.1790535",
+            "title": "COVID-19 restrictions and consumers’ psychological reactance toward offline shopping freedom restoration",
+            "doi": "10.1080/02642069.2020.1790535",
+            "openAlexId": "https://openalex.org/W3039863613",
+            "authors": [
+              "Naeem Akhtar",
+              "Muhammad Nadeem Akhtar",
+              "Muhammad Usman",
+              "Moazzam Ali",
+              "Umar Iqbal Siddiqi"
+            ],
+            "authorsTruncated": false,
+            "year": 2020,
+            "venue": "Service Industries Journal",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "The COVID-19 pandemic threats and its subsequent restrictions on people's freedom, social interaction, closures of workplaces and shopping stores have caused public psychological reactance. In response, the study develops and tests a conceptual framework, which unveils the effects of perceived choice hesitation and perceived choice confidence on consumers’ psychological reactance. It also corroborates two bipolar behavioral outcomes of consumers’ psychological reactance— choice freedom satisfaction and resistance to persuasion. We employ the moderating role of anticipated worry and trust in government in strengthening the psychological reactance and final behavioral outcomes, respectively. Data collected from the country of origin of COVID-19 pandemic indicated the positive effects of antecedents on psychological reactance, which negatively affected choice freedom satisfaction and positively to resistance to persuasion. Anticipated worry and trust in government positively moderated these relationships. Findings extend the literature on psychology, service management, and consumer behavior, and suggest to government policymakers and store managers.",
+            "abstractTruncated": false,
+            "citations": 136,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1080/02642069.2020.1790535",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W3039863613",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.16538/j.cnki.fem.2016.02.004",
+            "title": "Consumer Psychological Reactance: A Literature Review and Prospects",
+            "doi": "10.16538/j.cnki.fem.2016.02.004",
+            "openAlexId": "https://openalex.org/W2890662736",
+            "authors": [
+              "Yuanqiong He",
+              "Yangyi Tang",
+              "Junfang Zhang"
+            ],
+            "authorsTruncated": false,
+            "year": 2016,
+            "venue": "Waiguo jingji yu guanli",
+            "sourceIsCore": false,
+            "kind": "review",
+            "abstract": "Consumers will experience psychological reactance when they perceive their freedom being threatened,and this kind of motivational state has important influence on consumers' cognition and behavior. This paper firstly makes a brief introduction of psychological reactance theory and elaborates related concepts. Secondly,it explores the consumers' cognition and behavior to deal with reactance from the perspective of characteristics of perceived threats (perceived restriction,perceived intrusiveness and perceived manipulative intent). Finally it prospects for future directions in consumer psychological reactance research based on current research limitations.",
+            "abstractTruncated": false,
+            "citations": 6,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://qks.sufe.edu.cn/J/PDFFull/A160824000187.pdf",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2890662736",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2990160134",
+            "title": "Theoretical and empirical analysis of consumer buying behavior toward limited products: psychological reactance theory and theory of uniqueness in a purchase of low involvement products",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2990160134",
+            "authors": [
+              "寛 鈴木"
+            ],
+            "authorsTruncated": false,
+            "year": 2008,
+            "venue": "Medical Entomology and Zoology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://ci.nii.ac.jp/naid/40016608069/en/",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2990160134",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          },
+          {
+            "key": "doi:10.1080/10696679.2000.11501859",
+            "title": "You Can’t Have That! A Study of Reactance Effects & Children’s Consumer Behavior",
+            "doi": "10.1080/10696679.2000.11501859",
+            "openAlexId": "https://openalex.org/W2285408095",
+            "authors": [
+              "Amy Rummel",
+              "John Harrison Howard",
+              "Jennifer M. Swinton",
+              "D. Bradley Seymour"
+            ],
+            "authorsTruncated": false,
+            "year": 2000,
+            "venue": "The Journal of Marketing Theory and Practice",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Experience has often taught parents that children’s desires for products are heightened when they are told “You can’t have that!” The psychological literature has identified this phenomenon as “reactance.” This study examines whether reactance determines the behavior of young consumers and examines individual differences that moderate such reactance. Findings indicate that reality reflects theory. Regardless of gender, adolescents prefer certain products more when parents signal disapproval, but younger children tend to conform to parent’s preferences.",
+            "abstractTruncated": false,
+            "citations": 40,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1080/10696679.2000.11501859",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2285408095",
+            "retrievedAt": "2026-10-22T09:13:10.073Z"
+          }
+        ],
+        "total": 98318,
+        "page": 1,
+        "pageSize": 10,
+        "notices": [],
+        "cached": false,
+        "hasMore": true
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "assess",
+      "status": 502,
+      "data": {
+        "error": "AI 回复未完成或格式不受支持，没有保存为有效建议，请重试。"
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/literature",
+      "query": "?query=psychological+reactance+consumer+behavior&provider=auto&sort=relevance&yearFrom=&yearTo=&journalsOnly=false&doiOnly=false&coreOnly=false&page=1",
+      "status": 200,
+      "data": {
+        "query": "psychological reactance consumer behavior",
+        "provider": "openalex",
+        "items": [
+          {
+            "key": "doi:10.1086/208782",
+            "title": "Consumer Behavior and Psychological Reactance",
+            "doi": "10.1086/208782",
+            "openAlexId": "https://openalex.org/W2018832113",
+            "authors": [
+              "Mona A. Clee",
+              "Robert A. Wicklund"
+            ],
+            "authorsTruncated": false,
+            "year": 1980,
+            "venue": "Journal of Consumer Research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "A theory about psychological freedom is reviewed in terms of its broad applicability to consumer behavior. Promotional influence, manipulative advertisements, product unavailability, and government regulations are all cast as potentially freedom-threatening events, and a theory of psychological reactance details the consumer's reply to reductions in freedom.",
+            "abstractTruncated": false,
+            "citations": 647,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1086/208782",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2018832113",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.3389/fpsyg.2022.952964",
+            "title": "Unveiling the effects of consumers' psychological distance on their reactance and related behavioral outcomes: Do lockdown restrictions matter?",
+            "doi": "10.3389/fpsyg.2022.952964",
+            "openAlexId": "https://openalex.org/W4300863153",
+            "authors": [
+              "Xianglan Chen",
+              "Yachao Duan",
+              "Yachao Duan",
+              "Huma Ittefaq",
+              "Yahui Duan",
+              "Yahui Duan"
+            ],
+            "authorsTruncated": false,
+            "year": 2022,
+            "venue": "Frontiers in Psychology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "This study examined consumers' psychological reactance, which is insufficiently explored in the literature. This research fills the gaps found in the literature reviewed and investigates how the psychological reactance of restaurant consumers developed because of social, temporal, and spatial distancing measures during COVID-19. This study also explored ways in which the restaurant industry can increase its compliance with COVID-19 restrictions in such a situation. We explored the effects of social, temporal, and spatial distancing on psychological reactance. We also identified the moderating effect of lockdown restrictions, which strengthen the psychological reactance developed because of (a) social distancing, (b) temporal distancing, and (c) spatial distancing. We collected data from restaurant consumers in Lahore. This study applied quantitative techniques (i.e., a test of normality, measurement model assessment, structural model assessment, and common method variance). The data were analyzed using IBM SPSS 25 and AMOS 24 and the results were interpreted and presented accordingly. This study added to the literature on psychological reactance, service management, and psychological distance. We could also help the restaurant industry overcome the challenges that occurred during the COVID-19 pandemic and the closures. This study could assist the restaurant industry to understand consumer behavior and attract potential consumers.",
+            "abstractTruncated": false,
+            "citations": 5,
+            "retracted": false,
+            "oaUrl": "https://www.frontiersin.org/articles/10.3389/fpsyg.2022.952964/pdf",
+            "landingUrl": "https://doi.org/10.3389/fpsyg.2022.952964",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W4300863153",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2376742630",
+            "title": "Study of Consumers' Psychological Reactance and Behavior Tendency in Stock out Context: Based on Mediation Effect of Promotion in Online Shopping Goods",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2376742630",
+            "authors": [
+              "Xiaofen Liu"
+            ],
+            "authorsTruncated": false,
+            "year": 2014,
+            "venue": "Tongji yu xinxi luntan",
+            "sourceIsCore": false,
+            "kind": "article",
+            "abstract": "This paper mainly studies consumers' psychological reactance and different behavioral tendency confronted with the context that the promotion product online is out of stock.Based on relevant psychology and marketing theory,we explore the impact of psychological reactance on consumer's behavioral tendency.The findings of experiments show that,when the product is out of stock,the level of psychological reactance is determined by the attribution of stock out.The higher the psychological reactance is,the worse the shopper has to be faced with the tendency that consumer will switch to the competitor;whether the out of stock product is in promotion will play a median effect;Last but not least, the shoppers can use substitute product to be promoted and offer arrival notice as several efficient ways to lower consumers' psychological reactance level as well as to lead consumers not switch to the competitors.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://en.cnki.com.cn/Article_en/CJFDTOTAL-TJLT201401024.htm",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2376742630",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.47067/ramss.v9i2.660",
+            "title": "Trust, Privacy Concerns, and Psychological Reactance in AI-Targeted Marketing: Effects on Consumer Attitudes and Behavioral Intentions",
+            "doi": "10.47067/ramss.v9i2.660",
+            "openAlexId": "https://openalex.org/W7203688505",
+            "authors": [
+              "Khadija Hassan",
+              "Muhammad Bilal Javed",
+              "Sehar Zehra"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Review of Applied Management and Social Sciences",
+            "sourceIsCore": false,
+            "kind": "article",
+            "abstract": "The rapid advancement of Artificial Intelligence (AI) has transformed contemporary marketing by enabling personalized advertising, predictive recommendations, and data-driven consumer engagement. Despite these technological advancements, the increasing adoption of AI-targeted marketing has generated growing concerns regarding consumer trust, privacy protection, and psychological resistance toward automated personalization. This study examined the effects of trust, privacy concerns, and psychological reactance on consumer attitudes toward AI-targeted marketing The quantitative research methodology was used with a cross sectional survey design, and data were gathered from 250 respondents from five main cities of Punjab, Pakistan, using a structured questionnaire, which had five-point Likert scale. Correlation analysis, multiple regression, analysis of variance (ANOVA), and independent samples t-test were used to analyses the collected data. The results showed that trust has a positive impact on consumer attitudes toward AI-driven marketing, while privacy concerns and psychological reactance have strong negative impacts. Moreover, there were found to be differences in consumer attitudes between gender and age groups. The results indicate that to boost consumer acceptance and the impact of AI-influenced marketing strategies, fostering consumer trust, transparency in AI-driven marketing practices, protecting consumer data, and reducing psychological resistance play key roles. The study adds to the existing literature on AI-powered marketing by offering empirical insights from the Pakistani context and practical implications for marketers and organizations aiming to create AI marketing strategies that are ethical, consumer-centric, and privacy-aware.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://ramss.spcrd.org/index.php/ramss/article/download/660/660",
+            "landingUrl": "https://doi.org/10.47067/ramss.v9i2.660",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7203688505",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.1016/j.tifs.2026.105892",
+            "title": "Consumer resistance and behavioral responses to front-of-pack nutrition labels: a systematic review through cognitive dissonance and psychological reactance frameworks",
+            "doi": "10.1016/j.tifs.2026.105892",
+            "openAlexId": "https://openalex.org/W7165177752",
+            "authors": [
+              "Carolina S. Portel",
+              "Júlia B. Sousa",
+              "Carolina Pinto de Carvalho Martins",
+              "Mônica Marques Pagani",
+              "Eliane Teixeira Mársico",
+              "Monica Q. Freitas",
+              "Adriano G. da Cruz",
+              "Erick A. Esmerino"
+            ],
+            "authorsTruncated": false,
+            "year": 2026,
+            "venue": "Trends in Food Science & Technology",
+            "sourceIsCore": true,
+            "kind": "review",
+            "abstract": "Background Front-of-pack nutrition labeling (FOPNL) has been increasingly adopted across several countries as a public health policy aimed at improving dietary choices and reducing the burden of diet-related diseases. By presenting simplified nutritional information at the point of purchase, FOPNL are expected to support informed consumer decisions and stimulate product reformulation by the food industry. However, empirical evidence regarding their effectiveness remains heterogeneous. While some studies report improvements in food choices, others identify limited effects or even defensive consumer responses. Scope and approach This systematic review synthesizes empirical evidence on consumer responses to front-of-pack labels through the theoretical lenses of cognitive dissonance and psychological reactance. Following PRISMA 2020 guidelines, studies were identified through systematic searches in PubMed , Scopus , ScienceDirect , and Web of Science . Eligible studies included experimental, quasi-experimental, qualitative, and mixed-methods research examining psychological responses to nutrition labeling interventions in food choice contexts. Key findings and conclusions Psychological reactance emerged when labels were perceived as threatening consumer autonomy, particularly in warning-based systems. Cognitive dissonance occurred when label information conflicted with prior beliefs about product healthfulness. Responses varied across food categories and were influenced by message framing, label format, and perceived costs of behavioral change. Defensive reactions did not necessarily prevent behavioral change, suggesting that resistance and increased risk awareness may coexist. By integrating insights from consumer psychology, this review provides insights into factors that may contribute to heterogeneous consumer responses to front-of-pack labeling (FOPL) policies sometimes succeed or fail and provides guidance for designing labeling strategies that reduce defensive responses while strengthening public health interventions.",
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": "https://www.sciencedirect.com/science/article/pii/S092422442600364X/pdf",
+            "landingUrl": "https://doi.org/10.1016/j.tifs.2026.105892",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W7165177752",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2580621562",
+            "title": "Study of Consumers’ Psychological reactance and Behavior Tendency in Stock out Context—based on median effect of promotion",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2580621562",
+            "authors": [
+              "刘晓凤"
+            ],
+            "authorsTruncated": false,
+            "year": 2014,
+            "venue": null,
+            "sourceIsCore": null,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "http://or.nsfc.gov.cn/handle/00001903-5/353603",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2580621562",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.1080/02642069.2020.1790535",
+            "title": "COVID-19 restrictions and consumers’ psychological reactance toward offline shopping freedom restoration",
+            "doi": "10.1080/02642069.2020.1790535",
+            "openAlexId": "https://openalex.org/W3039863613",
+            "authors": [
+              "Naeem Akhtar",
+              "Muhammad Nadeem Akhtar",
+              "Muhammad Usman",
+              "Moazzam Ali",
+              "Umar Iqbal Siddiqi"
+            ],
+            "authorsTruncated": false,
+            "year": 2020,
+            "venue": "Service Industries Journal",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "The COVID-19 pandemic threats and its subsequent restrictions on people's freedom, social interaction, closures of workplaces and shopping stores have caused public psychological reactance. In response, the study develops and tests a conceptual framework, which unveils the effects of perceived choice hesitation and perceived choice confidence on consumers’ psychological reactance. It also corroborates two bipolar behavioral outcomes of consumers’ psychological reactance— choice freedom satisfaction and resistance to persuasion. We employ the moderating role of anticipated worry and trust in government in strengthening the psychological reactance and final behavioral outcomes, respectively. Data collected from the country of origin of COVID-19 pandemic indicated the positive effects of antecedents on psychological reactance, which negatively affected choice freedom satisfaction and positively to resistance to persuasion. Anticipated worry and trust in government positively moderated these relationships. Findings extend the literature on psychology, service management, and consumer behavior, and suggest to government policymakers and store managers.",
+            "abstractTruncated": false,
+            "citations": 136,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1080/02642069.2020.1790535",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W3039863613",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.16538/j.cnki.fem.2016.02.004",
+            "title": "Consumer Psychological Reactance: A Literature Review and Prospects",
+            "doi": "10.16538/j.cnki.fem.2016.02.004",
+            "openAlexId": "https://openalex.org/W2890662736",
+            "authors": [
+              "Yuanqiong He",
+              "Yangyi Tang",
+              "Junfang Zhang"
+            ],
+            "authorsTruncated": false,
+            "year": 2016,
+            "venue": "Waiguo jingji yu guanli",
+            "sourceIsCore": false,
+            "kind": "review",
+            "abstract": "Consumers will experience psychological reactance when they perceive their freedom being threatened,and this kind of motivational state has important influence on consumers' cognition and behavior. This paper firstly makes a brief introduction of psychological reactance theory and elaborates related concepts. Secondly,it explores the consumers' cognition and behavior to deal with reactance from the perspective of characteristics of perceived threats (perceived restriction,perceived intrusiveness and perceived manipulative intent). Finally it prospects for future directions in consumer psychological reactance research based on current research limitations.",
+            "abstractTruncated": false,
+            "citations": 6,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://qks.sufe.edu.cn/J/PDFFull/A160824000187.pdf",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2890662736",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "openalex:https://openalex.org/W2990160134",
+            "title": "Theoretical and empirical analysis of consumer buying behavior toward limited products: psychological reactance theory and theory of uniqueness in a purchase of low involvement products",
+            "doi": null,
+            "openAlexId": "https://openalex.org/W2990160134",
+            "authors": [
+              "寛 鈴木"
+            ],
+            "authorsTruncated": false,
+            "year": 2008,
+            "venue": "Medical Entomology and Zoology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 0,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://ci.nii.ac.jp/naid/40016608069/en/",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2990160134",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          },
+          {
+            "key": "doi:10.1080/10696679.2000.11501859",
+            "title": "You Can’t Have That! A Study of Reactance Effects & Children’s Consumer Behavior",
+            "doi": "10.1080/10696679.2000.11501859",
+            "openAlexId": "https://openalex.org/W2285408095",
+            "authors": [
+              "Amy Rummel",
+              "John Harrison Howard",
+              "Jennifer M. Swinton",
+              "D. Bradley Seymour"
+            ],
+            "authorsTruncated": false,
+            "year": 2000,
+            "venue": "The Journal of Marketing Theory and Practice",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Experience has often taught parents that children’s desires for products are heightened when they are told “You can’t have that!” The psychological literature has identified this phenomenon as “reactance.” This study examines whether reactance determines the behavior of young consumers and examines individual differences that moderate such reactance. Findings indicate that reality reflects theory. Regardless of gender, adolescents prefer certain products more when parents signal disapproval, but younger children tend to conform to parent’s preferences.",
+            "abstractTruncated": false,
+            "citations": 40,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1080/10696679.2000.11501859",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2285408095",
+            "retrievedAt": "2026-10-22T13:54:34.451Z"
+          }
+        ],
+        "total": 98441,
+        "page": 1,
+        "pageSize": 10,
+        "notices": [],
+        "cached": false,
+        "hasMore": true
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "assess",
+      "status": 200,
+      "data": {
+        "assessments": [
+          {
+            "id": "doi:10.1086/208782",
+            "level": "direct",
+            "reason": "直接讨论促销与操纵广告引发消费者逆反，贴近劝退机制",
+            "use": "理论背景",
+            "basis": "a theory of psychological reactance details the consumer's reply to reductions in freedom",
+            "limitation": "理论综述，未检验品牌劝退文案"
+          },
+          {
+            "id": "doi:10.3389/fpsyg.2022.952964",
+            "level": "background",
+            "reason": "疫情距离限制下的消费者逆反，情境与品牌劝退不同",
+            "use": "理论背景",
+            "basis": "social, temporal, and spatial distancing measures during COVID-19",
+            "limitation": "非营销劝退，结论不可直接外推"
+          },
+          {
+            "id": "openalex:https://openalex.org/W2376742630",
+            "level": "background",
+            "reason": "缺货引发的逆反与行为倾向，涉及自由受限但非劝退",
+            "use": "理论背景",
+            "basis": "when the product is out of stock,the level of psychological reactance is determined by the attribution of stock out",
+            "limitation": "缺货情境，非品牌主动劝退措辞"
+          },
+          {
+            "id": "doi:10.47067/ramss.v9i2.660",
+            "level": "background",
+            "reason": "AI精准营销中的逆反，非劝退刺激购买现象",
+            "use": "理论背景",
+            "basis": "psychological reactance have strong negative impacts",
+            "limitation": "关注AI营销信任隐私，情境不匹配"
+          },
+          {
+            "id": "doi:10.1016/j.tifs.2026.105892",
+            "level": "background",
+            "reason": "营养标签被视为威胁自主时引发逆反，属警告标签情境",
+            "use": "理论背景",
+            "basis": "Psychological reactance emerged when labels were perceived as threatening consumer autonomy",
+            "limitation": "食品标签政策，非品牌劝退购买"
+          },
+          {
+            "id": "openalex:https://openalex.org/W2580621562",
+            "level": "insufficient",
+            "reason": "仅题名提示缺货逆反，缺摘要无法判断具体发现",
+            "use": "待核实",
+            "basis": "Study of Consumers’ Psychological reactance and Behavior Tendency in Stock out Context",
+            "limitation": "摘要缺失，不能推断方法与结论"
+          },
+          {
+            "id": "doi:10.1080/02642069.2020.1790535",
+            "level": "background",
+            "reason": "疫情限制下逆反与抵拒说服，非品牌劝退购买",
+            "use": "理论背景",
+            "basis": "resistance to persuasion",
+            "limitation": "情境为线下购物限制，外推需谨慎"
+          },
+          {
+            "id": "doi:10.16538/j.cnki.fem.2016.02.004",
+            "level": "direct",
+            "reason": "综述消费者逆反及感知限制、操纵意图等威胁特征",
+            "use": "概念定义",
+            "basis": "perceived restriction,perceived intrusiveness and perceived manipulative intent",
+            "limitation": "综述性文献，未直接检验劝退文案"
+          },
+          {
+            "id": "openalex:https://openalex.org/W2990160134",
+            "level": "insufficient",
+            "reason": "仅题名涉及限量产品逆反，与品牌劝退关系不明",
+            "use": "待核实",
+            "basis": "consumer buying behavior toward limited products",
+            "limitation": "摘要缺失，无法评估机制与结论"
+          },
+          {
+            "id": "doi:10.1080/10696679.2000.11501859",
+            "level": "direct",
+            "reason": "父母禁止提升产品偏好，直接体现逆反式消费反应",
+            "use": "直接研究",
+            "basis": "adolescents prefer certain products more when parents signal disapproval",
+            "limitation": "父母禁止非品牌劝退，儿童青少年样本"
+          }
+        ]
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "context",
+      "status": 200,
+      "data": {
+        "threads": [
+          {
+            "title": "把“劝退反而更想买”先挂在心理逆反框架下",
+            "kind": "主题",
+            "body": "给定摘要把促销影响、操纵性广告、产品不可得、政府管制都列为可能威胁消费者自由的事件，并用心理逆反理论描述消费者对自由减少的回应。这为“品牌说别买、消费者反而更想买”提供了一个候选解释方向：劝退可被理解为对选择自由的限制。但该来源是理论综述性质的题录与摘要，并未针对品牌主动劝退这类具体话术给出实证结果，因此只能作为概念起点，不能当作已证实的机制。",
+            "evidenceIds": [
+              "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8"
+            ],
+            "uncertainty": "仅有题录与摘要，未见全文，无法确认其研究方法、效应大小与边界条件。下一步需读全文，并把“劝退”操作化为可观测的自由威胁程度。"
+          },
+          {
+            "title": "自由威胁的来源可能不止一种，反应未必同向",
+            "kind": "理论",
+            "body": "摘要并列了促销影响、操纵性广告、产品不可得与政府管制几类自由威胁事件，说明逆反框架内部对“威胁从哪来”有区分空间。对你的现象而言，消费者可能把“别买”读成真诚的限制信息，也可能读成一种操纵性营销表演，两种读法对应的心理反应未必相同。这是从摘要分类推出来的研究设想，原文并未比较这些来源在劝退情境下的效果差异。",
+            "evidenceIds": [
+              "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8"
+            ],
+            "uncertainty": "摘要未报告各类威胁事件的比较结果，也没有“真诚劝退 vs 营销表演”的区分。需要检索后续实证研究核实，不能据此下结论。"
+          },
+          {
+            "title": "待查不足：被刺激的是购买欲还是好奇与讨论",
+            "kind": "待查不足",
+            "body": "现有摘要只笼统谈消费者对自由减少的“回应”，没有说明因变量是购买意愿、态度、好奇还是传播行为。你的观察里“更想买”与“更想点击、讨论”并不等同，若研究设计混用这些结果，容易把注意力反应误读为购买意愿上升。该来源不足以支撑任何关于结果变量结构的判断，需要先明确测量对象再找对应文献。",
+            "evidenceIds": [
+              "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8"
+            ],
+            "uncertainty": "摘要未提供测量工具与结果变量信息，本系统不得编造已验证量表。下一步应查该文全文及其引证文献中的具体测量方式。"
+          },
+          {
+            "title": "交叉点：逆反与消费者对“反向套路”的察觉",
+            "kind": "交叉点",
+            "body": "摘要把“操纵性广告”列为潜在自由威胁，提示一个可能的交叉口：当消费者察觉“劝退”本身是营销手法时，逆反是否仍被触发、还是转为抵触或免疫。这个交叉点目前只是由摘要中的一个列举项引申出的设想，给定资料里没有关于消费者察觉营销意图的测量或结论，也没有可引用的相关文献，因此只能作为待探索方向。",
+            "evidenceIds": [
+              "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8"
+            ],
+            "uncertainty": "“察觉营销意图”所需的概念与文献不在给定资料内，不得凭空补引。需另行检索说服知识与反向营销相关研究后再判断该交叉点是否成立。"
+          }
+        ]
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/literature/graph",
+      "query": "?id=https%3A%2F%2Fopenalex.org%2FW2018832113",
+      "status": 200,
+      "data": {
+        "center": "doi:10.1086/208782",
+        "papers": [
+          {
+            "key": "doi:10.1086/208782",
+            "title": "Consumer Behavior and Psychological Reactance",
+            "doi": "10.1086/208782",
+            "openAlexId": "https://openalex.org/W2018832113",
+            "authors": [
+              "Mona A. Clee",
+              "Robert A. Wicklund"
+            ],
+            "authorsTruncated": false,
+            "year": 1980,
+            "venue": "Journal of Consumer Research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "A theory about psychological freedom is reviewed in terms of its broad applicability to consumer behavior. Promotional influence, manipulative advertisements, product unavailability, and government regulations are all cast as potentially freedom-threatening events, and a theory of psychological reactance details the consumer's reply to reductions in freedom.",
+            "abstractTruncated": false,
+            "citations": 647,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1086/208782",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2018832113",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.4324/9781912282432",
+            "title": "A Theory of Cognitive Dissonance",
+            "doi": "10.4324/9781912282432",
+            "openAlexId": "https://openalex.org/W1966114254",
+            "authors": [
+              "Camille Morvan",
+              "Alexander O’Connor"
+            ],
+            "authorsTruncated": false,
+            "year": 2017,
+            "venue": "Macat Library eBooks",
+            "sourceIsCore": false,
+            "kind": "book",
+            "abstract": "Leon Festinger’s 1957 A Theory of Cognitive Dissonance is a key text in the history of psychology – one that made its author one of the most influential social psychologists of his time. It is also a prime example of how creative thinking and problem solving skills can come together to produce work that changes the way people look at questions for good. Strong creative thinkers are able to look at things from a new perspective, often to the point of challenging the very frames in which those around them see things. Festinger was such a creative thinker, leading what came to be known as the “cognitive revolution” in social psychology. When Festinger was carrying out his research, the dominant school of thought – behaviorism – focused on outward behaviors and their effects. Festinger, however, turned his attention elsewhere, looking at “cognition:” the mental processes behind behaviors. In the case of “cognitive dissonance”, for example, he hypothesized that apparently incomprehensible or illogical behaviors might be caused by a cognitive drive away from dissonance, or internal contradiction. This perspective, however, raised a problem: how to examine and test out cognitive processes. Festinger’s book records the results of the psychological experiments he designed to solve that problem. The results helped prove the existence for what is now a fundamental theory in social psychology.",
+            "abstractTruncated": false,
+            "citations": 18122,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.4324/9781912282432",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W1966114254",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1016/s0065-2601(08)60253-1",
+            "title": "Responses to Uncontrollable Outcomes: An Integration of Reactance Theory and the Learned Helplessness Model",
+            "doi": "10.1016/s0065-2601(08)60253-1",
+            "openAlexId": "https://openalex.org/W40929747",
+            "authors": [
+              "Camille B. Wortman",
+              "Jack W. Brehm"
+            ],
+            "authorsTruncated": false,
+            "year": 1975,
+            "venue": "Advances in experimental social psychology",
+            "sourceIsCore": true,
+            "kind": "book-chapter",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 764,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1016/s0065-2601(08)60253-1",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W40929747",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.4324/9780203767672",
+            "title": "Perspectives on Cognitive Dissonance",
+            "doi": "10.4324/9780203767672",
+            "openAlexId": "https://openalex.org/W1941386639",
+            "authors": [
+              "Robert A. Wicklund",
+              "Jack W. Brehm"
+            ],
+            "authorsTruncated": false,
+            "year": 2013,
+            "venue": "Psychology Press eBooks",
+            "sourceIsCore": false,
+            "kind": "book",
+            "abstract": "Published in 1976, Perspectives on Cognitive Dissonance is a valuable contribution to the field of Social Psychology.",
+            "abstractTruncated": false,
+            "citations": 645,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.4324/9780203767672",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W1941386639",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1016/b978-1-4832-3071-9.50016-7",
+            "title": "Implications of Commodity Theory for Value Change",
+            "doi": "10.1016/b978-1-4832-3071-9.50016-7",
+            "openAlexId": "https://openalex.org/W28731800",
+            "authors": [
+              "Timothy C. Brock"
+            ],
+            "authorsTruncated": false,
+            "year": 1968,
+            "venue": "Elsevier eBooks",
+            "sourceIsCore": false,
+            "kind": "book-chapter",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 592,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1016/b978-1-4832-3071-9.50016-7",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W28731800",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1037/h0077033",
+            "title": "Increasing the attractiveness of college cafeteria food: A reactance theory perspective.",
+            "doi": "10.1037/h0077033",
+            "openAlexId": "https://openalex.org/W1978269176",
+            "authors": [
+              "Stephen G. West"
+            ],
+            "authorsTruncated": false,
+            "year": 1975,
+            "venue": "Journal of Applied Psychology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 44,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1037/h0077033",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W1978269176",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1037/h0037529",
+            "title": "Implied threat to behavioral freedom.",
+            "doi": "10.1037/h0037529",
+            "openAlexId": "https://openalex.org/W1966913628",
+            "authors": [
+              "Virginia Andreoli Mathie",
+              "Stephen Worchel",
+              "Robert G. Folger"
+            ],
+            "authorsTruncated": false,
+            "year": 1974,
+            "venue": "Journal of Personality and Social Psychology",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 42,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1037/h0037529",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W1966913628",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1016/j.jpubeco.2011.03.003",
+            "title": "Social norms and energy conservation",
+            "doi": "10.1016/j.jpubeco.2011.03.003",
+            "openAlexId": "https://openalex.org/W2139035425",
+            "authors": [
+              "Hunt Allcott"
+            ],
+            "authorsTruncated": false,
+            "year": 2011,
+            "venue": "Journal of Public Economics",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 2662,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1016/j.jpubeco.2011.03.003",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2139035425",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1509/jmkg.69.3.19.66363",
+            "title": "The Social Influence of Brand Community: Evidence from European Car Clubs",
+            "doi": "10.1509/jmkg.69.3.19.66363",
+            "openAlexId": "https://openalex.org/W1997254581",
+            "authors": [
+              "René Algesheimer",
+              "Utpal M. Dholakia",
+              "Andreas Peter Herrmann"
+            ],
+            "authorsTruncated": false,
+            "year": 2005,
+            "venue": "Journal of Marketing",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "The authors develop and estimate a conceptual model of how different aspects of customers’ relationships with the brand community influence their intentions and behaviors. The authors describe how identification with the brand community leads to positive consequences, such as greater community engagement, and negative consequences, such as normative community pressure and (ultimately) reactance. They examine the moderating effects of customers’ brand knowledge and the brand community's size and test their hypotheses by estimating a structural equation model with survey data from a sample of European car club members.",
+            "abstractTruncated": false,
+            "citations": 2395,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1509/jmkg.69.3.19.66363",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W1997254581",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1086/208911",
+            "title": "Reference Group Influence on Product and Brand Purchase Decisions",
+            "doi": "10.1086/208911",
+            "openAlexId": "https://openalex.org/W2055078707",
+            "authors": [
+              "William O. Bearden",
+              "Michael J. Etzel"
+            ],
+            "authorsTruncated": false,
+            "year": 1982,
+            "venue": "Journal of Consumer Research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "Consumer perceptions of reference group influence on product and brand decisions were examined using 645 members of a consumer panel and 151 respondents in a followup study. Differences for 16 products in informational, value expressive, and utilitarian influence were investigated in a nested repeated measures design. The results support hypothesized differences in reference group influence between publicly and privately consumed products and luxuries and necessities.",
+            "abstractTruncated": false,
+            "citations": 1950,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1086/208911",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2055078707",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1177/009207039502300405",
+            "title": "Relationship Marketing in Consumer Markets: Antecedents and Consequences",
+            "doi": "10.1177/009207039502300405",
+            "openAlexId": "https://openalex.org/W2053583812",
+            "authors": [
+              "Jagdish N. Sheth",
+              "A. Parvatlyar"
+            ],
+            "authorsTruncated": false,
+            "year": 1995,
+            "venue": "Journal of the Academy of Marketing Science",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": null,
+            "abstractTruncated": false,
+            "citations": 1757,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1177/009207039502300405",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2053583812",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1080/00913367.2002.10673678",
+            "title": "Forced Exposure and Psychological Reactance: Antecedents and Consequences of the Perceived Intrusiveness of Pop-Up Ads",
+            "doi": "10.1080/00913367.2002.10673678",
+            "openAlexId": "https://openalex.org/W2079084267",
+            "authors": [
+              "Steven Marc Edwards",
+              "Hairong Li",
+              "Joo-Hyun Lee"
+            ],
+            "authorsTruncated": false,
+            "year": 2002,
+            "venue": "Journal of Advertising",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "This paper explores forced viewing of “pop-up ads” on the Internet to understand better how viewers come to define ads as irritating and decide to avoid them. Perceived intrusiveness was suggested as the underlying mechanism by which the process occurs. Antecedents of intrusiveness were identified that affect perceptions of ads as interruptions, including congruence of the advertisement content with the current task and intensity of cognition at the moment the ad pops up. The consequences of intrusiveness were shown to be caused by feelings of irritation and ad avoidance. The results provide an understanding of how consumers experience forced exposure situations in interactive environments and highlight implications for advertisers seeking to increase the effectiveness of on-line advertising.",
+            "abstractTruncated": false,
+            "citations": 1035,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1080/00913367.2002.10673678",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W2079084267",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          },
+          {
+            "key": "doi:10.1509/jmr.10.0355",
+            "title": "Social Networks, Personalized Advertising, and Privacy Controls",
+            "doi": "10.1509/jmr.10.0355",
+            "openAlexId": "https://openalex.org/W3023008627",
+            "authors": [
+              "Catherine E. Tucker"
+            ],
+            "authorsTruncated": false,
+            "year": 2013,
+            "venue": "Journal of Marketing Research",
+            "sourceIsCore": true,
+            "kind": "article",
+            "abstract": "This article investigates how Internet users’ perceptions of control over their personal information affect how likely they are to click on online advertising on a social networking website. The analysis uses data from a randomized field experiment that examined the effectiveness of personalizing ad text with user-posted personal information relative to generic text. The website gave users more control over their personally identifiable information in the middle of the field test. However, the website did not change how advertisers used data to target and personalize ads. Before the policy change, personalized ads did not perform particularly well. However, after this enhancement of perceived control over privacy, users were nearly twice as likely to click on personalized ads. Ads that targeted but did not use personalized text remained unchanged in effectiveness. The increase in effectiveness was larger for ads that used more unique private information to personalize their message and for target groups that were more likely to use opt-out privacy settings.",
+            "abstractTruncated": false,
+            "citations": 825,
+            "retracted": false,
+            "oaUrl": null,
+            "landingUrl": "https://doi.org/10.1509/jmr.10.0355",
+            "source": "openalex",
+            "recordUrl": "https://api.openalex.org/works/W3023008627",
+            "retrievedAt": "2026-10-22T13:55:05.845Z"
+          }
+        ],
+        "edges": [
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.4324/9781912282432",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.1016/s0065-2601(08)60253-1",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.4324/9780203767672",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.1016/b978-1-4832-3071-9.50016-7",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.1037/h0077033",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1086/208782",
+            "to": "doi:10.1037/h0037529",
+            "recordUrl": "https://api.openalex.org/works/W2018832113"
+          },
+          {
+            "from": "doi:10.1016/j.jpubeco.2011.03.003",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W2139035425"
+          },
+          {
+            "from": "doi:10.1509/jmkg.69.3.19.66363",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W1997254581"
+          },
+          {
+            "from": "doi:10.1086/208911",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W2055078707"
+          },
+          {
+            "from": "doi:10.1177/009207039502300405",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W2053583812"
+          },
+          {
+            "from": "doi:10.1080/00913367.2002.10673678",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W2079084267"
+          },
+          {
+            "from": "doi:10.1509/jmr.10.0355",
+            "to": "doi:10.1086/208782",
+            "recordUrl": "https://api.openalex.org/works/W3023008627"
+          }
+        ],
+        "notices": [
+          "仅展开一层：最多6篇参考文献、6篇引用文献。箭头从引用方指向被引用方。缺失关系不代表不存在。"
+        ],
+        "retrievedAt": "2026-10-22T13:55:05.845Z"
+      }
+    },
+    {
+      "case": "B",
+      "path": "/api/research",
+      "query": "",
+      "task": "design",
+      "status": 200,
+      "data": {
+        "design": {
+          "path": "qualitative",
+          "nodes": [
+            {
+              "id": "n1",
+              "kind": "研究问题",
+              "title": "品牌劝退话语与消费者反应的初步研究问题",
+              "body": "候选问题一：消费者如何理解并解释品牌“劝你别买”的表达？候选问题二：在何种情境与消费者特征下，劝退表达会被感知为自由威胁，并伴随更強的购买或接触意向？两问均为待检验的探索性提法，非既定结论。",
+              "evidenceIds": [],
+              "uncertainty": "问题范围较宽，尚未限定品类与平台；是否可操作化为“意向”而非实际购买，待核实。",
+              "x": 50,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n2",
+              "kind": "对象与情境",
+              "title": "研究对象的边界：品类、平台与话语场景",
+              "body": "拟聚焦社交媒体或内容电商中公开发布“不建议购买/不适合所有人/劝退”类文案的品牌账号，以及其评论区互动者。需先做小样本现象梳理，记录品类（如小众服饰、限量数码、独立出版）与平台差异，再决定是否收窄到单一情境。",
+              "evidenceIds": [],
+              "uncertainty": "“劝退式营销”缺乏统一定义，需自行界定并说明边界；样本可得性未知。",
+              "x": 320,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n3",
+              "kind": "探索主题",
+              "title": "劝退话语的类型与措辞差异",
+              "body": "可尝试区分：条件式劝退（“不适合你”）、道歉式/自嘲式声明、限量或断货提示、反向推荐。关注措辞中的语气、责任归属与是否给出理由。此为待核实的分类草案，需由文本归纳生成而非先验套用。",
+              "evidenceIds": [],
+              "uncertainty": "分类维度来源仅为观察设想，未做系统文本编码，类型数量与稳定性待核实。",
+              "x": 590,
+              "y": 50,
+              "status": "suggested"
+            },
+            {
+              "id": "n4",
+              "kind": "理论/分析视角",
+              "title": "心理逆反：自由受威胁后的反应倾向",
+              "body": "可借心理逆反理论作为敏感化概念：促销影响、操纵性广告、产品不可得等被视为潜在的自由威胁事件，理论描述了消费者对自由减少的回应。仅作分析视角，不预设本现象即逆反，也不预设效应方向与强度。",
+              "evidenceIds": [
+                "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8"
+              ],
+              "uncertainty": "仅有题录与摘要，未读全文；该文献年代较早，适用当代社交媒体的情境需重新论证。",
+              "x": 50,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n5",
+              "kind": "探索主题",
+              "title": "意图归因：真心劝退还是营销套路",
+              "body": "关注消费者是否察觉“反向劝退”本身是策略，以及这种察觉如何改变其反应。可探索归因路径：真诚关怀、稀缺操纵、玩梗互动。此主题为访谈中待浮现的解释框架，非已验证机制。",
+              "evidenceIds": [],
+              "uncertainty": "归因类别需由受访者语料归纳；是否存在稳定类型，证据不足。",
+              "x": 320,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n6",
+              "kind": "理论/分析视角",
+              "title": "竞争性解释：稀缺、好奇与社会认同",
+              "body": "在分析时并列考虑替代解释：数量稀缺或时间限制、单纯好奇与点击而非购买意愿、他人评论与从众。目的是避免把所有“越劝越买”都归因于逆反。这些为待检验的竞争性解读。",
+              "evidenceIds": [],
+              "uncertainty": "未检索相关文献，替代解释目前仅来自现象推理，需补文献核实。",
+              "x": 590,
+              "y": 230,
+              "status": "suggested"
+            },
+            {
+              "id": "n7",
+              "kind": "访谈/观察/文本方案",
+              "title": "资料方案：半结构访谈与公开评论文本",
+              "body": "拟两路并行：（1）对有过相关接触的消费者做半结构访谈，围绕看到文案时的感受、是否感到被限制、是否产生兴趣及后续行为；（2）收集品牌公开文案与评论区文本作辅助语境。访谈提纲开放式提问，不预设逆反成立。",
+              "evidenceIds": [],
+              "uncertainty": "访谈提纲尚未试访；回忆偏差与事后合理化风险需在设计中处理。",
+              "x": 50,
+              "y": 410,
+              "status": "suggested"
+            },
+            {
+              "id": "n8",
+              "kind": "资料获取",
+              "title": "抽样与资料获取路径",
+              "body": "拟采用目的性抽样与最大差异抽样：按品类、平台、原本购买意愿高低分层招募；文本资料仅取公开发布内容并记录时间与来源。可考虑先做少量预访谈修正提纲，再确定正式样本量与饱和判断标准。",
+              "evidenceIds": [],
+              "uncertainty": "样本量与饱和标准未定；招募渠道与受访者可得性待核实。",
+              "x": 320,
+              "y": 410,
+              "status": "suggested"
+            },
+            {
+              "id": "n9",
+              "kind": "可行性",
+              "title": "可行性、伦理与效度限制",
+              "body": "初步评估：小规模访谈加公开文本在时间与成本上可行。需注意公开文本使用与匿名化、避免引用可识别个人信息；效度上以多源资料互证与反例寻找为主要策略，并明确不宣称因果或量表验证。",
+              "evidenceIds": [],
+              "uncertainty": "伦理审查要求与平台使用条款需确认；研究者自身作为消费者可能引入先入之见。",
+              "x": 590,
+              "y": 410,
+              "status": "suggested"
+            }
+          ],
+          "edges": [
+            {
+              "from": "n1",
+              "to": "n2",
+              "label": "规划步骤：由问题收窄研究对象与情境",
+              "id": "e0"
+            },
+            {
+              "from": "n2",
+              "to": "n3",
+              "label": "规划步骤：在选定情境中归纳话语类型",
+              "id": "e1"
+            },
+            {
+              "from": "n3",
+              "to": "n4",
+              "label": "待检验关系：特定措辞是否更易被感知为自由威胁",
+              "id": "e2"
+            },
+            {
+              "from": "n4",
+              "to": "n5",
+              "label": "待检验关系：自由威胁感知与营销意图归因的交互",
+              "id": "e3"
+            },
+            {
+              "from": "n4",
+              "to": "n6",
+              "label": "待检验关系：逆反解释与稀缺、好奇等替代解释的竞争",
+              "id": "e4"
+            },
+            {
+              "from": "n5",
+              "to": "n7",
+              "label": "规划步骤：将归因主题转为访谈问题",
+              "id": "e5"
+            },
+            {
+              "from": "n6",
+              "to": "n7",
+              "label": "规划步骤：设置竞争性解释的对照提问",
+              "id": "e6"
+            },
+            {
+              "from": "n7",
+              "to": "n8",
+              "label": "规划步骤：据提纲试访结果确定抽样方案",
+              "id": "e7"
+            },
+            {
+              "from": "n8",
+              "to": "n9",
+              "label": "规划步骤：评估资料获取可行性与伦理限制",
+              "id": "e8"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "projectIsolation": {
+    "aUnchanged": true,
+    "aPath": "quantitative",
+    "projects": [
+      {
+        "id": "6fa7f11a-53b2-4812-914b-60bfef46a543",
+        "concepts": [
+          "心理逆反"
+        ],
+        "history": [
+          "psychological reactance consumer behavior",
+          "brand discouragement psychological reactance purchase intention"
+        ],
+        "designNodes": 10,
+        "library": [
+          {
+            "id": "f7c36dfb-c392-4b68-9f63-930ec7e7f8f8",
+            "doi": "10.1086/208782",
+            "title": "Consumer Behavior and Psychological Reactance"
+          }
+        ]
+      },
+      {
+        "id": "0adddfbd-650a-47f7-8ceb-b20436ff70ff",
+        "concepts": [
+          "说服知识（persuasion knowledge）",
+          "算法信任与建议采纳"
+        ],
+        "history": [
+          "generative engine optimization consumer persuasion knowledge trust"
+        ],
+        "designNodes": 9,
+        "library": [
+          {
+            "id": "e64684fb-fcce-42d7-85e9-56f4b22f91a7",
+            "doi": null,
+            "title": "Responsible Generative Engine Optimization: Optimizing LLM Rankings via Trustworthy Text Generation"
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "legacyUpgrade": {
+    "oldProjects": 2,
+    "oldMessages": [
+      4,
+      6
+    ],
+    "oldLibraries": [
+      0,
+      1
+    ],
+    "explorationsAndLibrariesUnchanged": true,
+    "newNodePersisted": true,
+    "newAIRequests": 0
+  },
+  "browserInteractions": {
+    "checks": [
+      {
+        "page": "lab",
+        "inputVisible": true
+      },
+      {
+        "dragChanged": true
+      },
+      {
+        "recenterStatus": 200,
+        "newCenter": "A Theory of Cognitive Dissonance"
+      },
+      {
+        "page": "lab",
+        "width": 390,
+        "overflow": false
+      },
+      {
+        "page": "literature",
+        "width": 390,
+        "overflow": false
+      },
+      {
+        "page": "map",
+        "width": 390,
+        "overflow": false
+      },
+      {
+        "page": "canvas",
+        "width": 390,
+        "overflow": false
+      }
+    ],
+    "errors": []
+  }
+}
