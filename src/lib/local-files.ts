@@ -1,3 +1,4 @@
+import { pdfOperation, type PDFProgress } from "./pdf-operation";
 export type LocalPDF = {
   id: string;
   projectId: string;
@@ -73,29 +74,58 @@ export async function deleteProjectPDFs(projectId: string) {
     };
   });
 }
-export async function extractPDF(file: File) {
-  if (file.size > 20 * 1024 * 1024)
-    throw new Error("PDF 最大 20 MB，请拆分文件。");
-  const data = new Uint8Array(await file.arrayBuffer());
-  if (new TextDecoder().decode(data.slice(0, 5)) !== "%PDF-")
-    throw new Error("文件不是有效 PDF。");
-  const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-  const task = pdfjs.getDocument({
-    data,
-    useSystemFonts: true,
-    stopAtErrors: true,
-  });
-  let doc;
+export async function extractPDF(
+  file: File,
+  options: {
+    signal?: AbortSignal;
+    onProgress?: (progress: PDFProgress) => void;
+  } = {},
+) {
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () =>
+      deadline.abort(
+        new Error("PDF 总读取时间超过 60 秒，请拆分文件或先使用摘要。"),
+      ),
+    60000,
+  );
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, deadline.signal])
+    : deadline.signal;
+  const report = (stage: string, page = 0, total = 0) =>
+    options.onProgress?.({ stage, page, total });
+  let task: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
   try {
-    doc = await task.promise;
+    report("正在打开 PDF…");
+    if (file.size > 20 * 1024 * 1024)
+      throw new Error("PDF 最大 20 MB，请拆分文件。");
+    const data = new Uint8Array(await pdfOperation(file.arrayBuffer(), signal));
+    if (new TextDecoder().decode(data.slice(0, 5)) !== "%PDF-")
+      throw new Error("文件不是有效 PDF。");
+    const pdfjs = await pdfOperation(import("pdfjs-dist"), signal);
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+    task = pdfjs.getDocument({
+      data,
+      useSystemFonts: true,
+      cMapUrl: "/pdfjs/cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: "/pdfjs/standard_fonts/",
+      stopAtErrors: true,
+    });
+    task.onPassword = () => {
+      deadline.abort(
+        new Error("PDF 需要密码，暂不支持读取。请在本地解密后重新导入。"),
+      );
+    };
+    const doc = await pdfOperation(task.promise, signal);
     if (doc.numPages > 150)
       throw new Error("当前支持最多 150 页的 PDF，请拆分。");
     const pages: string[] = [];
     let count = 0;
     for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
+      report(`正在提取文字：第 ${i} / ${doc.numPages} 页`, i, doc.numPages);
+      const page = await pdfOperation(doc.getPage(i), signal);
+      const content = await pdfOperation(page.getTextContent(), signal);
       const text = content.items
         .map((x) =>
           "str" in x ? x.str + ("hasEOL" in x && x.hasEOL ? "\n" : " ") : "",
@@ -110,7 +140,8 @@ export async function extractPDF(file: File) {
       throw new Error(
         "此 PDF 没有足够可提取文字，可能为扫描件。当前不提供 OCR，请补充摘要。",
       );
-    const metadata = await doc.getMetadata();
+    report("文字提取完成，正在整理导入预览…", doc.numPages, doc.numPages);
+    const metadata = await pdfOperation(doc.getMetadata(), signal);
     const info = metadata.info as Record<string, unknown>;
     return {
       pages,
@@ -118,6 +149,7 @@ export async function extractPDF(file: File) {
       author: typeof info.Author === "string" ? info.Author : "",
     };
   } finally {
-    await task.destroy();
+    clearTimeout(timer);
+    if (task) void task.destroy().catch(() => {});
   }
 }

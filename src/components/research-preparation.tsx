@@ -6,7 +6,7 @@ import { emptyWorkflow } from "@/lib/workflow";
 import { profileFingerprint, researchContext } from "@/lib/workbench";
 import { useProjects } from "./project-provider";
 import { researchFetch } from "./workspace-common";
-export function ResearchPreparation({ project: p }: { project: Project }) {
+export function ResearchPreparation({ project: p, initialOpen=true }: { project: Project;initialOpen?:boolean }) {
   const { saveWorkflow, busy } = useProjects();
   const f = p.workflow ?? emptyWorkflow();
   const [draft, setDraft] = useState(f.keywords),
@@ -66,7 +66,7 @@ export function ResearchPreparation({ project: p }: { project: Project }) {
     }
   }
   return (
-    <details className="frosted-surface workflow-panel" open>
+    <details className="frosted-surface workflow-panel" open={initialOpen}>
       <summary>
         <strong>检索准备</strong> · 带着问题去找文献
       </summary>

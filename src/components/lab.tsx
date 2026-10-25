@@ -44,7 +44,7 @@ function LabProject({ project }: { project: Project }) {
   const initialAttempted = useRef(false);
   const transcript = useRef<HTMLDivElement>(null);
   const lastMessageId = exploration.messages.at(-1)?.id;
-  useEffect(() => { const el = transcript.current; if (el) el.scrollTop = el.scrollHeight; }, [lastMessageId]);
+  useEffect(() => { const el = transcript.current; if (el) {const last=el.lastElementChild as HTMLElement|null;el.scrollTop=last?.classList.contains('chat-assistant')?last.offsetTop:el.scrollHeight;} }, [lastMessageId]);
   useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
@@ -140,10 +140,10 @@ function LabProject({ project }: { project: Project }) {
         {unsavedReply && <details className="lab-unsaved"><summary>未保存的 AI 回复</summary><p>{unsavedReply}</p></details>}
         {exploration.messages.at(-1)?.role === 'user' && !pending && <button className="text-button lab-retry" onClick={() => void send(true)} disabled={locked || !status?.configured}>重试 AI 回复</button>}
         <form className="lab-composer" onSubmit={e => { e.preventDefault(); void send(); }}>
-          <label className="sr-only" htmlFor="lab-message">给 AI 的消息</label><textarea id="lab-message" rows={3} maxLength={2000} value={draft} onChange={e => setDraft(e.target.value)} placeholder="我最近注意到…" disabled={pending}/>
+          <label className="sr-only" htmlFor="lab-message">给 AI 的消息</label><textarea id="lab-message" rows={2} maxLength={2000} value={draft} onChange={e => setDraft(e.target.value)} placeholder="我最近注意到…" disabled={pending}/>
           <div><span>{draft.length} / 2000</span><button className="button primary" disabled={locked || !status?.configured || !draft.trim()}>{pending ? '正在探索…' : '发送'}<Icon name="arrow" size={16}/></button></div>
         </form>
-        <p className="lab-privacy">发送时，对话上下文和研究种子会交给你配置的 AI 服务商。从首页点击“开始探索”会自动发送首次观察；其他对话由你点击发送。失败后不会自动重试。</p>
+        <details className="lab-privacy"><summary>关于 AI 与隐私</summary><p>发送时，对话上下文和研究种子会交给你配置的 AI 服务商。从首页点击“开始探索”会自动发送首次观察；其他对话由你点击发送。失败后不会自动重试。</p></details>
       </section>
       <aside className="lab-directions" aria-label="探索辅助与研究种子">
         <details className="assistant-drawer" open><summary>探索辅助面板<span>可收起</span></summary>

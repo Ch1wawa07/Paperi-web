@@ -32,7 +32,8 @@ import { CitationNetwork } from "./citation-network";
 import { LiteratureAnalysis } from "./literature-analysis";
 export function Literature({
   requestProject,
-  initialMode = "library",
+  initialMode = "start",
+  fromConcepts=false,
 }: {
   requestProject?: string;
   initialMode?: string;
@@ -49,7 +50,7 @@ export function Literature({
           链接属于另一个项目，请先在顶部切换项目。
         </p>
       ) : ready && p ? (
-        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} />
+        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} prepare={fromConcepts} />
       ) : (
         <Link href="/">选择或创建研究项目</Link>
       )}
@@ -59,13 +60,21 @@ export function Literature({
 function LibraryWorkspace({
   p,
   initialMode,
+  prepare,
 }: {
   p: Project;
   initialMode: string;
+  prepare:boolean;
 }) {
   const { saveLibrary, busy } = useProjects();
   const lib = p.library ?? emptyLibrary();
-  const [mode, setMode] = useState(initialMode),
+  const [mode, setMode] = useState(
+      initialMode === "start"
+        ? lib.items.length
+          ? "library"
+          : "import"
+        : initialMode,
+    ),
     [text, setText] = useState(""),
     [preview, setPreview] = useState<ImportPreview | null>(null),
     [decisions, setDecisions] = useState<Record<number, string>>({}),
@@ -76,15 +85,18 @@ function LibraryWorkspace({
     [category, setCategory] = useState(""),
     [tag, setTag] = useState(""),
     [pdf, setPDF] = useState<LocalPDF | null>(null),
+    [progress, setProgress] = useState(""),
     [pending, setPending] = useState(false),
     [previewRevision, setPreviewRevision] = useState(lib.revision);
+  const reading = useRef<AbortController | null>(null);
   const mounted = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
       mounted.current = false;
-    },
-    [],
-  );
+      reading.current?.abort(new Error("已取消 PDF 读取。"));
+    };
+  }, []);
   const filtered = lib.items.filter(
     (i) =>
       (!category || i.categoryIds.includes(category)) &&
@@ -95,9 +107,14 @@ function LibraryWorkspace({
   async function readFile(file: File) {
     setError("");
     setPending(true);
+    reading.current = new AbortController();
+    setProgress("正在读取文件…");
     try {
       if (/\.pdf$/i.test(file.name)) {
-        const result = await extractPDF(file);
+        const result = await extractPDF(file, {
+          signal: reading.current!.signal,
+          onProgress: (p) => setProgress(p.stage),
+        });
         if (!mounted.current) return;
         setPDF({
           id: crypto.randomUUID(),
@@ -258,8 +275,8 @@ function LibraryWorkspace({
         aria-label="文献工作台模块"
       >
         {[
-          ["library", "我的文献库"],
           ["import", "导入文献"],
+          ...(lib.items.length ? [["library", "已导入文献"]] : []),
           ["citations", "文献星图"],
           ["context", "研究脉络"],
           ["reading", "文献精析"],
@@ -442,8 +459,15 @@ function LibraryWorkspace({
         </>
       )}
       {mode === "import" && (
-        <section className="frosted-surface workflow-panel">
-          <h2>批量导入文献</h2>
+        <section className="frosted-surface workflow-panel import-surface">
+          <div className="import-intro">
+            <span className="eyebrow">BRING YOUR RESEARCH IN</span>
+            <h2>把找到的论文，带进研究里。</h2>
+            <p>
+              从一篇 PDF
+              或一组书目开始。先核对导入预览，再进入文献理解与研究设计。
+            </p>
+          </div>
           <p>
             支持 RIS、BibTeX、EndNote 标签题录和逐行参考文献。中文 UTF-8 /
             GB18030；最大 2 MB。也可导入可提取文字的 PDF（20 MB / 150 页以内）。
@@ -503,7 +527,27 @@ function LibraryWorkspace({
               下载演示 RIS
             </button>
           </details>
-          {pending && <p role="status">正在读取文件，请稍候…</p>}
+          {pending && (
+            <div className="pdf-progress" role="status">
+              <span className="spinner" />
+              <p>
+                {progress}
+                <small>
+                  本地提取文字，不调用 AI；最长 60 秒。预览确认后才保存。
+                </small>
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  reading.current?.abort(
+                    new Error("已取消 PDF 读取，可重新选择文件。"),
+                  )
+                }
+              >
+                取消读取
+              </button>
+            </div>
+          )}
           {preview && (
             <>
               <h3>
@@ -606,6 +650,7 @@ function LibraryWorkspace({
           )}
         </section>
       )}
+      {mode === "import" && <ResearchPreparation key={p.id+":import-preparation"} project={p} initialOpen={prepare}/>}
       {mode === "citations" && <CitationNetwork project={p} />}
       {(mode === "context" || mode === "reading") && (
         <LiteratureAnalysis key={mode} project={p} mode={mode} />
@@ -756,11 +801,14 @@ function PaperEditor({
     [pdf, setPDF] = useState<LocalPDF | null>(null),
     [detach, setDetach] = useState(false),
     [verified, setVerified] = useState<Paper | null>(null),
+    [progress, setProgress] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
+  const reading = useRef<AbortController | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     dialog.current?.showModal();
+    return () => reading.current?.abort(new Error("已取消 PDF 读取。"));
   }, []);
   async function save() {
     setError("");
@@ -937,7 +985,11 @@ function PaperEditor({
               setPending(true);
               setError("");
               try {
-                const result = await extractPDF(file);
+                reading.current = new AbortController();
+                const result = await extractPDF(file, {
+                  signal: reading.current.signal,
+                  onProgress: (p) => setProgress(p.stage),
+                });
                 setPDF({
                   id: crypto.randomUUID(),
                   projectId: p.id,
@@ -982,6 +1034,19 @@ function PaperEditor({
           >
             下载 PDF 原文件备份
           </button>
+        )}
+        {pending && (
+          <p role="status">
+            {progress || "正在读取登记记录…"}
+            <button
+              type="button"
+              onClick={() =>
+                reading.current?.abort(new Error("已取消 PDF 读取。"))
+              }
+            >
+              取消 PDF 读取
+            </button>
+          </p>
         )}
         {error && <p role="alert">{error}</p>}
         <div className="dialog-actions">

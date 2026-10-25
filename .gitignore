@@ -10,3 +10,5 @@ test-results/
 
 /public/pdf.worker.min.mjs
 /work/
+
+/public/pdfjs/

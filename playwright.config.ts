@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 import { existsSync } from 'node:fs';
 export default defineConfig({
   testDir: './tests',
+  testIgnore: 'pdf-dev.spec.ts',
   fullyParallel: true,
   workers: 2,
   retries: 0,
