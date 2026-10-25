@@ -42,9 +42,9 @@ test('按研究与多分类收藏、笔记、跨源去重、分类改名删除�
 
 test('缺失信息、来源记录、题名核查不一致、空结果和失败不会变成假论文',async({page})=>{
   await mock(page);await page.goto('/literature');await search(page);
-  const missing=page.locator('.paper-card').nth(1);await expect(missing).toContainText('作者未提供');await expect(missing).toContainText('年份未提供');await expect(missing).toContainText('数据源未提供摘要');
+  await expect(page.locator('.paper-card')).toHaveCount(1);await expect(page.locator('.paper-card')).not.toContainText(b.title);
   const first=page.locator('.paper-card').first();await expect(first.getByRole('link',{name:'查看来源记录'})).toHaveAttribute('href',a.recordUrl);await first.getByRole('button',{name:'核查 DOI 登记',exact:true}).click();await expect(first.locator('.paper-verification')).toContainText('题名与 Crossref 记录不同');await expect(first.locator('.paper-verification')).toContainText('年份记录不同');await expect(first.getByRole('heading')).toHaveText(a.title);
-  await page.getByLabel('文献关键词或 DOI').fill('empty');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.getByRole('heading',{name:'没有找到匹配记录'})).toBeVisible();await expect(page.locator('.paper-card')).toHaveCount(0);
+  await page.getByLabel('文献关键词或 DOI').fill('empty');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.getByRole('heading',{name:'本次搜索尚未找到可核实的学术文献。'})).toBeVisible();await expect(page.locator('.paper-card')).toHaveCount(0);
   await page.getByLabel('文献关键词或 DOI').fill('failed');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.locator('.literature-error')).toContainText('数据源不可达');await expect(page.locator('.paper-card')).toHaveCount(0);
 });
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { isRecord } from '@/lib/exploration';
-import { normalizeDOI, identityLabel, crossrefRecordURL, doiURL, emptyLibrary, isPaper, isSearchResults, samePaper, type Category, type KeywordSuggestions, type Library, type Paper, type SavedPaper, type SearchOptions, type SearchResults } from '@/lib/literature';
+import { isScholarlyPaper, normalizeDOI, identityLabel, crossrefRecordURL, doiURL, emptyLibrary, isPaper, isSearchResults, samePaper, type Category, type KeywordSuggestions, type Library, type Paper, type SavedPaper, type SearchOptions, type SearchResults } from '@/lib/literature';
 import type { Project } from '@/lib/projects';
 import { useProjects } from './project-provider';
 import { emptyWorkbench, selectedConcepts, researchContext, profileFingerprint, isAssessments, type Assessment } from '@/lib/workbench';
@@ -11,7 +11,7 @@ import { WorkspaceToolbar, ProfileStrip, EvidencePicker, researchFetch } from '.
 import { Icon, LoadingState } from './ui';
 
 const initialSearch = (project?: Project, query?:string): SearchOptions => ({ query: query ?? project?.workbench?.search?.input ?? (project ? selectedConcepts(project).slice(0,2).join(' ') : ''), provider:'auto',sort:'relevance',yearFrom:'',yearTo:'',journalsOnly:false,doiOnly:false,coreOnly:false,page:1 });
-const sourceName = (p: Paper) => p.source === 'openalex' ? 'OpenAlex' : p.source === 'deepseek' ? 'DeepSeek 网页搜索' : 'Crossref';
+const sourceName = (p: Paper) => p.source === 'openalex' ? 'OpenAlex' : p.source === 'deepseek' ? '历史网页线索' : p.source === 'academic' ? '学术出版记录' : 'Crossref';
 const kindName = (kind: string) => ({ article: '文章', review: '综述', 'journal-article': '期刊文章', 'book-chapter': '书籍章节', 'proceedings-article': '会议论文', preprint: '预印本', 'posted-content': '预发布内容' } as Record<string,string>)[kind] ?? kind;
 const fold = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 
@@ -32,6 +32,9 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
   const [language,setLanguage]=useState<'auto'|'zh'|'en'>('auto');
   const [assessments,setAssessments]=useState<Assessment[]>([]);
   const [showOthers,setShowOthers]=useState(false);
+  const [assessmentError,setAssessmentError]=useState('');
+  const [reviewing,setReviewing]=useState(false);
+  const reviewRef=useRef(false);
 
   const library = project?.library ?? emptyLibrary();
   const seed = project?.exploration?.seed;
@@ -59,7 +62,7 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
 
   const context=project?researchContext(project):{observation:'',question:'',concepts:[],messages:[],evidence:[]};
   async function search(options:SearchOptions, multiple=false){
-    if(searchingRef.current)return;searchingRef.current=true;setSearching(true);setError('');setResults(null);setAssessments([]);setActiveSearch(options);
+    if(searchingRef.current||reviewRef.current)return;searchingRef.current=true;setSearching(true);setError('');setResults(null);setAssessments([]);setAssessmentError('');setActiveSearch(options);
     const controller=new AbortController();controllers.current.add(controller);
     try{
 
@@ -67,11 +70,22 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
       const r=doi?await fetch('/api/literature?query='+encodeURIComponent(doi),{signal:controller.signal,cache:'no-store'}):await fetch('/api/literature/discover',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,cache:'no-store',body:JSON.stringify({query:options.query,language,concepts:context.concepts,question:context.question})});
       const data:unknown=await r.json();if(!r.ok)throw new Error(isRecord(data)&&typeof data.error==='string'?data.error:'检索失败。');if(!isSearchResults(data))throw new Error('文献数据格式不完整。');
       void multiple;
-      const merged=data,usedKeywords=keywords;
+      const merged={...data,items:data.items.filter(isScholarlyPaper)},usedKeywords=keywords;
       if(!mounted.current)return;setResults(merged);
-      if(aiConfigured&&merged.items.length){try{const reviewed=await researchFetch({task:'assess',query:options.query,context:{...context,evidence:merged.items.map(p=>({id:p.key,paper:p}))}},controller.signal);if(!isAssessments(reviewed.assessments))throw new Error('评估结构不完整。');if(mounted.current)setAssessments(reviewed.assessments);}catch(e){if(mounted.current)setError('来源记录已取得，但相关性尚未评估：'+(e instanceof Error?e.message:'请重试。'));}}
+      if(merged.items.length)await assessPapers(merged.items,options.query,controller.signal);
       if(project&&mounted.current)await saveWorkbench(project.id,workbench.revision,{...workbench,search:{input:options.query,origin:'manual',fingerprint,keywords:usedKeywords??{zh:[],en:[]},history:[...new Set([options.query,...(workbench.search?.history??[])])].slice(0,12)}});
     }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'检索连接中断。');}finally{controllers.current.delete(controller);searchingRef.current=false;if(mounted.current)setSearching(false);}
+  }
+  async function assessPapers(papers:Paper[],query:string,signal?:AbortSignal){
+    if(reviewRef.current||!papers.length)return;
+    reviewRef.current=true;setReviewing(true);setAssessmentError('');
+    const c=new AbortController();controllers.current.add(c);
+    try{
+      const reviewed:unknown=await researchFetch({task:'assess',query,context:{...context,evidence:papers.map(p=>({id:p.key,paper:p}))}},signal?AbortSignal.any([signal,c.signal]):c.signal);
+      if(!isRecord(reviewed)||!isAssessments(reviewed.assessments)||reviewed.assessments.length!==papers.length||new Set(reviewed.assessments.map(a=>a.id)).size!==papers.length||reviewed.assessments.some(a=>!papers.some(p=>p.key===a.id)))throw new Error('相关性评估记录不完整，未标为推荐。');
+      if(mounted.current)setAssessments(reviewed.assessments);
+    }catch(e){if(mounted.current)setAssessmentError(e instanceof Error?e.message:'相关性接口连接失败。');}
+    finally{controllers.current.delete(c);reviewRef.current=false;if(mounted.current)setReviewing(false);}
   }
   async function suggestKeywords(){
     if(!aiConfigured||generatingRef.current)return;generatingRef.current=true;setGenerating(true);setError('');const controller=new AbortController();controllers.current.add(controller);
@@ -85,6 +99,7 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
     return ok;
   }
   async function saveItem(categoryIds: string[], note: string) {
+    if (editor && !editor.existing && !isScholarlyPaper(editor.paper)) { setError('身份尚未核实，不能作为学术文献收藏。'); return false; }
     if (!editor || library.revision!==editor.revision) { setError('文献库已更新，请取消并重新打开编辑，避免覆盖其他页面的修改。'); return false; }
     if (!editor.existing && library.items.some(i=>samePaper(i.paper,editor.paper))) { setError('这篇文献已在当前项目收藏中，请重新打开管理。'); return false; }
     const now=new Date().toISOString();
@@ -104,7 +119,7 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
     const next=id ? {...library,categories:library.categories.filter(c=>c.id!==id),items:library.items.map(i=>i.categoryIds.includes(id) ? {...i,categoryIds:i.categoryIds.filter(c=>c!==id),updatedAt:new Date().toISOString()} : i)} : {...library,items:library.items.filter(i=>i.id!==removal.item?.id)};
     const ok=await persist(next,removal.revision); if(ok) { setRemoval(null); if(id===category)setCategory('all'); } return ok;
   }
-  function openItem(paper: Paper) { setError(''); setEditor({paper,existing:library.items.find(i=>samePaper(i.paper,paper)),revision:library.revision}); }
+  function openItem(paper: Paper) { if(!isScholarlyPaper(paper)&&!library.items.some(i=>samePaper(i.paper,paper))){setError('身份尚未核实，不能作为学术文献收藏。');return;}setError(''); setEditor({paper,existing:library.items.find(i=>samePaper(i.paper,paper)),revision:library.revision}); }
   const selectedCategory=category==='uncategorized' || library.categories.some(c=>c.id===category) ? category : 'all';
   const filtered=library.items.filter(i=>(selectedCategory==='all' || selectedCategory==='uncategorized' ? selectedCategory!=='uncategorized' || !i.categoryIds.length : i.categoryIds.includes(selectedCategory)) &&
     [i.paper.title,...i.paper.authors,i.paper.venue??'',i.note].join(' ').toLowerCase().includes(localQuery.trim().toLowerCase())).slice().sort((a,b)=>librarySort==='year' ? (b.paper.year??0)-(a.paper.year??0) : librarySort==='title' ? a.paper.title.localeCompare(b.paper.title,'zh-CN') : (librarySort==='updated' ? b.updatedAt.localeCompare(a.updatedAt) : b.savedAt.localeCompare(a.savedAt)));
@@ -117,12 +132,12 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
     {view==='search' ? <>
       <section className="literature-search frosted-surface" aria-label="真实文献检索">
         <div className="literature-search-heading"><div><span className="eyebrow">FIND YOUR EVIDENCE</span><h2>AI 学术联网检索</h2></div><button className="button secondary" disabled={!aiConfigured || generating || searching} onClick={()=>void suggestKeywords()}>{generating?'正在生成…':'生成中英文检索词'}<Icon name="spark" size={16}/></button></div>
-        <p className="muted search-assistance">输入完整研究问题，结合本项目已选概念搜索真实网页。中文优先、英文补充；身份核验与相关性评估分别标明。</p>
+        <p className="muted search-assistance">输入完整研究问题，结合本项目已选概念查找学术论文。中文优先、英文补充；身份核验与相关性评估分别标明。</p>
         {workbench.search&&workbench.search.fingerprint!==fingerprint&&<p className="source-notice">概念或问题已变化，检索建议需要更新。</p>}
         {keywords&&<details className="keyword-suggestions" open={fromConcepts}><summary>本项目检索建议 · 点击使用一组</summary>{(['zh','en'] as const).map(lang=><div key={lang}><strong>{lang==='zh'?'中文':'English'}</strong><div>{keywords[lang].map(term=><button key={term} onClick={()=>{setDraft({...draft,query:term});setOrigin('当前项目推荐词');setLanguage(lang);}}>{term}</button>)}</div></div>)}<button className="text-button" disabled={searching} onClick={()=>void search({...draft,page:1},true)}>按当前问题联网检索</button></details>}
 
         <form onSubmit={e=>{e.preventDefault();void search({...draft,page:1});}}>
-          <label className="sr-only" htmlFor="literature-query">文献关键词或 DOI / 自然语言研究问题</label><div className="literature-query-row"><input id="literature-query" required minLength={2} maxLength={200} value={draft.query} onChange={e=>{setDraft({...draft,query:e.target.value});setOrigin('手动输入');}} placeholder="输入一整段研究问题，例如：品牌拟人化传播如何影响消费者品牌态度？"/><button className="button primary" disabled={searching || draft.query.trim().length<2}>{searching?'正在检索…':'检索'}<Icon name="arrow" size={16}/></button></div>
+          <label className="sr-only" htmlFor="literature-query">文献关键词或 DOI / 自然语言研究问题</label><div className="literature-query-row"><input id="literature-query" required minLength={2} maxLength={200} value={draft.query} onChange={e=>{setDraft({...draft,query:e.target.value});setOrigin('手动输入');}} placeholder="输入一整段研究问题，例如：品牌拟人化传播如何影响消费者品牌态度？"/><button className="button primary" disabled={searching || reviewing || draft.query.trim().length<2}>{searching?'正在检索…':'检索'}<Icon name="arrow" size={16}/></button></div>
           <div className="search-mode"><label>检索语言<select aria-label="检索语言" value={language} onChange={e=>setLanguage(e.target.value as typeof language)}><option value="auto">智能搜索</option><option value="zh">中文文献优先</option><option value="en">英文文献补充</option></select></label><span>输入来源：{origin}</span></div>
         </form>
       </section>
@@ -130,8 +145,9 @@ function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?:
       {!!workbench.search?.history.length&&<details><summary>本项目检索历史</summary><div className="workspace-actions">{workbench.search.history.map(q=><button className="text-button" key={q} onClick={()=>{setDraft({...draft,query:q});setOrigin('本项目历史');}}>{q}</button>)}</div></details>}
 
       {searching && <div className="literature-loading" role="status"><span className="spinner"/>正在向真实学术数据源检索…</div>}
-      {results && <><div className="literature-results-heading"><div><h2>「{results.query}」</h2><span>{results.provider==='deepseek'?'DeepSeek 网页搜索':results.provider==='openalex'?'OpenAlex':'Crossref'} · 数据源命中 {results.total.toLocaleString('zh-CN')} 条，本页 {results.items.length} 条{results.cached?' · 缓存结果':''}</span></div><span>第 {results.page} 页</span></div>{results.notices.map(n=><p className="source-notice" key={n}>{n}</p>)}
-        {!results.items.length && <div className="literature-empty"><Icon name="book" size={28}/><h3>{results.total?'本页没有可展示的完整记录':'没有找到匹配记录'}</h3><p>试试更明确的关键词、英文词，或放宽年份筛选。不会用无关论文填充结果。</p></div>}
+      {results && <><div className="literature-results-heading"><div><h2>「{results.query}」</h2><span>{results.provider==='deepseek'?'DeepSeek 网页搜索':results.provider==='openalex'?'OpenAlex':'Crossref'} · 已核实 {results.items.length} 篇学术文献{results.cached?' · 缓存结果':''}</span></div><span>第 {results.page} 页</span></div>{results.notices.map(n=><p className="source-notice" key={n}>{n}</p>)}
+        {!results.items.length && <div className="literature-empty"><Icon name="book" size={28}/><h3>本次搜索尚未找到可核实的学术文献。</h3><p>可调整研究概念或学术检索表达。新闻、行业报道和身份信息不足的网页不会用来填充结果。</p></div>}
+        {reviewing&&<p role="status">正在批量评估已核实论文的相关性…</p>}{assessmentError&&<div role="alert" className="literature-error"><p>论文身份核验已完成，但相关性评估失败：{assessmentError}</p><button className="button secondary" disabled={reviewing||searching} onClick={()=>void assessPapers(results.items,results.query)}>重试相关性分析</button></div>}
         {assessments.length>0&&!assessments.some(a=>a.level==='direct')&&<p className="source-notice">本批未识别出直接相关研究。可以换用另一组短查询或仅保留核心理论与情境。背景文献仅作为理论 / 方法线索，不能据此证明研究空白。</p>}<button className="text-button" onClick={()=>setShowOthers(!showOthers)}>{showOthers?'收起低相关 / 信息不足记录':'查看低相关 / 信息不足记录'}</button><div className="paper-list">{results.items.filter(p=>showOthers||!assessments.length||['direct','background','possible'].includes(assessments.find(a=>a.id===p.key)?.level??'insufficient')).sort((a,b)=>{const rank=(p:Paper)=>({direct:0,background:1,possible:2,insufficient:3,unrelated:4}[assessments.find(x=>x.id===p.key)?.level??'insufficient']);return rank(a)-rank(b);}).map(p=><PaperCard assessment={assessments.find(a=>a.id===p.key)} key={p.key} paper={p} saved={library.items.find(i=>samePaper(i.paper,p))} categories={library.categories} query={results.query} onManage={()=>openItem(p)} canSave={!!project} disabled={busy}/>)}</div>
         <div className="literature-pagination"><button className="button secondary" disabled={searching || results.page<=1} onClick={()=>activeSearch && void search({...activeSearch,page:results.page-1})}>上一页</button><span>本次最多展示 10 条；修改问题后手动搜索，不自动翻页</span><button className="button secondary" disabled={searching || !results.hasMore} onClick={()=>activeSearch && void search({...activeSearch,page:results.page+1})}>下一页</button></div></>}
       {!results && !searching && <div className="literature-empty"><Icon name="book" size={28}/><h3>先找真实，再读深入。</h3><p>搜索结果将显示作者、来源与可追溯记录；缺少的摘要和全文会如实标明。</p>{error && activeSearch && <button className="text-button" onClick={()=>void search(activeSearch)}>重试本次检索</button>}</div>}
@@ -165,7 +181,7 @@ function PaperCard({paper:p,saved,categories,query='',canSave,disabled,onManage,
     <div className="paper-links"><a href={p.recordUrl} target="_blank" rel="noopener noreferrer">查看来源记录<Icon name="arrow-up" size={13}/></a>{p.landingUrl&&<a href={p.landingUrl} target="_blank" rel="noopener noreferrer">出版 / 原始页面<Icon name="arrow-up" size={13}/></a>}{p.oaUrl&&<a href={p.oaUrl} target="_blank" rel="noopener noreferrer">开放全文入口<Icon name="arrow-up" size={13}/></a>}{p.doi&&<button onClick={()=>void checkDOI()} disabled={checking}>{checking?'正在核查…':'核查 DOI 登记'}</button>}</div>
     {error&&<p className="paper-check-error" role="alert">{error}</p>}{verify&&<div className="paper-verification"><strong>{fold(verify.paper.title)===fold(p.title)?'题名与 Crossref 登记记录一致':'题名与 Crossref 记录不同，请人工核对版本或译名'}</strong><p>{verify.paper.title}</p><p>{verify.paper.authors.join('；')||'作者未提供'} · {verify.paper.year??'年份未提供'}</p>{p.year!==null&&verify.paper.year!==null&&p.year!==verify.paper.year&&<p className="paper-check-error">年份记录不同：当前来源 {p.year}，Crossref {verify.paper.year}。可能涉及在线发表与卷期年份，请到出版方核对后引用。</p>}<span>{verify.resolves===true?'DOI 解析器返回有效响应 / 跳转':verify.resolves===false?'DOI 解析器未找到该标识，请谨慎核查':'本次未能检查 DOI 解析状态'}</span><a href={crossrefRecordURL(verify.paper.doi!)} target="_blank" rel="noopener noreferrer">打开本次登记记录</a><p>此核查仅确认元数据与标识，不代表全文已阅读或内容质量已认证。</p></div>}
     {saved&&<div className="paper-saved-info"><div className="concept-tags">{saved.categoryIds.length?saved.categoryIds.map(id=><span key={id}>{categories.find(c=>c.id===id)?.name??'分类已更新'}</span>):<span>未分类</span>}</div>{saved.note&&<p className="paper-note">我的笔记：{saved.note}</p>}</div>}
-    <div className="paper-actions"><span>采集 {new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(p.retrievedAt))}</span><div>{onRemove&&<button className="small-button delete-button" disabled={disabled} onClick={onRemove}>移出收藏</button>}{canSave?<button className={`button ${saved?'secondary':'primary'}`} disabled={disabled} onClick={onManage}>{saved?'已收藏 · 管理':'收藏文献'}<Icon name={saved?'check':'plus'} size={15}/></button>:<Link className="text-button" href="/">创建研究后收藏<Icon name="arrow" size={15}/></Link>}</div></div>
+    <div className="paper-actions"><span>采集 {new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(p.retrievedAt))}</span><div>{onRemove&&<button className="small-button delete-button" disabled={disabled} onClick={onRemove}>移出收藏</button>}{canSave&&(!!saved||isScholarlyPaper(p))?<button className={`button ${saved?'secondary':'primary'}`} disabled={disabled} onClick={onManage}>{saved?'已收藏 · 管理':'收藏文献'}<Icon name={saved?'check':'plus'} size={15}/></button>:!isScholarlyPaper(p)?<span>历史未核实线索，仅保留原收藏记录</span>:<Link className="text-button" href="/">创建研究后收藏<Icon name="arrow" size={15}/></Link>}</div></div>
   </article>;
 }
 

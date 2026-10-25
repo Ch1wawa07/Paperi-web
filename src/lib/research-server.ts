@@ -57,7 +57,7 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
       year: p.year,
       source: p.source,
       identity: p.source === "deepseek" ? p.identity : "verified",
-      webSummary: p.webSummary?.slice(0, 1400) ?? null,
+
       recordUrl: p.recordUrl,
     })),
   };
@@ -101,14 +101,10 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
       assessments: r.assessments.map((a) => {
         const p = evidence.find((e) => e.id === a.id)!.paper;
         const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
-        return !a.basis.trim() || !norm(p.title + " " + (p.abstract ?? "") + " " + (p.webSummary ?? "")).includes(norm(a.basis)) || (!p.abstract && a.level === "direct") || (p.identity === "webpage" && a.level !== "insufficient" && a.level !== "unrelated")
-          ? {
-              ...a,
-              level: "insufficient",
-              basis: "AI 未提供可在题名/摘要中核对的原文片段。",
-              limitation: "无法充分评估，请阅读原始来源。",
-            }
-          : a;
+        if (!a.basis.trim() || !norm(p.title + " " + (p.abstract ?? "")).includes(norm(a.basis))) return {...a,level:'insufficient',basis:'未能在给定题名或论文摘要中核对判断依据。',limitation:'无法充分评估，请阅读原始来源。'};
+        if (p.source === 'deepseek') return {...a,level:'insufficient',limitation:'历史网页线索尚未确认论文身份，不能作为已核实依据。'};
+        if (!p.abstract && a.level === 'direct') return {...a,level:'possible',limitation:'仅有论文题名，未取得论文摘要，不能推断方法或结论。'};
+        return a;
       }),
     };
   }

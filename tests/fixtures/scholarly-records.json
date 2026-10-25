@@ -1,0 +1,19 @@
+{
+  "note": "人工从下列期刊/出版详情页转录的最小题录快照，2026-10-25由聊天浏览工具核对；不是原始HTML、不是DeepSeek实际响应，不用于生产回退或主题预置。没有转录摘要。CNKI记录未展示DOI；不声称该论文在其他来源也没有DOI。",
+  "withDOI": {
+    "url": "https://journal.psych.ac.cn/xlxb/CN/abstract/abstract3681.shtml",
+    "title": "和品牌聊聊天 —— 拟人化沟通对消费者品牌态度影响",
+    "authors": ["汪涛", "谢志鹏", "崔楠"],
+    "year": 2014,
+    "venue": "心理学报",
+    "doi": "10.3724/sp.j.1041.2014.00987"
+  },
+  "withoutDOI": {
+    "url": "https://hgxs.cbpt.cnki.net/portal/journal/portal/client/paper/53d54ad3195b4ced6856269db635d9f2",
+    "title": "颠覆与重塑：AIGC对微短剧行业的革变",
+    "authors": ["郑晓君", "刘若瑾", "李毓瑄"],
+    "year": 2025,
+    "venue": "中北大学学报(社会科学版)",
+    "recordText": "# 中北大学学报(社会科学版)\n2025, 04, v.41 57-66\n颠覆与重塑：AIGC对微短剧行业的革变\n郑晓君 刘若瑾 李毓瑄\n1.暨南大学新闻与传播学院\nDOI:\n出版时间：2025-04-15"
+  }
+}
