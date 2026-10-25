@@ -6,12 +6,13 @@ export type Paper = {
   venue: string | null; sourceIsCore: boolean | null; kind: string; doi: string | null; openAlexId: string | null;
   abstract: string | null; abstractTruncated: boolean; citations: number | null;
   retracted: boolean | null; oaUrl: string | null; landingUrl: string | null;
-  source: 'openalex' | 'crossref' | 'deepseek' | 'academic';
+  source: 'openalex' | 'crossref' | 'deepseek' | 'academic' | 'import';
   verification?: {method: 'citation-meta'|'json-ld'|'record-fields'; recordId: string; url: string};
-  discoveryUrl?: string; webSummary?: string; identity?: 'verified' | 'lead' | 'webpage'; recordUrl: string; retrievedAt: string;
+  discoveryUrl?: string; webSummary?: string; identity?: 'verified' | 'lead' | 'webpage' | 'imported'; recordUrl: string; retrievedAt: string;
 };
 export type Category = { id: string; name: string };
-export type SavedPaper = { id: string; paper: Paper; categoryIds: string[]; note: string; savedAt: string; updatedAt: string };
+export type Attachment = { id:string; name:string; pages:number; characters:number; updatedAt:string };
+export type SavedPaper = { attachment?:Attachment; id: string; paper: Paper; categoryIds: string[]; note: string; savedAt: string; updatedAt: string };
 export type Library = { revision: number; categories: Category[]; items: SavedPaper[] };
 export type SearchOptions = { query: string; provider: 'auto' | 'openalex' | 'crossref'; sort: 'relevance' | 'newest' | 'citations'; yearFrom: string; yearTo: string; journalsOnly: boolean; doiOnly: boolean; coreOnly: boolean; page: number };
 export type SearchResults = { query: string; provider: 'openalex' | 'crossref' | 'deepseek' | 'academic'; items: Paper[]; total: number; page: number; pageSize: number; notices: string[]; cached: boolean; hasMore: boolean };
@@ -37,7 +38,7 @@ export function safeWebURL(value: unknown): string | null {
 }
 export const doiURL = (doi: string) => `https://doi.org/${encodeURIComponent(doi)}`;
 export const crossrefRecordURL = (doi: string) => `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
-export const samePaper = (a: Paper, b: Paper) => a.key === b.key || !!(a.doi && b.doi && a.doi === b.doi) || !!(a.openAlexId && b.openAlexId && a.openAlexId === b.openAlexId);
+export const samePaper = (a: Paper, b: Paper) => a.key === b.key || !!(a.source!=='import' && b.source!=='import' && a.doi && b.doi && a.doi === b.doi) || !!(a.openAlexId && b.openAlexId && a.openAlexId === b.openAlexId);
 const text = (v: unknown, max: number) => typeof v === 'string' && !!v.trim() && v.length <= max;
 const date = (v: unknown) => typeof v === 'string' && Number.isFinite(Date.parse(v));
 export function isPaper(v: unknown): v is Paper {
@@ -51,7 +52,8 @@ export function isPaper(v: unknown): v is Paper {
   if (v.openAlexId !== null && (typeof v.openAlexId !== 'string' || !/^https:\/\/openalex\.org\/W\d+$/.test(v.openAlexId))) return false;
   if (v.discoveryUrl !== undefined && safeWebURL(v.discoveryUrl) !== v.discoveryUrl) return false;
   if (v.webSummary !== undefined && !text(v.webSummary, 6000)) return false;
-  if (v.identity !== undefined && !['verified','lead','webpage'].includes(String(v.identity))) return false;
+  if (v.identity !== undefined && !['verified','lead','webpage','imported'].includes(String(v.identity))) return false;
+  if(v.source==='import')return typeof v.key==='string'&&/^import:[a-zA-Z0-9-]+$/.test(v.key)&&v.identity==='imported'&&v.openAlexId===null&&v.citations===null&&(v.recordUrl===''||safeWebURL(v.recordUrl)===v.recordUrl)&&[v.oaUrl,v.landingUrl].every(u=>u===null||safeWebURL(u)===u);
   if (v.source === 'academic') {
     const record = typeof v.recordUrl === 'string' ? scholarlySource(v.recordUrl) : null;
     const proof = v.verification;
@@ -77,7 +79,7 @@ export function isLibrary(v: unknown): v is Library {
   for (const i of v.items) {
     if (!isRecord(i) || !text(i.id, 100) || itemIds.has(String(i.id)) || !isPaper(i.paper) || papers.some(p => samePaper(p, i.paper as Paper)) ||
       !Array.isArray(i.categoryIds) || i.categoryIds.length > 30 || new Set(i.categoryIds).size !== i.categoryIds.length || !i.categoryIds.every(c => typeof c === 'string' && ids.has(c)) ||
-      typeof i.note !== 'string' || i.note.length > 4000 || !date(i.savedAt) || !date(i.updatedAt)) return false;
+      typeof i.note !== 'string' || i.note.length > 4000 || !date(i.savedAt) || !date(i.updatedAt) || (i.attachment!==undefined&&(!isRecord(i.attachment)||!text(i.attachment.id,100)||!text(i.attachment.name,250)||!Number.isInteger(i.attachment.pages)||Number(i.attachment.pages)<1||!Number.isInteger(i.attachment.characters)||Number(i.attachment.characters)<0||!date(i.attachment.updatedAt)))) return false;
     itemIds.add(String(i.id)); papers.push(i.paper);
   }
   return true;
@@ -91,7 +93,7 @@ export function isSearchResults(v: unknown): v is SearchResults {
 
 // Compact deterministic URL identity fits existing evidence-id limits.
 export function webKey(url: string) { let h = 2166136261; for (const c of url) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return 'web:' + (h >>> 0).toString(16); }
-export const identityLabel = (p: Paper) => p.source === 'deepseek' ? p.identity === 'lead' ? '论文线索 · 待核实' : '参考网页 · 非已核实论文' : '已核实的论文元数据';
+export const identityLabel = (p: Paper) => p.source==='import'?'用户导入书目 · 未外部认证': p.source === 'deepseek' ? p.identity === 'lead' ? '论文线索 · 待核实' : '参考网页 · 非已核实论文' : '已核实的论文元数据';
 
 export const academicKinds = ['journal-article','dissertation','proceedings-article','article','review','preprint','posted-content','book-chapter'];
-export function isScholarlyPaper(v: unknown): v is Paper { return isPaper(v) && v.source !== 'deepseek' && academicKinds.includes(v.kind) && v.authors.length > 0 && v.year !== null && !!v.venue && v.retracted !== true; }
+export function isScholarlyPaper(v: unknown): v is Paper { return isPaper(v) && v.source !== 'deepseek' && v.source !== 'import' && academicKinds.includes(v.kind) && v.authors.length > 0 && v.year !== null && !!v.venue && v.retracted !== true; }

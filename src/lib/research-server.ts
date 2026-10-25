@@ -56,7 +56,7 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
       abstract: p.abstract?.slice(0, 1400) ?? null,
       year: p.year,
       source: p.source,
-      identity: p.source === "deepseek" ? p.identity : "verified",
+      identity: p.source === "deepseek" || p.source === "import" ? p.identity : "verified",
 
       recordUrl: p.recordUrl,
     })),
@@ -65,7 +65,7 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
   if (v.task === "keywords") {
     const r = await requestStructured(
       safety +
-        ' 仅生成短的独立检索表达，不混合中英文。结合当前已选概念、观察、用户当前检索输入，不用过时问题覆盖当前概念。中文/英文各2到3组，每组最多100字符。英文每组3到5个单词：第一组仅使用最核心的规范学术理论名加一个研究领域词，作为可靠的理论入口；第二组使用具体现象与情境，不再堆叠理论、结果变量与对象。宁可逐组探索，不要为了完整复述观察牺牲检索精度。中文每组2到3个概念。避免GEO等歧义缩写单独检索。JSON: {"zh":["中文短组合"],"en":["short academic query"]}。',
+        ' 仅生成短的独立检索表达，不混合中英文。结合当前已选概念、观察、用户当前检索输入，不用过时问题覆盖当前概念。中文/英文各2到3组，每组最多100字符。英文每组3到5个单词：第一组仅使用最核心的规范学术理论名加一个研究领域词，作为可靠的理论入口；第二组使用具体现象与情境，不再堆叠理论、结果变量与对象。宁可逐组探索，不要为了完整复述观察牺牲检索精度。中文每组2到3个概念。避免GEO等歧义缩写单独检索。另提供synonyms中文同义扩展词数组、expressions可复制的检索组合数组。zh改为中文核心词，en改为英文核心词，各2至3条。JSON: {"zh":["中文核心词"],"en":["English term"],"synonyms":["中文扩展词"],"expressions":["中文组合","English query"]}。',
       [{ role: "user", content: JSON.stringify({ context, query }) }],
       signal,
       700,
@@ -77,6 +77,7 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
       x.every((t) => typeof t === "string" && t.trim() && t.length <= 100);
     if (!isRecord(r) || !valid(r.zh) || !valid(r.en))
       throw new AIError(502, "检索表达格式不完整，请重试或手动检索。");
+    if ((r.synonyms!==undefined&&!valid(r.synonyms))||(r.expressions!==undefined&&!valid(r.expressions)))throw new AIError(502,'扩展关键词格式不完整，请重试。');
     return r;
   }
   if (v.task === "assess") {

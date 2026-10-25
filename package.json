@@ -8,13 +8,15 @@
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "postinstall": "node scripts/pdf-worker.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "next": "16.4.2",
+    "pdfjs-dist": "^6.4.299",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

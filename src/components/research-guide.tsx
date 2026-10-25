@@ -28,7 +28,7 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,seed,revision,
     <div className="lab-panel-heading"><h2>{researchStages.find(s=>s.id===n.stage)!.label}</h2><span className="seed-status">AI 建议 · 待核实</span></div>
     <p className="guide-hint">{researchStages.find(s=>s.id===n.stage)!.hint}</p>
     {error&&<p className="guide-error" role="alert">{error}</p>}
-    <div className="selected-concepts-bar"><strong>已选概念 · {n.concepts.filter(c=>c.status==='selected').length}</strong><div>{n.concepts.filter(c=>c.status==='selected').map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目的探索档案，研究问题可以稍后确定。</p><Link className="button primary" href={{pathname:'/literature',query:{project:projectId,concepts:'1'}}}>根据已选概念查找文献 →</Link></div>
+    <div className="selected-concepts-bar"><strong>已选概念 · {n.concepts.filter(c=>c.status==='selected').length}</strong><div>{n.concepts.filter(c=>c.status==='selected').map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目的探索档案，研究问题可以稍后确定。</p><Link className="button primary" href={{pathname:'/literature',query:{project:projectId,concepts:'1'}}}>根据已选概念准备检索 →</Link></div>
     {<>
       <div className="guide-section-heading"><h3>候选概念</h3><button className="text-button" disabled={disabled||n.concepts.length>=24} onClick={()=>{setError('');setEditing({revision});}}><Icon name="plus" size={14}/>添加概念</button></div>
       {!n.concepts.length&&<p className="muted">先说说你的观察。这里会逐渐出现候选解释，不是已经验证的定义。</p>}
@@ -36,13 +36,13 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,seed,revision,
       <p className="guide-footnote">选择与排除会保存；新一轮建议不会覆盖你编辑或确认的概念。概念识别不是变量操作化。</p>
     </>}
     {n.stage==='literature'&&<>
-      <p className="muted">可先请 AI 帮你拟定检索组合，再逐组打开文献探索。跳转只填入搜索框，由你编辑后检索；结果不由 AI 生成。</p>
+      <p className="muted">可请 AI 拟定检索组合，在下方检索准备区域编辑保存，再前往学校数据库查找文献。</p>
       {(['zh','en'] as const).map(lang=><div key={lang} className="guide-keywords"><h3>{lang==='zh'?'中文组合':'English queries'}</h3>{guide?.keywords[lang].length?guide.keywords[lang].map(t=><Link key={t} href={{pathname:'/literature',query:{query:t,project:projectId}}}>{t}<Icon name="arrow-up" size={13}/></Link>):<p className="muted">这一轮还没有{lang==='zh'?'中文':'英文'}组合，可在左侧提出检索需求。</p>}</div>)}
-      <Link className="button secondary" href="/literature">直接进入真实文献检索<Icon name="arrow" size={14}/></Link>
+      <Link className="button secondary" href="/literature">进入文献工作台导入题录<Icon name="arrow" size={14}/></Link>
     </>}
     {['context','questions'].includes(n.stage)&&<>
       <div className="guide-section-heading"><h3>本轮文献依据</h3><span>{selected.length} / 5</span></div><p className="muted">从本研究的真实收藏中主动选取，最多 5 篇；AI 只收到题录与可用摘要。收藏本身不代表你已读过全文。</p>
-      {!papers.length&&<Link className="button secondary" href="/literature">先检索并收藏文献<Icon name="arrow" size={14}/></Link>}
+      {!papers.length&&<Link className="button secondary" href="/literature">先从数据库检索并导入文献<Icon name="arrow" size={14}/></Link>}
       <div className="evidence-picker">{papers.map(p=><label key={p.id}><input type="checkbox" checked={n.evidenceIds.includes(p.id)} disabled={disabled||(!n.evidenceIds.includes(p.id)&&selected.length>=5)} onChange={e=>void update({...n,evidenceIds:e.target.checked?[...selected.map(x=>x.id),p.id]:selected.filter(x=>x.id!==p.id).map(x=>x.id)})}/><span>{p.paper.title}<small>{p.paper.venue??'来源未提供'} · {p.paper.year??'年份未提供'} · {p.paper.abstract?'有摘要，未读全文':'只有题录，解释范围有限'}</small></span></label>)}</div>
       {n.stage==='questions'&&(!selected.length||!n.concepts.some(c=>c.status==='selected'))&&<p className="guide-caution">生成候选问题前，请先选择概念，并选取至少一篇真实文献依据。你仍可以自由返回前面环节或手动记录问题。</p>}
       {guide?.threads.map((t,i)=><article className="evidence-thread" key={i}><h3>{t.title}</h3><p>{t.description}</p><div>{t.evidenceIds.map(id=>{const p=papers.find(p=>p.id===id);return p?<a key={id} href={p.paper.recordUrl} target="_blank" rel="noopener noreferrer">依据：{p.paper.title}</a>:<span key={id}>该依据已不在当前收藏中，请重新选取。</span>;})}</div><p className="guide-caution">待验证 / 限制：{t.uncertainty}</p></article>)}

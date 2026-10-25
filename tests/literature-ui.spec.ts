@@ -1,68 +1,362 @@
-import { test, expect, type Page } from '@playwright/test';
-import records from './fixtures/metadata-records.json';
-import { mapCrossref, mapOpenAlex } from '../src/lib/literature-mapping';
-const at='2026-10-21T08:00:00.000Z';
-const a=mapCrossref(records.crossref,at)!,b=mapCrossref(records.missing,at)!;
-async function mock(page: Page){
-  await page.route('**/api/literature**',route=>{
-    const u=new URL(route.request().url());
-    if(u.pathname.endsWith('/verify'))return route.fulfill({json:{paper:{...a,title:'登记记录题名不同（测试夹具）',year:2025},resolves:true,checkedAt:at}});
-    const q=route.request().method()==='POST'?route.request().postDataJSON().query:u.searchParams.get('query')??'';
-    if(q==='failed')return route.fulfill({status:503,json:{error:'测试数据源不可达，没有结果'}});
-    return route.fulfill({json:{query:q,provider:q==='same-doi'?'openalex':'crossref',items:q==='empty'?[]:q==='same-doi'?[mapOpenAlex(records.openalex,at)!]:[a,b],total:q==='empty'?0:24,page:Number(u.searchParams.get('page')??1),pageSize:10,notices:['测试夹具，仅测试界面流程'],cached:false,hasMore:q!=='empty'}});
+import { test, expect, type Page } from "@playwright/test";
+import { emptyWorkflow } from "../src/lib/workflow";
+import { mapOpenAlex } from "../src/lib/literature-mapping";
+import records from "./fixtures/metadata-records.json";
+const at = "2026-10-25T00:00:00Z",
+  key = "paperi.projects.v1";
+const project = (id = "a") => ({
+  id,
+  name: id === "a" ? "品牌联名研究" : "另一个项目",
+  observation: "品牌联名如何吸引消费者",
+  discipline: "广告学",
+  status: "starting",
+  createdAt: at,
+  updatedAt: at,
+});
+const ris = Array.from(
+  { length: 10 },
+  (_, i) =>
+    `TY  - JOUR\nTI  - 测试品牌联名文献 ${i + 1}\nAU  - 测试作者${i + 1}\nPY  - 2024\nJO  - 测试期刊\nER  -`,
+).join("\n");
+async function load(page: Page) {
+  await page.goto("/");
+  await page.evaluate(
+    ({ key, projects }) =>
+      localStorage.setItem(
+        key,
+        JSON.stringify({ version: 1, revision: 0, activeId: "a", projects }),
+      ),
+    { key, projects: [project(), project("b")] },
+  );
+  await page.reload();
+}
+async function importTen(page: Page) {
+  await page.goto("/literature");
+  await page
+    .getByRole("button", { name: "导入文献", exact: true })
+    .first()
+    .click();
+  await page.getByLabel("粘贴多条参考文献").fill(ris);
+  await page.getByRole("button", { name: "解析并预览" }).click();
+  await expect(page.getByText("导入预览：10 篇可编辑，0 条失败")).toBeVisible();
+  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await expect(page.locator(".paper-card")).toHaveCount(10);
+}
+async function snapshot(page: Page) {
+  return page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), key);
+}
+test("十篇批量导入、重复预览默认跳过、项目切换刷新隔离与书目精析限制", async ({
+  page,
+}) => {
+  await load(page);
+  await importTen(page);
+  await expect(page.getByText("AI 学术联网检索", { exact: true })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "导入文献", exact: true }).click();
+  await page.getByLabel("粘贴多条参考文献").fill(ris);
+  await page.getByRole("button", { name: "解析并预览" }).click();
+  await expect(page.getByLabel("第 1 条导入方式", { exact: true })).toHaveValue(
+    "skip",
+  );
+  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await expect(page.locator(".paper-card")).toHaveCount(10);
+  await page.getByLabel("当前项目", { exact: true }).selectOption("b");
+  await expect(page.locator(".paper-card")).toHaveCount(0);
+  await page.getByLabel("当前项目", { exact: true }).selectOption("a");
+  await page.reload();
+  await expect(page.locator(".paper-card")).toHaveCount(10);
+  await page
+    .getByRole("button", { name: "文献精析", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "分析 / 追问这篇文献" }).click();
+  await expect(page.locator(".analysis-card")).toHaveCount(10);
+  await expect(page.locator(".analysis-card").nth(5)).toContainText("信息不足");
+  expect(
+    (await snapshot(page)).projects[0].workflow.analyses[0].sourceIds,
+  ).toHaveLength(1);
+});
+test("真实形状引用网络、二级晋升、方向综述设计导出完整路径（AI使用明确模拟响应）", async ({
+  page,
+}) => {
+  await load(page);
+  await importTen(page);
+  const p = mapOpenAlex(records.openalex, at)!;
+  await page.evaluate(
+    ({ key, p }) => {
+      const s = JSON.parse(localStorage.getItem(key)!);
+      s.projects[0].library.items[0].paper = p;
+      localStorage.setItem(key, JSON.stringify(s));
+    },
+    { key, p },
+  );
+  await page.reload();
+  const ref = {
+    ...p,
+    key: "doi:10.5555/secondary",
+    doi: "10.5555/secondary",
+    title: "二级测试文献",
+    openAlexId: "https://openalex.org/W9999999911",
+    recordUrl: "https://api.openalex.org/works/W9999999911",
+  };
+  await page.route("**/api/literature/graph?**", (r) =>
+    r.fulfill({
+      json: {
+        center: p.key,
+        papers: [p, ref],
+        edges: [{ from: p.key, to: ref.key, recordUrl: p.recordUrl }],
+        notices: ["隔离测试夹具，不代表真实覆盖"],
+        retrievedAt: at,
+      },
+    }),
+  );
+  await page.getByRole("button", { name: "文献星图", exact: true }).click();
+  await expect(page.locator(".canvas-node")).toHaveCount(10);
+  await expect(page.locator(".canvas-edge")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "按需加载引用（每次最多 3 篇）" })
+    .click();
+  await expect(page.locator(".canvas-node")).toHaveCount(11);
+  await expect(page.locator(".canvas-edge")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "二级测试文献", exact: true })
+    .press("Enter");
+  await page.getByRole("button", { name: "加入当前文献库" }).click();
+  await expect(page.locator(".canvas-node")).toHaveCount(11);
+  await expect(page.locator(".is-secondary")).toHaveCount(0);
+  await page.route("**/api/workflow", (r) => {
+    const b = r.request().postDataJSON();
+    return r.fulfill({
+      json: {
+        sections: [
+          {
+            title: b.task === "review" ? "概念界定" : "测试候选方向",
+            body: "测试建议，非真实学术结论",
+            evidenceIds: [b.evidence[0].id],
+            quote: b.evidence[0].paper.title,
+            page: null,
+            uncertainty: "测试资料有限",
+          },
+        ],
+      },
+    });
   });
-}
-async function create(page: Page,name='研究 A'){
-  await page.goto('/');await page.getByRole('button',{name:'新建项目',exact:true}).click();await page.getByLabel('项目名称').fill(name);await page.getByRole('button',{name:'创建项目',exact:true}).click();await expect(page.getByRole('dialog')).not.toBeVisible();await page.goto('/literature');
-}
-async function search(page: Page,q='fixture'){await page.getByLabel('文献关键词或 DOI').fill(q);await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.locator('.paper-card').first()).toBeVisible();}
-async function saved(page: Page){await page.getByRole('tab',{name:/我的文献库/}).click();}
-
-test('按研究与多分类收藏、笔记、跨源去重、分类改名删除保留文献及独立移除',async({page})=>{
-  test.setTimeout(60000);await mock(page);await create(page);await saved(page);
-  await page.getByRole('button',{name:'新建分类',exact:true}).click();await page.getByLabel('分类名称').fill('课程资料');await page.getByRole('button',{name:'保存分类',exact:true}).click();
-  await page.getByRole('tab',{name:'检索文献',exact:true}).click();await search(page);
-  const card=page.locator('.paper-card').first();await card.getByRole('button',{name:'收藏文献',exact:true}).click();
-  await page.getByRole('dialog').getByLabel('待读',{exact:true}).uncheck();await page.getByRole('dialog').getByLabel('核心文献',{exact:true}).check();await page.getByRole('dialog').getByLabel('课程资料',{exact:true}).check();
-  await page.getByLabel('我的阅读笔记').fill('研究 A 的私有阅读笔记');await page.getByRole('button',{name:'确认收藏',exact:true}).click();
-  await expect(card.getByRole('button',{name:'已收藏 · 管理'})).toBeVisible();
-  await search(page,'same-doi');await expect(page.locator('.paper-card')).toHaveCount(1);await expect(page.getByRole('button',{name:'已收藏 · 管理'})).toBeVisible();
-  await saved(page);await expect(page.locator('.paper-card')).toHaveCount(1);await expect(page.locator('.paper-note')).toContainText('研究 A 的私有阅读笔记');
-  await page.getByRole('button',{name:'重命名分类 课程资料',exact:true}).click();await page.getByLabel('分类名称').fill('课程核心');await page.getByRole('button',{name:'保存分类',exact:true}).click();await expect(page.locator('.paper-saved-info')).toContainText('课程核心');
-  await page.reload();await saved(page);await expect(page.locator('.paper-note')).toContainText('研究 A 的私有阅读笔记');
-  await page.getByRole('button',{name:'删除分类 课程核心',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('文献和笔记都会保留');await page.getByRole('button',{name:'确认删除分类',exact:true}).click();
-  await page.getByRole('button',{name:'删除分类 核心文献',exact:true}).click();await page.getByRole('button',{name:'确认删除分类',exact:true}).click();await expect(page.locator('.paper-card')).toHaveCount(1);await expect(page.locator('.paper-saved-info')).toContainText('未分类');await expect(page.locator('.paper-note')).toContainText('研究 A 的私有阅读笔记');
-  await create(page,'研究 B');await saved(page);await expect(page.locator('.paper-card')).toHaveCount(0);
-  await page.getByRole('tab',{name:'检索文献',exact:true}).click();await search(page);await page.locator('.paper-card').first().getByRole('button',{name:'收藏文献',exact:true}).click();await page.getByLabel('我的阅读笔记').fill('研究 B 的另一份笔记');await page.getByRole('button',{name:'确认收藏',exact:true}).click();
-  await page.getByLabel('当前项目',{exact:true}).selectOption({label:'研究 A'});await saved(page);await expect(page.locator('.paper-note')).toContainText('研究 A 的私有阅读笔记');
-  await page.getByRole('button',{name:'移出收藏',exact:true}).click();await expect(page.getByRole('button',{name:'取消',exact:true})).toBeFocused();await page.getByRole('button',{name:'取消',exact:true}).click();await expect(page.locator('.paper-card')).toHaveCount(1);
-  await page.getByRole('button',{name:'移出收藏',exact:true}).click();await page.getByRole('button',{name:'确认移出收藏',exact:true}).click();await expect(page.locator('.paper-card')).toHaveCount(0);
-  await page.getByLabel('当前项目',{exact:true}).selectOption({label:'研究 B'});await saved(page);await expect(page.locator('.paper-note')).toContainText('研究 B 的另一份笔记');
+  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
+  await page.getByRole("button", { name: "生成 / 追问候选研究方向" }).click();
+  await page.getByRole("button", { name: "选择这个研究方向" }).click();
+  await page.getByRole("link", { name: "进入文献综述与研究整合" }).click();
+  await page.getByRole("button", { name: "生成综述结构候选" }).click();
+  await page.getByRole("button", { name: "追加候选，保留已有编辑" }).click();
+  await page.getByRole("button", { name: "保存综述编辑" }).click();
+  await page
+    .getByRole("button", { name: "概念界定", exact: true })
+    .first()
+    .press("Enter");
+  await page.getByLabel("综述节点内容").fill("用户修改的综述结构");
+  await page.getByRole("button", { name: "保存综述编辑" }).click();
+  await page.getByRole("link", { name: "进入研究设计" }).click();
+  await page.getByRole("button", { name: "添加节点" }).click();
+  await page.getByLabel("名称", { exact: true }).fill("品牌契合度");
+  await page
+    .getByLabel("研究内容", { exact: true })
+    .fill("自变量，待选择测量依据");
+  await page.getByRole("button", { name: "保存研究设计" }).click();
+  await page.goto("/proposal");
+  await page.getByRole("button", { name: "确认当前研究框架" }).click();
+  await expect(
+    page.getByText("已确认 · 确认仅代表你的研究计划，不代表结论已证实。", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "导出完整研究框架 Markdown" }).click();
+  expect((await download).suggestedFilename()).toBe("Paperi-研究框架.md");
+  expect((await snapshot(page)).projects[0].workflow.review[0].body).toBe(
+    "用户修改的综述结构",
+  );
 });
-
-test('缺失信息、来源记录、题名核查不一致、空结果和失败不会变成假论文',async({page})=>{
-  await mock(page);await page.goto('/literature');await search(page);
-  await expect(page.locator('.paper-card')).toHaveCount(1);await expect(page.locator('.paper-card')).not.toContainText(b.title);
-  const first=page.locator('.paper-card').first();await expect(first.getByRole('link',{name:'查看来源记录'})).toHaveAttribute('href',a.recordUrl);await first.getByRole('button',{name:'核查 DOI 登记',exact:true}).click();await expect(first.locator('.paper-verification')).toContainText('题名与 Crossref 记录不同');await expect(first.locator('.paper-verification')).toContainText('年份记录不同');await expect(first.getByRole('heading')).toHaveText(a.title);
-  await page.getByLabel('文献关键词或 DOI').fill('empty');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.getByRole('heading',{name:'本次搜索尚未找到可核实的学术文献。'})).toBeVisible();await expect(page.locator('.paper-card')).toHaveCount(0);
-  await page.getByLabel('文献关键词或 DOI').fill('failed');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.locator('.literature-error')).toContainText('数据源不可达');await expect(page.locator('.paper-card')).toHaveCount(0);
+test("删除来源标记失效，保存失败不破坏旧文献，备份恢复为副本", async ({
+  page,
+}) => {
+  await load(page);
+  await importTen(page);
+  const s = await snapshot(page);
+  const id = s.projects[0].library.items[0].id;
+  await page.evaluate(
+    ({ key, id, f }) => {
+      const s = JSON.parse(localStorage.getItem(key)!);
+      s.projects[0].workflow = {
+        ...f,
+        review: [
+          {
+            id: "n",
+            title: "旧综述",
+            body: "用户编辑不能丢",
+            evidenceIds: [id],
+            uncertainty: "待核对",
+            x: 0,
+            y: 0,
+          },
+        ],
+        reviewFingerprint: "old",
+      };
+      localStorage.setItem(key, JSON.stringify(s));
+    },
+    { key, id, f: emptyWorkflow() },
+  );
+  await page.reload();
+  page.on("dialog", (d) => d.accept());
+  await page
+    .getByRole("button", { name: "删除文献", exact: true })
+    .first()
+    .click();
+  await expect(page.locator(".paper-card")).toHaveCount(9);
+  await page.goto("/review");
+  await page
+    .getByRole("button", { name: "旧综述", exact: true })
+    .first()
+    .press("Enter");
+  await expect(
+    page.getByText("来源已移除，需要更新", { exact: true }),
+  ).toBeVisible();
+  await page.goto("/literature");
+  await page
+    .getByRole("button", { name: "编辑资料、分类与笔记" })
+    .first()
+    .click();
+  await page.getByLabel("阅读笔记").fill("未保存笔记");
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("Quota", "QuotaExceededError");
+    };
+  });
+  await page.getByRole("button", { name: "保存文献资料" }).click();
+  await expect(page.getByRole("dialog")).toContainText("保存未完成");
+  await expect(page.getByLabel("阅读笔记")).toHaveValue("未保存笔记");
+  await page.reload();
+  await page.goto("/");
+  await page.getByText("项目数据备份与恢复", { exact: true }).click();
+  await page.getByLabel("选择项目 JSON 备份").setInputFiles({
+    name: "backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(await snapshot(page))),
+  });
+  await page.getByRole("button", { name: "确认恢复为独立副本" }).click();
+  expect((await snapshot(page)).projects).toHaveLength(4);
 });
-
-test('收藏写入失败不显示已收藏，编辑窗口保留笔记',async({page})=>{
-  await mock(page);await create(page);await search(page);await page.locator('.paper-card').first().getByRole('button',{name:'收藏文献',exact:true}).click();await page.getByLabel('我的阅读笔记').fill('不能丢失的编辑');
-  await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw new DOMException('Quota exceeded','QuotaExceededError');};});
-  await page.getByRole('button',{name:'确认收藏',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('还没有保存成功');await expect(page.getByLabel('我的阅读笔记')).toHaveValue('不能丢失的编辑');
-  await page.getByRole('button',{name:'取消',exact:true}).click();await saved(page);await expect(page.locator('.paper-card')).toHaveCount(0);await page.reload();await saved(page);await expect(page.locator('.paper-card')).toHaveCount(0);
+test("AI失败明确可重试且不覆盖历史，PDF格式错误不会新增假文献", async ({
+  page,
+}) => {
+  await load(page);
+  await importTen(page);
+  await page.route("**/api/workflow", (r) =>
+    r.fulfill({ status: 504, json: { error: "测试：AI 请求超时" } }),
+  );
+  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
+  await page.getByRole("button", { name: "生成 / 追问候选研究方向" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "测试：AI 请求超时" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "导入文献", exact: true }).click();
+  await page.getByLabel("选择题录或 PDF 文件").setInputFiles({
+    name: "bad.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("not a PDF"),
+  });
+  await expect(
+    page.getByRole("alert").filter({ hasText: "不是有效 PDF" }),
+  ).toBeVisible();
+  expect((await snapshot(page)).projects[0].library.items).toHaveLength(10);
 });
+for (const width of [1440, 390])
+  test(`工作台、网络、综述和模型可见交互 ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 950 });
+    await load(page);
+    await importTen(page);
+    await page.screenshot({
+      path: `docs/screenshots/workflow/library-${width}.png`,
+      fullPage: true,
+    });
+    for (const mode of ["文献星图", "研究脉络", "文献精析"]) {
+      await page
+        .getByRole("button", { name: mode, exact: true })
+        .first()
+        .click();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: `docs/screenshots/workflow/${mode}-${width}.png`,
+        fullPage: true,
+      });
+    }
+    for (const path of ["review", "canvas"]) {
+      await page.goto("/" + path);
+      await page
+        .getByRole("button", {
+          name: path === "review" ? "添加综述节点" : "添加节点",
+          exact: true,
+        })
+        .click();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: `docs/screenshots/workflow/${path}-${width}.png`,
+        fullPage: true,
+      });
+    }
+  });
 
-test('其他标签改分类时，旧编辑窗口不能覆盖新内容',async({page,context})=>{
-  await mock(page);await create(page);await search(page);await page.locator('.paper-card').first().getByRole('button',{name:'收藏文献',exact:true}).click();await page.getByRole('button',{name:'确认收藏',exact:true}).click();await saved(page);
-  await page.getByRole('button',{name:'已收藏 · 管理'}).click();await page.getByLabel('我的阅读笔记').fill('旧页面编辑中');
-  const other=await context.newPage();await mock(other);await other.goto('/literature');await saved(other);await other.getByRole('button',{name:'重命名分类 待读',exact:true}).click();await other.getByLabel('分类名称').fill('其他标签改名');await other.getByRole('button',{name:'保存分类',exact:true}).click();
-  await expect(page.getByRole('dialog')).toContainText('其他标签改名');await page.getByRole('button',{name:'保存分类与笔记',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('还没有保存成功');await page.getByRole('button',{name:'取消',exact:true}).click();await page.reload();await saved(page);await expect(page.locator('.paper-saved-info')).toContainText('其他标签改名');await expect(page.locator('.paper-note')).toHaveCount(0);
-});
-
-test('390px 收藏、分类、笔记搜索与键盘可用，无横向溢出',async({page})=>{
-  await page.setViewportSize({width:390,height:844});await mock(page);await create(page);await search(page);await page.locator('.paper-card').first().getByRole('button',{name:'收藏文献',exact:true}).click();await page.getByLabel('我的阅读笔记').fill('手机阅读：与算法信任有关');await page.getByRole('button',{name:'确认收藏',exact:true}).click();await saved(page);await page.getByRole('textbox',{name:'搜索当前收藏'}).fill('算法信任');await expect(page.locator('.paper-card')).toHaveCount(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.getByRole('button',{name:'新建分类',exact:true}).focus();await page.keyboard.press('Enter');await expect(page.getByLabel('分类名称')).toBeFocused();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'新建分类',exact:true})).toBeFocused();
+test("真实PDF解析器读取本地合成文件，确认前不入库，刷新后可下载原文件", async ({
+  page,
+}) => {
+  await load(page);
+  await page.goto("/literature");
+  await page
+    .getByRole("button", { name: "导入文献", exact: true })
+    .first()
+    .click();
+  await page
+    .getByLabel("选择题录或 PDF 文件")
+    .setInputFiles("tests/fixtures/workflow/readable.pdf");
+  await expect(page.getByText("导入预览：1 篇可编辑，0 条失败")).toBeVisible({
+    timeout: 20000,
+  });
+  expect((await snapshot(page)).projects[0].library).toBeUndefined();
+  await page.getByLabel("论文标题").fill("测试 PDF 书目（用户确认）");
+  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await expect(page.locator(".paper-card")).toHaveCount(1);
+  await expect(page.locator(".paper-card")).toContainText("有本地 PDF");
+  await page.reload();
+  await page.getByRole("button", { name: "编辑资料、分类与笔记" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 PDF 原文件备份" }).click();
+  expect((await download).suggestedFilename()).toBe("readable.pdf");
+  const s = await snapshot(page);
+  expect(JSON.stringify(s)).not.toContain("Synthetic Paperi");
+  expect(s.projects[0].library.items[0].attachment.pages).toBe(1);
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await page.goto("/");
+  await page.getByText("项目数据备份与恢复", { exact: true }).click();
+  await page.getByLabel("选择项目 JSON 备份").setInputFiles({
+    name: "pdf-backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(s)),
+  });
+  await page.getByRole("button", { name: "确认恢复为独立副本" }).click();
+  await page.goto("/literature");
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "删除文献", exact: true }).click();
+  await expect(page.locator(".paper-card")).toHaveCount(0);
+  await page.getByLabel("当前项目", { exact: true }).selectOption("a");
+  await page.getByRole("button", { name: "编辑资料、分类与笔记" }).click();
+  const original = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 PDF 原文件备份" }).click();
+  expect((await original).suggestedFilename()).toBe("readable.pdf");
 });

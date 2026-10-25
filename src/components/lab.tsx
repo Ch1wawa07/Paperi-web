@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import {ResearchPreparation} from './research-preparation';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { emptyExploration, isAIReply, isRecord, type Direction, type Exploration, type ResearchSeed } from '@/lib/exploration';
 import type { Project } from '@/lib/projects';
@@ -18,7 +19,7 @@ export function Lab() {
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
   return <div className="module-page module-lab">
     <WorkspaceToolbar title="灵感实验室" project={project}/>
-    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <LabProject key={project.id} project={project}/> :
+    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <><LabProject key={project.id} project={project}/><ResearchPreparation key={project.id+':keywords'} project={project}/></> :
       <section className="lab-no-project frosted-surface"><Icon name="leaf" size={32}/><h2>为想法留一个位置</h2><p className="muted">先创建项目，对话和研究种子会保存在这个项目里。</p><Link className="button primary" href="/">去创建项目<Icon name="arrow" size={16}/></Link></section>}
   </div>;
 }

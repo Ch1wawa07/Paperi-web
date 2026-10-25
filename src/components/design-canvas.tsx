@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
+import {sourceFingerprint} from "@/lib/workflow";
+import {WorkflowSelection} from "./literature-analysis";
 import { useEffect, useRef, useState } from "react";
 import { useProjects } from "./project-provider";
 import {
   WorkspaceToolbar,
   ProfileStrip,
-  EvidencePicker,
   researchFetch,
   downloadText,
 } from "./workspace-common";
@@ -17,6 +18,7 @@ import {
   isDesign,
   type Design,
   type DesignNode,
+  type DesignEdge,
 } from "@/lib/workbench";
 import type { Project } from "@/lib/projects";
 export function DesignCanvas({ proposal = false }: { proposal?: boolean }) {
@@ -55,7 +57,8 @@ function Designer({
     [dirty, setDirty] = useState(false),
     [from, setFrom] = useState(""),
     [to, setTo] = useState(""),
-    [edgeLabel, setEdgeLabel] = useState("待检验关系");
+    [edgeLabel, setEdgeLabel] = useState("H1 待检验关系"),
+    [edgeKind,setEdgeKind]=useState<NonNullable<DesignEdge["kind"]>>("hypothesis");
   const controller = useRef<AbortController | null>(null),
     running = useRef(false);
   useEffect(() => () => controller.current?.abort(), []);
@@ -100,7 +103,7 @@ function Designer({
   const node = draft.nodes.find((n) => n.id === selected);
   const sources = [
     ...(p.library?.items ?? []).map((i) => ({ id: i.id, paper: i.paper })),
-    ...w.designSources.map((paper) => ({ id: paper.key, paper })),
+    ...w.designSources.filter(paper=>p.library?.items.some(i=>i.paper.key===paper.key)).map((paper) => ({ id: paper.key, paper })),
   ];
   function change(next: Design) {
     if(!dirty&&baseline!==JSON.stringify(w.design)){setError("设计已在其他页面更新，请先读取已保存版本再编辑。");return;}
@@ -121,7 +124,7 @@ function Designer({
     setError("");
     if(!dirty)return;
     const expected = revision;
-    if (await saveWorkbench(p.id, expected, { ...w, design: draft })) {
+    if (await saveWorkbench(p.id, expected, { ...w, design: draft,designFingerprint:sourceFingerprint(p) })) {
       setRevision(expected + 1);
       setBaseline(JSON.stringify(draft));
       setDirty(false);
@@ -136,7 +139,8 @@ function Designer({
     controller.current = c;
     try {
       const context = researchContext(p);
-      const extras = w.designSources
+      if((p.library?.items.length??0)>30&&context.evidence.length>=30)throw new Error("本次设计最多使用 30 篇，请先调整文献选择。");
+      const extras = (p.workflow?[]:w.designSources).filter(paper=>p.library?.items.some(i=>i.paper.key===paper.key))
         .filter(
           (paper) => !context.evidence.some((e) => e.paper.key === paper.key),
         )
@@ -190,6 +194,7 @@ function Designer({
   return (
     <>
       <ProfileStrip project={p} />
+      {!!w.design.nodes.length&&w.designFingerprint!==sourceFingerprint(p)&&<p className="source-notice">研究资料或文献集合已变化（或来自旧版设计），请复核设计依据；已有设计保留。</p>}
       <div className="design-toolbar">
         <label>
           研究路径
@@ -197,7 +202,7 @@ function Designer({
             aria-label="研究路径"
             value={draft.path}
             onChange={(e) =>
-              change({ ...draft, path: e.target.value as Design["path"] })
+              confirm("切换研究路径会保留所有现有节点和连线，请自行复核它们是否适用于新路径。继续？") && change({ ...draft, path: e.target.value as Design["path"] })
             }
           >
             <option value="quantitative">定量研究</option>
@@ -256,7 +261,7 @@ function Designer({
         </button>
         <span role="status">{dirty ? "有未保存修改" : "已保存内容"}</span>
       </div>
-      <EvidencePicker project={p} />
+      <WorkflowSelection project={p} /><p className="source-notice">研究问题与方向：{p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??p.observation}。模型连线是待检验假设或设计逻辑。</p><Link href="/review">返回文献综述</Link> · <Link href="/proposal">确认并导出完整研究框架 →</Link>
       {error && (
         <p className="literature-error" role="alert">
           {error}
@@ -514,6 +519,7 @@ function Designer({
                   ))}
                 </select>
               </label>
+              <label>关系类型<select aria-label="关系类型" value={edgeKind} onChange={e=>setEdgeKind(e.target.value as NonNullable<DesignEdge["kind"]>)}><option value="hypothesis">直接假设</option><option value="mediation">中介路径</option><option value="moderation">调节关系</option><option value="process">质性研究流程</option></select></label>
               <label>
                 关系名称
                 <input
@@ -542,6 +548,7 @@ function Designer({
                         from,
                         to,
                         label: edgeLabel.trim(),
+                        kind:edgeKind,
                       },
                     ],
                   })
@@ -555,6 +562,7 @@ function Designer({
                     {draft.nodes.find((n) => n.id === e.from)?.title} →{" "}
                     {draft.nodes.find((n) => n.id === e.to)?.title}
                   </span>
+                  <select aria-label="编辑关系类型" value={e.kind??"hypothesis"} onChange={ev=>change({...draft,edges:draft.edges.map(x=>x.id===e.id?{...x,kind:ev.target.value as DesignEdge["kind"]}:x)})}><option value="hypothesis">直接假设</option><option value="mediation">中介路径</option><option value="moderation">调节关系</option><option value="process">质性研究流程</option></select>
                   <input
                     aria-label="编辑关系名称"
                     value={e.label}

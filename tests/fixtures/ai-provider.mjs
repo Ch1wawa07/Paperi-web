@@ -10,6 +10,12 @@ createServer(async (request, response) => {
   let raw = '';
   for await (const chunk of request) raw += chunk;
   const body = JSON.parse(raw);
+  if(body.messages?.[0]?.content?.includes('Paperi 研究工作流助手')){
+    const input=JSON.parse(body.messages[1].content),e=input.evidence[0];
+    const titles=input.task==='reading'?['研究主题','研究缘由','核心概念','理论基础','研究问题与假设','研究方法','样本与数据','主要发现','研究局限','对当前项目的价值']:['测试候选方向'];
+    const sections=titles.map(title=>({title,body:'仅测试模型协议，不代表研究结论',evidenceIds:[input.question==='FORGED'?'unknown':e.id],quote:input.question==='BADQUOTE'?'不存在的原文':e.abstract||e.title,page:null,uncertainty:'测试限制'}));
+    response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections})}}]}));return;
+  }
   if(body.messages?.[0]?.content?.includes('你是 Paperi 人文社科研究助手')){
     const system=body.messages[0].content,input=JSON.parse(body.messages[1].content),context=input.context??input;
     let value;

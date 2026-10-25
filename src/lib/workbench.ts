@@ -1,3 +1,4 @@
+import {workflowEvidence} from './workflow';
 import { isRecord } from "./exploration";
 import { isIds } from "./research-navigation";
 import type { Project } from "./projects";
@@ -14,6 +15,7 @@ export type DesignNode = {
   uncertainty: string;
 };
 export type DesignEdge = {
+  kind?: "hypothesis"|"mediation"|"moderation"|"process";
   id: string;
   from: string;
   to: string;
@@ -45,6 +47,7 @@ export type Workbench = {
   design: Design;
   analysis: Thread[];
   analysisFingerprint?: string;
+  designFingerprint?: string;
   search?: {
     input: string;
     origin: "manual" | "concepts" | "history";
@@ -105,6 +108,7 @@ export function isDesign(v: unknown): v is Design {
       !ids.has(String(e.from)) ||
       !ids.has(String(e.to)) ||
       e.from === e.to ||
+      (e.kind!==undefined&&!["hypothesis","mediation","moderation","process"].includes(String(e.kind))) ||
       !txt(e.label, 160)
     )
       return false;
@@ -157,6 +161,7 @@ export function isWorkbench(v: unknown): v is Workbench {
     !Array.isArray(v.designSources) ||
     v.designSources.length > 40 ||
     !v.designSources.every(isPaper) ||
+    (v.designFingerprint !== undefined && !txt(v.designFingerprint,12000,true)) ||
     (v.analysisFingerprint !== undefined &&
       !txt(v.analysisFingerprint, 12000, true))
   )
@@ -192,7 +197,7 @@ export const profileFingerprint = (p: Project) =>
     selectedConcepts(p),
     p.exploration?.seed?.workingQuestion ?? "",
   ]);
-export const selectedEvidence = (p: Project) =>
+export const selectedEvidence = (p: Project) => p.workflow || (!p.workbench&&!p.exploration?.navigation?.evidenceIds.length) ? workflowEvidence(p) :
   (p.library?.items ?? []).filter((i) =>
     (
       p.workbench?.evidenceIds ??
@@ -204,12 +209,12 @@ export function researchContext(p: Project) {
   return {
     observation: p.observation,
     concepts: selectedConcepts(p),
-    question: p.exploration?.seed?.workingQuestion ?? "",
+    question: (p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??"").slice(0,400),
     messages: (p.exploration?.messages ?? [])
       .slice(-4)
       .map((m) => m.content.slice(0, 1000)),
     evidence: selectedEvidence(p)
-      .slice(0, 8)
+      .slice(0, 30)
       .map((i) => ({ id: i.id, paper: i.paper })),
   };
 }
@@ -217,7 +222,7 @@ export function exportDesign(p: Project) {
   const w = p.workbench ?? emptyWorkbench();
   const sources = [
     ...(p.library?.items ?? []).map((i) => ({ id: i.id, paper: i.paper })),
-    ...w.designSources.map((paper) => ({ id: paper.key, paper })),
+    ...w.designSources.filter(paper=>p.library?.items.some(i=>i.paper.key===paper.key)).map((paper) => ({ id: paper.key, paper })),
   ];
   return (
     `# ${p.name} · 初步研究设计\n\n路径：${w.design.path === "quantitative" ? "定量研究" : "质化研究"}\n\n原始观察：${p.observation}\n\n已选概念：${selectedConcepts(p).join("、")}\n\n已确认研究起点：${p.exploration?.seed?.workingQuestion || "尚未确认"}\n\n本方案为可编辑草案。用户确认不等于文献验证；仅依据可获得的题录/摘要，未宣称阅读全文。\n\n` +

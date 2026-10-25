@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import {ProjectBackup} from './project-backup';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { navigation } from '@/lib/navigation';
@@ -11,7 +12,7 @@ import { EmptyState, Icon, LoadingState } from './ui';
 import { GlassBloom } from './glass-art';
 
 type Modal = { mode: 'create' | 'rename' | 'delete'; project?: Project };
-const journeyCopy = ['理解现象，探索概念', '用真实文献验证', '沿引用继续发现', '衔接定量或质化', '整理自己的方案'];
+const journeyCopy = ['理解现象，探索概念', '导入、理解和组织文献', '构建文献综述结构', '衔接定量或质性', '确认并导出研究框架'];
 
 export function Home() {
   const [observation, setObservation] = useState('');
@@ -59,6 +60,7 @@ export function Home() {
       </article>)}</div>}
       <p className="storage-note"><Icon name="lock" size={13}/><span>项目和对话仅存于当前浏览器，清除数据后可能丢失。</span></p>
     </section>
+    <ProjectBackup/>
     {modal && <ProjectDialog {...modal} onClose={()=>setModal(null)}/>}
   </>;
 }

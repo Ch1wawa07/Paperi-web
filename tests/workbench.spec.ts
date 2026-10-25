@@ -171,72 +171,6 @@ test("V1.1无工作台记录直接读取；新增设计校验并保留来源导�
   expect(exportDesign(p)).toContain("尚无完整原文");
 });
 
-test("项目A带入词不串到B，手动输入不被异步建议覆盖，刷新恢复各自历史", async ({
-  page,
-}) => {
-  await mockAI(page);
-  const a=project();a.workbench={...emptyWorkbench(),search:{input:"saved AI trust",origin:"history",fingerprint:"",keywords:{zh:[],en:[]},history:["saved AI trust"]}};await load(page, [a, project("b")]);
-  await page.goto("/literature?project=a&query=algorithmic%20trust");
-  await expect(page.getByLabel("文献关键词或 DOI")).toHaveValue(
-    "algorithmic trust",
-  );
-  await page.getByLabel("当前项目", { exact: true }).selectOption("b");
-  await expect(page.getByLabel("文献关键词或 DOI")).toHaveValue("心理逆反");
-  await page.getByRole("button", { name: "生成中英文检索词" }).click();
-  await page.getByLabel("文献关键词或 DOI").fill("手动编辑后不能覆盖");
-  await expect(page.locator(".keyword-suggestions")).toBeAttached();
-  await expect(page.getByLabel("文献关键词或 DOI")).toHaveValue(
-    "手动编辑后不能覆盖",
-  );
-  await page.getByLabel("当前项目", { exact: true }).selectOption("a");
-  await expect(page.getByLabel("文献关键词或 DOI")).toHaveValue(
-    "saved AI trust",
-  );
-});
-
-test("默认联网入口；机械工程同词记录归入不推荐且不进入直接结果", async ({
-  page,
-}) => {
-  await mockAI(page);
-  await load(page);
-  await page.route("**/api/literature/discover", (r) =>
-    r.fulfill({
-      json: {
-        query: "fixture",
-        provider: "crossref",
-        items: [
-          paper,
-          {
-            ...paper,
-            key: "doi:10.5555/mechanical",
-            doi: "10.5555/mechanical",
-            title: "Mechanical reverse manufacturing",
-              openAlexId: null,
-            source: "crossref",
-            recordUrl: "https://api.crossref.org/works/10.5555%2Fmechanical",
-          },
-        ],
-        total: 2,
-        page: 1,
-        pageSize: 10,
-        notices: [],
-        cached: false,
-        hasMore: false,
-      },
-    }),
-  );
-  await page.goto("/literature");
-  await page
-    .getByLabel("文献关键词或 DOI")
-    .fill("psychological reactance advertising");
-  await page.getByRole("button", { name: "检索", exact: true }).click();
-  await expect(page.locator(".assessment-direct")).toHaveCount(1);
-  await expect(page.locator(".paper-card")).toHaveCount(1);
-  await page.getByRole("button", { name: "查看低相关 / 信息不足记录" }).click();
-  await expect(page.locator(".paper-card")).toHaveCount(2);
-  await expect(page.locator(".paper-card").last()).toContainText("不推荐");
-});
-
 test("真实引用适配器只绘制可核对的边并拒绝任意外部地址", async ({
   request,
 }) => {
@@ -315,75 +249,13 @@ test("研究辅助接口严格校验来源，实际HTTP适配关键词、相关�
   }
 });
 
-test("星图拖动缩放重置、来源详情、切换中心与加入设计真实共享", async ({
-  page,
-}) => {
-  await load(page);
-  await page.route("**/api/literature/graph?**", (r) =>
-    r.fulfill({
-      json: {
-        center: paper.key,
-        papers: [paper],
-        edges: [],
-        notices: ["真实接口形状的隔离夹具"],
-        retrievedAt: at,
-      },
-    }),
-  );
-  await page.goto("/map");
-  await page.getByLabel("选择中心文献").selectOption(paper.openAlexId!);
-  await page.getByRole("button", { name: "展开真实引用" }).click();
-  const n = page.getByRole("button", { name: paper.title, exact: true });
-  await expect(n).toBeVisible();
-  await n.focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(n).toHaveAttribute("transform", /355/);
-  await page.getByRole("button", { name: "放大画布" }).click();
-  await expect(page.locator(".canvas-controls")).toContainText("120%");
-  await page.getByRole("button", { name: "重置视图" }).click();
-  await expect(page.locator(".canvas-controls")).toContainText("100%");
-  await n.press("Enter");
-  await expect(page.locator(".graph-detail")).toContainText(paper.title);
-  await page.getByRole("button", { name: "加入研究设计", exact: true }).click();
-  await page.goto("/canvas");
-  await expect(
-    page.getByRole("button", { name: paper.title.slice(0, 160), exact: true }),
-  ).toBeVisible();
-  await page.reload();
-  await expect(page.locator(".canvas-node")).toHaveCount(1);
-});
-
-test("共享文献选择直接分析脉络、来源一键进入设计，旧笔记保持", async ({
-  page,
-}) => {
-  await mockAI(page);
-  await load(page);
-  await page.goto("/literature");
-  await page.getByRole("tab", { name: /我的文献库/ }).click();
-  await page.locator(".shared-evidence>summary").click();
-  await page.locator(".evidence-picker input").check();
-  await page.getByRole("link", { name: "分析这些文献的研究脉络" }).click();
-  await page.getByRole("button", { name: "分析这些文献的研究脉络" }).click();
-  await expect(page.locator(".thread-grid")).toContainText("商业意图识别");
-  await page.getByRole("button", { name: "线索与来源加入设计" }).click();
-  await page.goto("/canvas");
-  await expect(page.locator(".canvas-node")).toHaveCount(1);
-  const saved = await page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key)!),
-    key,
-  );
-  expect(saved.projects[0].library.items[0].note).toBe("旧版笔记-a");
-  expect(saved.projects[0].workbench.designSources[0].recordUrl).toBe(
-    paper.recordUrl,
-  );
-});
-
 test("质化AI草案可拒绝、采纳、编辑、确认、增删关系、保存刷新、导出；跨项目不混入设计", async ({
   page,
 }) => {
   await mockAI(page);
   await load(page, [project(), project("b")]);
   await page.goto("/canvas");
+  page.on("dialog",d=>d.accept());
   await page.getByLabel("研究路径").selectOption("qualitative");
   await page.getByRole("button", { name: "AI 辅助生成草案" }).click();
   await expect(page.locator(".design-suggestions")).toBeVisible();
@@ -477,7 +349,7 @@ for (const size of [
           path === "lab"
             ? page.getByLabel("给 AI 的消息")
             : path === "literature"
-              ? page.getByLabel("文献关键词或 DOI")
+              ? page.getByLabel("筛选我的文献")
               : path === "canvas"
                 ? page.getByRole("button", { name: "添加节点" })
                 : null;
@@ -490,6 +362,3 @@ test('未编辑的旧设计页也不能覆盖其他标签的新设计',async({pa
  await load(page);await page.goto('/canvas');const other=await context.newPage();await other.goto('/canvas');await other.getByRole('button',{name:'添加节点'}).click();await other.getByLabel('名称',{exact:true}).fill('另一个页面的新设计');await other.getByRole('button',{name:'保存研究设计'}).click();await expect(page.getByRole('button',{name:'读取已保存版本'})).toBeVisible();await page.getByRole('button',{name:'添加节点'}).click();await expect(page.getByRole('alert').filter({hasText:'先读取已保存版本'})).toBeVisible();expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).projects[0].workbench.design.nodes[0].title,key)).toBe('另一个页面的新设计');
 });
 
-test('联网入口只提交一次，读取项目概念且不自动搜索',async({page})=>{
- await mockAI(page);await load(page);const requests:unknown[]=[];await page.route('**/api/literature/discover',r=>{requests.push(r.request().postDataJSON());return r.fulfill({json:{query:'fixture',provider:'deepseek',items:[paper],total:1,page:1,pageSize:10,notices:[],cached:false,hasMore:false}});});await page.goto('/literature');expect(requests).toHaveLength(0);await page.getByLabel('文献关键词或 DOI').fill('自然语言研究问题');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.locator('.paper-card')).toHaveCount(1);expect(requests).toHaveLength(1);expect(requests[0]).toHaveProperty('query','自然语言研究问题');expect(requests[0]).toHaveProperty('concepts');
-});

@@ -1,2 +1,2 @@
-import { DesignCanvas } from '@/components/design-canvas';
-export default function Page() { return <DesignCanvas proposal/>; }
+import {ResearchIntegration} from '@/components/research-integration';
+export default function Page(){return <ResearchIntegration final/>;}

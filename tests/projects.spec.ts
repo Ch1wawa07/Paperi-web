@@ -19,8 +19,8 @@ test('项目完整流程：创建、改名、切换、跨页、刷新、关闭�
   await createProject(page, '短视频里的日常生活');
   const picker = page.getByLabel('当前项目', { exact: true });
   await picker.selectOption({ label: 'AI 与消费者信任' });
-  await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: '文献探索' }).click();
-  await expect(page.getByRole('heading', { name: '文献探索', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: '文献工作台' }).click();
+  await expect(page.getByRole('heading', { name: '文献工作台', exact: true })).toBeVisible();
   await expect(picker.locator('option:checked')).toHaveText('AI 与消费者信任');
   await page.reload();
   await expect(picker.locator('option:checked')).toHaveText('AI 与消费者信任');
@@ -116,12 +116,12 @@ for (const width of [1440, 1280, 768, 390]) {
     await expect(page.getByRole('heading', { name: /此刻，有什么新想法？/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true });
-    for (const [route, title] of [['lab', '灵感探索'], ['literature', '文献探索'], ['map', '文献星图'], ['canvas', '研究设计'], ['proposal', '研究方案']]) {
+    for (const [route, title] of [['lab', '灵感实验室'], ['literature', '文献工作台'], ['review', '研究整合'], ['canvas', '研究设计'], ['proposal', '研究框架']]) {
       if (width <= 900) await page.getByRole('button', { name: '展开导航' }).click();
       await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: title }).click();
       await expect(page).toHaveURL(`/${route}`);
       await expect(page.getByRole('heading', { name: route==='lab'?'灵感实验室':title, exact: true })).toBeVisible();
-      if (route !== 'lab' && route !== 'literature') await expect(page.getByText('选择或创建研究项目', { exact: true })).toBeVisible();
+      if (route === 'canvas') await expect(page.getByText('选择或创建研究项目', { exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.goto('/');
       if (route === 'lab') await expect(page).toHaveURL('/');

@@ -7,8 +7,13 @@ import { isLibrary, type Library } from '@/lib/literature';
 import { isWorkbench, type Workbench } from '@/lib/workbench';
 import { emptyNavigation } from '@/lib/research-navigation';
 
+import {deleteProjectPDFs} from '@/lib/local-files';
+import {isWorkflow,type Workflow} from '@/lib/workflow';
+import {parseSnapshot} from '@/lib/projects';
 const repository = new LocalProjectRepository();
 type ProjectActions = {
+  saveWorkflow:(id:string,revision:number,workflow:Workflow)=>Promise<boolean>;
+  restore:(raw:string)=>Promise<boolean>;
   snapshot: ProjectSnapshot; ready: boolean; busy: boolean; error: string; feedback: string;
   reload: () => Promise<void>;
   create: (name: string, discipline: string, observation: string) => Promise<boolean>;
@@ -58,6 +63,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
   const actions: ProjectActions = {
     snapshot, ready, busy, error, feedback, reload,
+    restore: raw => commit(s=>{const imported=parseSnapshot(raw);const copies=imported.projects.map(p=>({...p,id:crypto.randomUUID(),name:(p.name+' · 恢复副本').slice(0,80)}));return {...s,projects:[...s.projects,...copies],activeId:copies[0]?.id??s.activeId};},'备份已作为独立项目恢复，原项目保留。PDF 需从单独备份重新附加。'),
+    saveWorkflow:(id,revision,workflow)=>commit(s=>{const p=s.projects.find(p=>p.id===id);if(!p||(p.workflow?.revision??0)!==revision)throw new Error('研究资料已更新，请重新读取后保存。');const next={...workflow,revision:revision+1};if(!isWorkflow(next))throw new Error('工作流数据不完整或超过容量，原有内容未被覆盖。');return {...s,projects:s.projects.map(p=>p.id===id?{...p,workflow:next,updatedAt:new Date().toISOString()}:p)};},'研究进度已保存。'),
     saveWorkbench: (id, expectedRevision, workbench) => commit(s => {
       const project=s.projects.find(p=>p.id===id);
       if(!project||(project.workbench?.revision??0)!==expectedRevision)throw new Error('研究工作台已在其他页面更新，请重新读取后再保存。你的编辑尚未覆盖原有内容。');
@@ -111,10 +118,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (!s.projects.some(p => p.id === id)) throw new Error('这个项目已经不存在，请重新读取后选择项目。');
       return { ...s, activeId: id };
     }, '已切换当前项目。'),
-    remove: id => commit(s => {
+    remove: async id => { const ok=await commit(s => {
       if (!s.projects.some(p => p.id === id)) throw new Error('这个项目已经被删除，请重新读取项目列表。');
       return { ...s, projects: s.projects.filter(p => p.id !== id), activeId: s.activeId === id ? s.projects.find(p => p.id !== id)?.id ?? null : s.activeId };
-    }, '项目已从当前浏览器删除。'),
+    }, '项目已从当前浏览器删除。');if(ok)try{await deleteProjectPDFs(id);}catch(e){setError(errorMessage(e));}return ok;},
   };
   return <Context.Provider value={actions}>{children}</Context.Provider>;
 }

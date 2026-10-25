@@ -7,6 +7,7 @@ export type VisualNode = {
   x: number;
   y: number;
   selected?: boolean;
+  secondary?: boolean;
 };
 function fitBounds(nodes:VisualNode[]){const left=Math.min(...nodes.map(p=>p.x))-25,top=Math.min(...nodes.map(p=>p.y))-25,right=Math.max(...nodes.map(p=>p.x))+245,bottom=Math.max(...nodes.map(p=>p.y))+115;const scale=Math.min(1,850/(right-left),510/(bottom-top));return {scale,x:25-left*scale,y:25-top*scale};}
 export function NodeCanvas({
@@ -19,7 +20,7 @@ export function NodeCanvas({
   initialFit = false,
 }: {
   nodes: VisualNode[];
-  edges: { from: string; to: string; label?: string }[];
+  edges: { from: string; to: string; label?: string; kind?:string; highlight?:boolean }[];
   onSelect: (id: string) => void;
   onMove?: (id: string, x: number, y: number) => void;
   label: string;
@@ -93,7 +94,7 @@ export function NodeCanvas({
         <button className="small-button" onClick={fit}>
           适应全部节点
         </button>
-        <span>拖动节点 / 空白处平移 · 滚轮缩放</span>
+        <button className="small-button" onClick={()=>{if(!svg.current)return;const clone=svg.current.cloneNode(true) as SVGSVGElement;clone.setAttribute('xmlns','http://www.w3.org/2000/svg');const style=document.createElementNS('http://www.w3.org/2000/svg','style');style.textContent='.canvas-node rect{fill:#f0f4fa;stroke:#8c9db4}.canvas-node.is-secondary rect{fill:#eee8fa;stroke:#ab91bd}text{fill:#29364b;font:13px sans-serif}.node-subtitle{font-size:11px}';clone.prepend(style);const blob=new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=label+'.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>导出当前视图 SVG</button><span>拖动节点 / 空白处平移 · 滚轮缩放</span>
       </div>
       <svg
         ref={svg}
@@ -176,9 +177,9 @@ export function NodeCanvas({
                 <path
                   d={`M${x.x + 110 + dx * t},${x.y + 45 + dy * t} L${y.x + 110 - dx * t},${y.y + 45 - dy * t}`}
                   fill="none"
-                  stroke="#7793a8"
-                  strokeWidth="1.4"
-                  strokeDasharray={dashed ? "5 6" : undefined}
+                  stroke={e.highlight?"#6557a0":"#7793a8"}
+                  strokeWidth={e.highlight?3:1.4}
+                  strokeDasharray={e.kind==="moderation"?"2 5":e.kind==="mediation"?"10 4":dashed ? "5 6" : undefined}
                   markerEnd={`url(#${marker})`}
                 />
                 {e.label && (
@@ -187,7 +188,7 @@ export function NodeCanvas({
                     y={(x.y + y.y) / 2 + 30}
                     textAnchor="middle"
                   >
-                    {e.label.slice(0, 16)}
+                    {e.label.slice(0, 16)}{e.kind==="mediation"?" · 中介":e.kind==="moderation"?" · 调节":""}
                   </text>
                 )}
               </g>
@@ -202,7 +203,7 @@ export function NodeCanvas({
                 tabIndex={0}
                 aria-label={n.title}
                 aria-pressed={!!n.selected}
-                className={`canvas-node ${n.selected ? "is-selected" : ""}`}
+                className={`canvas-node ${n.selected ? "is-selected" : ""} ${n.secondary?"is-secondary":""}`}
                 transform={`translate(${p.x} ${p.y})`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {

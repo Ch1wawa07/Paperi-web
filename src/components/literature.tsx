@@ -1,204 +1,1001 @@
-'use client';
-
-import Link from 'next/link';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { isRecord } from '@/lib/exploration';
-import { isScholarlyPaper, normalizeDOI, identityLabel, crossrefRecordURL, doiURL, emptyLibrary, isPaper, isSearchResults, samePaper, type Category, type KeywordSuggestions, type Library, type Paper, type SavedPaper, type SearchOptions, type SearchResults } from '@/lib/literature';
-import type { Project } from '@/lib/projects';
-import { useProjects } from './project-provider';
-import { emptyWorkbench, selectedConcepts, researchContext, profileFingerprint, isAssessments, type Assessment } from '@/lib/workbench';
-import { WorkspaceToolbar, ProfileStrip, EvidencePicker, researchFetch } from './workspace-common';
-import { Icon, LoadingState } from './ui';
-
-const initialSearch = (project?: Project, query?:string): SearchOptions => ({ query: query ?? project?.workbench?.search?.input ?? (project ? selectedConcepts(project).slice(0,2).join(' ') : ''), provider:'auto',sort:'relevance',yearFrom:'',yearTo:'',journalsOnly:false,doiOnly:false,coreOnly:false,page:1 });
-const sourceName = (p: Paper) => p.source === 'openalex' ? 'OpenAlex' : p.source === 'deepseek' ? '历史网页线索' : p.source === 'academic' ? '学术出版记录' : 'Crossref';
-const kindName = (kind: string) => ({ article: '文章', review: '综述', 'journal-article': '期刊文章', 'book-chapter': '书籍章节', 'proceedings-article': '会议论文', preprint: '预印本', 'posted-content': '预发布内容' } as Record<string,string>)[kind] ?? kind;
-const fold = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
-
-export function Literature({initialQuery,requestProject,fromConcepts=false}:{initialQuery?:string;requestProject?:string;fromConcepts?:boolean}) {
-  const {ready,snapshot,error}=useProjects();const project=snapshot.projects.find(p=>p.id===snapshot.activeId);
-  return <div className="module-page module-literature"><WorkspaceToolbar title="文献探索" project={project}/>{!ready?error?<p>{error}</p>:<LoadingState/>:<BoundLiterature project={project} initialQuery={initialQuery} requestProject={requestProject} fromConcepts={fromConcepts}/>}</div>;
+"use client";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { useProjects } from "./project-provider";
+import { WorkspaceToolbar, downloadText } from "./workspace-common";
+import { ResearchPreparation } from "./research-preparation";
+import {
+  emptyLibrary,
+  identityLabel,
+  isPaper,
+  normalizeDOI,
+  safeWebURL,
+  type Paper,
+  type SavedPaper,
+  type Library,
+} from "@/lib/literature";
+import {
+  parseBibliography,
+  duplicateOf,
+  importedPaper,
+  type ImportPreview,
+} from "@/lib/bibliography";
+import {
+  extractPDF,
+  savePDF,
+  getPDF,
+  removePDF,
+  type LocalPDF,
+} from "@/lib/local-files";
+import type { Project } from "@/lib/projects";
+import { CitationNetwork } from "./citation-network";
+import { LiteratureAnalysis } from "./literature-analysis";
+export function Literature({
+  requestProject,
+  initialMode = "library",
+}: {
+  requestProject?: string;
+  initialMode?: string;
+  initialQuery?: string;
+  fromConcepts?: boolean;
+}) {
+  const { snapshot, ready } = useProjects();
+  const p = snapshot.projects.find((p) => p.id === snapshot.activeId);
+  return (
+    <div className="module-page">
+      <WorkspaceToolbar title="文献工作台" project={p} />
+      {requestProject && p && requestProject !== p.id ? (
+        <p className="source-notice">
+          链接属于另一个项目，请先在顶部切换项目。
+        </p>
+      ) : ready && p ? (
+        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} />
+      ) : (
+        <Link href="/">选择或创建研究项目</Link>
+      )}
+    </div>
+  );
 }
-function BoundLiterature({project,initialQuery,requestProject,fromConcepts}:{project?:Project;initialQuery?:string;requestProject?:string;fromConcepts:boolean}){
- const id=project?.id??'browse';const [binding]=useState(id);const [entry,setEntry]=useState({id,consumed:false});if(entry.id!==id)setEntry({id,consumed:true});const matches=!entry.consumed&&(requestProject??binding)===id;
- return <LiteratureWorkspace key={project?.id??'browse'} project={project} initialQuery={matches?initialQuery:undefined} fromConcepts={matches&&fromConcepts}/>;
-}
-
-function LiteratureWorkspace({ project, initialQuery,fromConcepts }: { project?: Project;initialQuery?:string;fromConcepts:boolean }) {
-  const { busy, saveLibrary,saveWorkbench } = useProjects();
-  const workbench=project?.workbench??emptyWorkbench();
-  const fingerprint=project?profileFingerprint(project):'';
-  const [origin,setOrigin]=useState(initialQuery?'带入的临时检索':fromConcepts?'当前项目概念':workbench.search?'本项目上次检索':'当前项目概念');
-  const [language,setLanguage]=useState<'auto'|'zh'|'en'>('auto');
-  const [assessments,setAssessments]=useState<Assessment[]>([]);
-  const [showOthers,setShowOthers]=useState(false);
-  const [assessmentError,setAssessmentError]=useState('');
-  const [reviewing,setReviewing]=useState(false);
-  const reviewRef=useRef(false);
-
-  const library = project?.library ?? emptyLibrary();
-  const seed = project?.exploration?.seed;
-  const [view, setView] = useState<'search'|'saved'>('search');
-  const [draft, setDraft] = useState<SearchOptions>(()=>initialSearch(project,fromConcepts&&project?selectedConcepts(project).slice(0,2).join(' '):initialQuery));
-  const [activeSearch, setActiveSearch] = useState<SearchOptions | null>(null);
-  const [results, setResults] = useState<SearchResults | null>(null);
-  const [searching, setSearching] = useState(false), [generating, setGenerating] = useState(false);
-  const [keywords, setKeywords] = useState<KeywordSuggestions | null>(workbench.search?.keywords??null);
-  const [aiConfigured, setAIConfigured] = useState(false);
-  const [error, setError] = useState('');
-  const [category, setCategory] = useState('all'), [localQuery, setLocalQuery] = useState('');
-  const [librarySort, setLibrarySort] = useState('saved');
-  const [editor, setEditor] = useState<{ paper: Paper; existing?: SavedPaper; revision: number } | null>(null);
-  const [categoryEditor, setCategoryEditor] = useState<{ category?: Category; revision: number } | null>(null);
-  const [removal, setRemoval] = useState<{ item?: SavedPaper; category?: Category; revision: number } | null>(null);
-  const mounted = useRef(false), searchingRef = useRef(false), generatingRef = useRef(false);
-  const controllers = useRef(new Set<AbortController>());
-  useEffect(()=>{
-    mounted.current = true; const controller = new AbortController(); const all = controllers.current;
-    all.add(controller);
-    fetch('/api/lab',{ signal: controller.signal, cache: 'no-store' }).then(r=>r.json()).then((data: unknown)=>{ if (mounted.current && isRecord(data)) setAIConfigured(data.configured===true); }).catch(()=>{}).finally(()=>all.delete(controller));
-    return ()=>{ mounted.current=false; for (const c of all) c.abort(); all.clear(); };
-  },[]);
-
-  const context=project?researchContext(project):{observation:'',question:'',concepts:[],messages:[],evidence:[]};
-  async function search(options:SearchOptions, multiple=false){
-    if(searchingRef.current||reviewRef.current)return;searchingRef.current=true;setSearching(true);setError('');setResults(null);setAssessments([]);setAssessmentError('');setActiveSearch(options);
-    const controller=new AbortController();controllers.current.add(controller);
-    try{
-
-      const doi=normalizeDOI(options.query);
-      const r=doi?await fetch('/api/literature?query='+encodeURIComponent(doi),{signal:controller.signal,cache:'no-store'}):await fetch('/api/literature/discover',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,cache:'no-store',body:JSON.stringify({query:options.query,language,concepts:context.concepts,question:context.question})});
-      const data:unknown=await r.json();if(!r.ok)throw new Error(isRecord(data)&&typeof data.error==='string'?data.error:'检索失败。');if(!isSearchResults(data))throw new Error('文献数据格式不完整。');
-      void multiple;
-      const merged={...data,items:data.items.filter(isScholarlyPaper)},usedKeywords=keywords;
-      if(!mounted.current)return;setResults(merged);
-      if(merged.items.length)await assessPapers(merged.items,options.query,controller.signal);
-      if(project&&mounted.current)await saveWorkbench(project.id,workbench.revision,{...workbench,search:{input:options.query,origin:'manual',fingerprint,keywords:usedKeywords??{zh:[],en:[]},history:[...new Set([options.query,...(workbench.search?.history??[])])].slice(0,12)}});
-    }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'检索连接中断。');}finally{controllers.current.delete(controller);searchingRef.current=false;if(mounted.current)setSearching(false);}
+function LibraryWorkspace({
+  p,
+  initialMode,
+}: {
+  p: Project;
+  initialMode: string;
+}) {
+  const { saveLibrary, busy } = useProjects();
+  const lib = p.library ?? emptyLibrary();
+  const [mode, setMode] = useState(initialMode),
+    [text, setText] = useState(""),
+    [preview, setPreview] = useState<ImportPreview | null>(null),
+    [decisions, setDecisions] = useState<Record<number, string>>({}),
+    [error, setError] = useState(""),
+    [message, setMessage] = useState(""),
+    [editing, setEditing] = useState<SavedPaper | null>(null),
+    [query, setQuery] = useState(""),
+    [category, setCategory] = useState(""),
+    [tag, setTag] = useState(""),
+    [pdf, setPDF] = useState<LocalPDF | null>(null),
+    [pending, setPending] = useState(false),
+    [previewRevision, setPreviewRevision] = useState(lib.revision);
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  const filtered = lib.items.filter(
+    (i) =>
+      (!category || i.categoryIds.includes(category)) &&
+      `${i.paper.title} ${i.paper.authors.join(" ")} ${i.note}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  async function readFile(file: File) {
+    setError("");
+    setPending(true);
+    try {
+      if (/\.pdf$/i.test(file.name)) {
+        const result = await extractPDF(file);
+        if (!mounted.current) return;
+        setPDF({
+          id: crypto.randomUUID(),
+          projectId: p.id,
+          blob: file,
+          name: file.name,
+          pages: result.pages,
+          updatedAt: new Date().toISOString(),
+        });
+        setPreview({
+          rows: [
+            {
+              paper: importedPaper({
+                title: result.title || file.name.replace(/\.pdf$/i, ""),
+                authors: result.author ? [result.author] : [],
+              }),
+              warnings: [
+                "PDF 属性可能不准确，请逐项确认标题和作者；年份与出版机构需自行补充。",
+              ],
+              raw: result.pages[0].slice(0, 2000),
+            },
+          ],
+          failures: [],
+        });
+        setPreviewRevision(lib.revision);
+        setDecisions({});
+      } else {
+        if (file.size > 2_000_000) throw new Error("题录文件最大 2 MB。");
+        const bytes = await file.arrayBuffer();
+        let content = new TextDecoder("utf-8").decode(bytes);
+        if (content.includes("\uFFFD"))
+          content = new TextDecoder("gb18030").decode(bytes);
+        setText(content);
+        parse(content);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "文件读取失败");
+    } finally {
+      if (mounted.current) setPending(false);
+    }
   }
-  async function assessPapers(papers:Paper[],query:string,signal?:AbortSignal){
-    if(reviewRef.current||!papers.length)return;
-    reviewRef.current=true;setReviewing(true);setAssessmentError('');
-    const c=new AbortController();controllers.current.add(c);
-    try{
-      const reviewed:unknown=await researchFetch({task:'assess',query,context:{...context,evidence:papers.map(p=>({id:p.key,paper:p}))}},signal?AbortSignal.any([signal,c.signal]):c.signal);
-      if(!isRecord(reviewed)||!isAssessments(reviewed.assessments)||reviewed.assessments.length!==papers.length||new Set(reviewed.assessments.map(a=>a.id)).size!==papers.length||reviewed.assessments.some(a=>!papers.some(p=>p.key===a.id)))throw new Error('相关性评估记录不完整，未标为推荐。');
-      if(mounted.current)setAssessments(reviewed.assessments);
-    }catch(e){if(mounted.current)setAssessmentError(e instanceof Error?e.message:'相关性接口连接失败。');}
-    finally{controllers.current.delete(c);reviewRef.current=false;if(mounted.current)setReviewing(false);}
+  function parse(content = text) {
+    setError("");
+    setPDF(null);
+    try {
+      setPreview(parseBibliography(content));
+      setDecisions({});
+      setPreviewRevision(lib.revision);
+    } catch (e) {
+      setPreview(null);
+      setError(e instanceof Error ? e.message : "解析失败");
+    }
   }
-  async function suggestKeywords(){
-    if(!aiConfigured||generatingRef.current)return;generatingRef.current=true;setGenerating(true);setError('');const controller=new AbortController();controllers.current.add(controller);
-    try{const d=await researchFetch({task:'keywords',context,query:fromConcepts?'':draft.query},controller.signal);if(mounted.current){setKeywords(d);if(project)await saveWorkbench(project.id,workbench.revision,{...workbench,search:{input:workbench.search?.input??'',origin:'concepts',fingerprint,keywords:d,history:workbench.search?.history??[]}});}}
-    catch(e){if(mounted.current)setError(e instanceof Error?e.message:'检索建议暂未生成。');}finally{controllers.current.delete(controller);generatingRef.current=false;if(mounted.current)setGenerating(false);}
+  async function commitImport() {
+    if (!preview) return;
+    setError("");
+    if (lib.revision !== previewRevision) {
+      setError("文献库已变化，请重新解析预览以核对重复记录。");
+      return;
+    }
+    let next: Library = { ...lib, items: [...lib.items] };
+    let fileSaved = false;
+    try {
+      for (const [index, row] of preview.rows.entries()) {
+        const paper = row.paper;
+        if (!isPaper(paper))
+          throw new Error(`第 ${index + 1} 条字段不完整，请检查。`);
+        const duplicate = duplicateOf(paper, next);
+        const action = decisions[index] ?? (duplicate ? "skip" : "keep");
+        if (action === "skip") continue;
+        const now = new Date().toISOString();
+        const attachment = pdf
+          ? {
+              id: pdf.id,
+              name: pdf.name,
+              pages: pdf.pages.length,
+              characters: pdf.pages.join("").length,
+              updatedAt: pdf.updatedAt,
+            }
+          : undefined;
+        if (duplicate && action === "merge") {
+          next = {
+            ...next,
+            items: next.items.map((i) =>
+              i.id === duplicate.id
+                ? {
+                    ...i,
+                    paper: {
+                      ...i.paper,
+                      abstract: i.paper.abstract ?? paper.abstract,
+                    },
+                    updatedAt: now,
+                  }
+                : i,
+            ),
+          };
+        } else
+          next.items.push({
+            id: crypto.randomUUID(),
+            paper,
+            categoryIds: [],
+            note: "",
+            savedAt: now,
+            updatedAt: now,
+            ...(attachment ? { attachment } : {}),
+          });
+      }
+      if (next.items.length > 300)
+        throw new Error("每个项目最多 300 篇文献，请分项目管理。");
+      if (pdf && next.items.some((i) => i.attachment?.id === pdf.id)) {
+        await savePDF(pdf);
+        fileSaved = true;
+      }
+      if (!mounted.current) {
+        if (fileSaved && pdf) await removePDF(p.id, pdf.id);
+        return;
+      }
+      if (!(await saveLibrary(p.id, previewRevision, next))) {
+        if (fileSaved && pdf) await removePDF(p.id, pdf.id);
+        throw new Error("导入尚未保存，请处理上方存储提示。");
+      }
+      setPreview(null);
+      setPDF(null);
+      setText("");
+      setMode("library");
+      setMessage("导入已完成。题录未经外部认证，请核对来源。");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "保存失败");
+    }
   }
-  async function persist(next: Library, revision: number) {
-    if (!project) { setError('请先创建研究项目，再收藏文献。'); return false; }
-    setError(''); const ok=await saveLibrary(project.id,revision,next);
-    if (!ok) setError('本次文献库修改没有保存。请处理上方的存储或其他页面更新提示，编辑内容仍保留在窗口中。');
-    return ok;
+  async function remove(item: SavedPaper) {
+    if (
+      !confirm(
+        `从当前研究移除《${item.paper.title}》？关联分析将标记来源失效，其他项目不受影响。`,
+      )
+    )
+      return;
+    if (
+      await saveLibrary(p.id, lib.revision, {
+        ...lib,
+        items: lib.items.filter((i) => i.id !== item.id),
+      })
+    ) {
+      setEditing(null);
+      setMessage("文献已移除；引用它的分析保留并标记待更新。");
+      if (item.attachment)
+        try {
+          await removePDF(p.id, item.attachment.id);
+        } catch {
+          setError("文献已移除，但 PDF 清理失败，可重试清理浏览器文件存储。");
+        }
+    }
   }
-  async function saveItem(categoryIds: string[], note: string) {
-    if (editor && !editor.existing && !isScholarlyPaper(editor.paper)) { setError('身份尚未核实，不能作为学术文献收藏。'); return false; }
-    if (!editor || library.revision!==editor.revision) { setError('文献库已更新，请取消并重新打开编辑，避免覆盖其他页面的修改。'); return false; }
-    if (!editor.existing && library.items.some(i=>samePaper(i.paper,editor.paper))) { setError('这篇文献已在当前项目收藏中，请重新打开管理。'); return false; }
-    const now=new Date().toISOString();
-    const item: SavedPaper={ id:editor.existing?.id ?? crypto.randomUUID(), paper:editor.existing?.paper ?? editor.paper, categoryIds,note,savedAt:editor.existing?.savedAt ?? now,updatedAt:now };
-    const ok=await persist({...library,items:editor.existing ? library.items.map(i=>i.id===item.id ? item : i) : [item,...library.items]},editor.revision);
-    if(ok) setEditor(null); return ok;
-  }
-  async function saveCategory(name: string) {
-    if (!categoryEditor || library.revision!==categoryEditor.revision) { setError('分类已在其他页面更新，请取消并重新打开。'); return false; }
-    if (library.categories.some(c=>c.name.trim().toLowerCase()===name.toLowerCase() && c.id!==categoryEditor.category?.id)) { setError('当前研究已有同名分类，请使用其他名称。'); return false; }
-    const categories=categoryEditor.category ? library.categories.map(c=>c.id===categoryEditor.category!.id ? {...c,name} : c) : [...library.categories,{id:crypto.randomUUID(),name}];
-    const ok=await persist({...library,categories},categoryEditor.revision); if(ok) setCategoryEditor(null); return ok;
-  }
-  async function confirmRemoval() {
-    if (!removal || library.revision!==removal.revision) { setError('文献库已更新，请取消后重新操作。'); return false; }
-    const id=removal.category?.id;
-    const next=id ? {...library,categories:library.categories.filter(c=>c.id!==id),items:library.items.map(i=>i.categoryIds.includes(id) ? {...i,categoryIds:i.categoryIds.filter(c=>c!==id),updatedAt:new Date().toISOString()} : i)} : {...library,items:library.items.filter(i=>i.id!==removal.item?.id)};
-    const ok=await persist(next,removal.revision); if(ok) { setRemoval(null); if(id===category)setCategory('all'); } return ok;
-  }
-  function openItem(paper: Paper) { if(!isScholarlyPaper(paper)&&!library.items.some(i=>samePaper(i.paper,paper))){setError('身份尚未核实，不能作为学术文献收藏。');return;}setError(''); setEditor({paper,existing:library.items.find(i=>samePaper(i.paper,paper)),revision:library.revision}); }
-  const selectedCategory=category==='uncategorized' || library.categories.some(c=>c.id===category) ? category : 'all';
-  const filtered=library.items.filter(i=>(selectedCategory==='all' || selectedCategory==='uncategorized' ? selectedCategory!=='uncategorized' || !i.categoryIds.length : i.categoryIds.includes(selectedCategory)) &&
-    [i.paper.title,...i.paper.authors,i.paper.venue??'',i.note].join(' ').toLowerCase().includes(localQuery.trim().toLowerCase())).slice().sort((a,b)=>librarySort==='year' ? (b.paper.year??0)-(a.paper.year??0) : librarySort==='title' ? a.paper.title.localeCompare(b.paper.title,'zh-CN') : (librarySort==='updated' ? b.updatedAt.localeCompare(a.updatedAt) : b.savedAt.localeCompare(a.savedAt)));
-  return <>
-    {project&&<ProfileStrip project={project}/>}
-    {seed&&<details className="literature-seed"><summary>已确认研究问题</summary><p>{seed.workingQuestion}</p></details>}
-    <div className="literature-tabs" role="tablist" aria-label="文献工作区"><button id="search-tab" role="tab" aria-selected={view==='search'} aria-controls="literature-panel" onClick={()=>setView('search')}>检索文献</button><button id="saved-tab" role="tab" aria-selected={view==='saved'} aria-controls="literature-panel" onClick={()=>setView('saved')}>我的文献库<span>{library.items.length}</span></button></div>
-    {error && <p className="literature-error" role="alert">{error}</p>}
-    <section id="literature-panel" role="tabpanel" aria-labelledby={view==='search'?'search-tab':'saved-tab'}>
-    {view==='search' ? <>
-      <section className="literature-search frosted-surface" aria-label="真实文献检索">
-        <div className="literature-search-heading"><div><span className="eyebrow">FIND YOUR EVIDENCE</span><h2>AI 学术联网检索</h2></div><button className="button secondary" disabled={!aiConfigured || generating || searching} onClick={()=>void suggestKeywords()}>{generating?'正在生成…':'生成中英文检索词'}<Icon name="spark" size={16}/></button></div>
-        <p className="muted search-assistance">输入完整研究问题，结合本项目已选概念查找学术论文。中文优先、英文补充；身份核验与相关性评估分别标明。</p>
-        {workbench.search&&workbench.search.fingerprint!==fingerprint&&<p className="source-notice">概念或问题已变化，检索建议需要更新。</p>}
-        {keywords&&<details className="keyword-suggestions" open={fromConcepts}><summary>本项目检索建议 · 点击使用一组</summary>{(['zh','en'] as const).map(lang=><div key={lang}><strong>{lang==='zh'?'中文':'English'}</strong><div>{keywords[lang].map(term=><button key={term} onClick={()=>{setDraft({...draft,query:term});setOrigin('当前项目推荐词');setLanguage(lang);}}>{term}</button>)}</div></div>)}<button className="text-button" disabled={searching} onClick={()=>void search({...draft,page:1},true)}>按当前问题联网检索</button></details>}
-
-        <form onSubmit={e=>{e.preventDefault();void search({...draft,page:1});}}>
-          <label className="sr-only" htmlFor="literature-query">文献关键词或 DOI / 自然语言研究问题</label><div className="literature-query-row"><input id="literature-query" required minLength={2} maxLength={200} value={draft.query} onChange={e=>{setDraft({...draft,query:e.target.value});setOrigin('手动输入');}} placeholder="输入一整段研究问题，例如：品牌拟人化传播如何影响消费者品牌态度？"/><button className="button primary" disabled={searching || reviewing || draft.query.trim().length<2}>{searching?'正在检索…':'检索'}<Icon name="arrow" size={16}/></button></div>
-          <div className="search-mode"><label>检索语言<select aria-label="检索语言" value={language} onChange={e=>setLanguage(e.target.value as typeof language)}><option value="auto">智能搜索</option><option value="zh">中文文献优先</option><option value="en">英文文献补充</option></select></label><span>输入来源：{origin}</span></div>
-        </form>
-      </section>
-      <p className="search-integrity">相关性优先；被引次数、DOI 和来源标记不代表单篇质量。中文覆盖有限，DOI 可直接导入真实题录。评估失败或缺少证据时不标为直接相关。</p>
-      {!!workbench.search?.history.length&&<details><summary>本项目检索历史</summary><div className="workspace-actions">{workbench.search.history.map(q=><button className="text-button" key={q} onClick={()=>{setDraft({...draft,query:q});setOrigin('本项目历史');}}>{q}</button>)}</div></details>}
-
-      {searching && <div className="literature-loading" role="status"><span className="spinner"/>正在向真实学术数据源检索…</div>}
-      {results && <><div className="literature-results-heading"><div><h2>「{results.query}」</h2><span>{results.provider==='deepseek'?'DeepSeek 网页搜索':results.provider==='openalex'?'OpenAlex':'Crossref'} · 已核实 {results.items.length} 篇学术文献{results.cached?' · 缓存结果':''}</span></div><span>第 {results.page} 页</span></div>{results.notices.map(n=><p className="source-notice" key={n}>{n}</p>)}
-        {!results.items.length && <div className="literature-empty"><Icon name="book" size={28}/><h3>本次搜索尚未找到可核实的学术文献。</h3><p>可调整研究概念或学术检索表达。新闻、行业报道和身份信息不足的网页不会用来填充结果。</p></div>}
-        {reviewing&&<p role="status">正在批量评估已核实论文的相关性…</p>}{assessmentError&&<div role="alert" className="literature-error"><p>论文身份核验已完成，但相关性评估失败：{assessmentError}</p><button className="button secondary" disabled={reviewing||searching} onClick={()=>void assessPapers(results.items,results.query)}>重试相关性分析</button></div>}
-        {assessments.length>0&&!assessments.some(a=>a.level==='direct')&&<p className="source-notice">本批未识别出直接相关研究。可以换用另一组短查询或仅保留核心理论与情境。背景文献仅作为理论 / 方法线索，不能据此证明研究空白。</p>}<button className="text-button" onClick={()=>setShowOthers(!showOthers)}>{showOthers?'收起低相关 / 信息不足记录':'查看低相关 / 信息不足记录'}</button><div className="paper-list">{results.items.filter(p=>showOthers||!assessments.length||['direct','background','possible'].includes(assessments.find(a=>a.id===p.key)?.level??'insufficient')).sort((a,b)=>{const rank=(p:Paper)=>({direct:0,background:1,possible:2,insufficient:3,unrelated:4}[assessments.find(x=>x.id===p.key)?.level??'insufficient']);return rank(a)-rank(b);}).map(p=><PaperCard assessment={assessments.find(a=>a.id===p.key)} key={p.key} paper={p} saved={library.items.find(i=>samePaper(i.paper,p))} categories={library.categories} query={results.query} onManage={()=>openItem(p)} canSave={!!project} disabled={busy}/>)}</div>
-        <div className="literature-pagination"><button className="button secondary" disabled={searching || results.page<=1} onClick={()=>activeSearch && void search({...activeSearch,page:results.page-1})}>上一页</button><span>本次最多展示 10 条；修改问题后手动搜索，不自动翻页</span><button className="button secondary" disabled={searching || !results.hasMore} onClick={()=>activeSearch && void search({...activeSearch,page:results.page+1})}>下一页</button></div></>}
-      {!results && !searching && <div className="literature-empty"><Icon name="book" size={28}/><h3>先找真实，再读深入。</h3><p>搜索结果将显示作者、来源与可追溯记录；缺少的摘要和全文会如实标明。</p>{error && activeSearch && <button className="text-button" onClick={()=>void search(activeSearch)}>重试本次检索</button>}</div>}
-    </> : <div className="library-layout">
-      <aside className="library-sidebar frosted-surface"><span className="eyebrow">YOUR RESEARCH LIBRARY</span><h2>按研究整理</h2><p>{project?.name ?? '请先创建研究项目'}</p><div className="category-list"><button className={selectedCategory==='all'?'active':''} onClick={()=>setCategory('all')}>全部收藏<span>{library.items.length}</span></button><button className={selectedCategory==='uncategorized'?'active':''} onClick={()=>setCategory('uncategorized')}>未分类<span>{library.items.filter(i=>!i.categoryIds.length).length}</span></button>{library.categories.map(c=><div className="category-row" key={c.id}><button className={selectedCategory===c.id?'active':''} onClick={()=>setCategory(c.id)}>{c.name}<span>{library.items.filter(i=>i.categoryIds.includes(c.id)).length}</span></button><button className="category-action" disabled={busy || !project} aria-label={`重命名分类 ${c.name}`} onClick={()=>{setError('');setCategoryEditor({category:c,revision:library.revision});}}>改名</button><button className="category-action" disabled={busy || !project} aria-label={`删除分类 ${c.name}`} onClick={()=>{setError('');setRemoval({category:c,revision:library.revision});}}>删除</button></div>)}</div><button className="text-button" disabled={busy || !project || library.categories.length>=30} onClick={()=>{setError('');setCategoryEditor({revision:library.revision});}}><Icon name="plus" size={15}/>新建分类</button><p className="library-note">一篇文献可放入多个分类。删除分类保留文献；收藏和笔记只保存在当前浏览器。</p></aside>
-      <div>{project&&<><EvidencePicker project={project}/><Link className="button secondary" href="/map?view=context">分析这些文献的研究脉络 →</Link><Link className="text-button" href="/canvas">进入研究设计 →</Link></>}<div className="library-toolbar"><label><span className="sr-only">搜索当前收藏</span><input value={localQuery} maxLength={100} onChange={e=>setLocalQuery(e.target.value)} placeholder="在收藏中找题名、作者或笔记"/></label><label><span className="sr-only">收藏排序</span><select aria-label="收藏排序" value={librarySort} onChange={e=>setLibrarySort(e.target.value)}><option value="saved">最近收藏</option><option value="updated">最近修改</option><option value="year">发表年份</option><option value="title">题名</option></select></label></div><p className="library-count">当前显示 {filtered.length} 篇 · 收藏在「{project?.name ?? '未选择研究'}」下</p>
-        {!filtered.length && <div className="literature-empty"><Icon name="book" size={28}/><h3>{library.items.length?'这个分类或关键词下还没有文献':'把有用的线索，留在这里。'}</h3><p>从检索结果收藏文献，再按自己的研究思路分类、做笔记。</p><button className="text-button" onClick={()=>setView('search')}>去检索文献<Icon name="arrow" size={16}/></button></div>}
-        <div className="paper-list">{filtered.map(i=><PaperCard key={i.id} paper={i.paper} saved={i} categories={library.categories} canSave={!!project} disabled={busy} onManage={()=>openItem(i.paper)} onRemove={()=>{setError('');setRemoval({item:i,revision:library.revision});}}/>)}</div>
+  return (
+    <>
+      <div
+        className="workspace-actions workflow-tabs"
+        aria-label="文献工作台模块"
+      >
+        {[
+          ["library", "我的文献库"],
+          ["import", "导入文献"],
+          ["citations", "文献星图"],
+          ["context", "研究脉络"],
+          ["reading", "文献精析"],
+        ].map(([key, label]) => (
+          <button
+            className={`button ${mode === key ? "primary" : "secondary"}`}
+            key={key}
+            aria-pressed={mode === key}
+            onClick={() => setMode(key)}
+          >
+            {label}
+          </button>
+        ))}
+        <Link href="/review">研究整合 →</Link>
       </div>
-    </div>}
-    </section>
-    {editor && <SavePaperDialog paper={editor.paper} existing={editor.existing} categories={library.categories} projectName={project?.name ?? ''} busy={busy} onClose={()=>setEditor(null)} onSave={saveItem}/>}
-    {categoryEditor && <CategoryDialog category={categoryEditor.category} busy={busy} onClose={()=>setCategoryEditor(null)} onSave={saveCategory}/>}
-    {removal && <RemovalDialog removal={removal} busy={busy} onClose={()=>setRemoval(null)} onConfirm={confirmRemoval}/>}
-  </>;
+      {error && (
+        <p role="alert" className="literature-error">
+          {error}
+        </p>
+      )}
+      {message && <p role="status">{message}</p>}
+      {mode === "library" && (
+        <>
+          <div className="workspace-actions">
+            <input
+              aria-label="筛选我的文献"
+              placeholder="按标题、作者或笔记筛选"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <select
+              aria-label="文献分类"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">全部分类</option>
+              {lib.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <span>{lib.items.length} 篇</span>
+          </div>
+          <details>
+            <summary>管理分类标签</summary>
+            <div className="workspace-actions">
+              <input
+                aria-label="新分类名称"
+                value={tag}
+                maxLength={40}
+                onChange={(e) => setTag(e.target.value)}
+              />
+              <button
+                disabled={busy || !tag.trim()}
+                onClick={async () => {
+                  if (
+                    await saveLibrary(p.id, lib.revision, {
+                      ...lib,
+                      categories: [
+                        ...lib.categories,
+                        { id: crypto.randomUUID(), name: tag.trim() },
+                      ],
+                    })
+                  )
+                    setTag("");
+                }}
+              >
+                新增分类
+              </button>
+              {lib.categories.map((c) => (
+                <button
+                  key={"rename-" + c.id}
+                  onClick={() => {
+                    const name = prompt("修改分类名称", c.name);
+                    if (name?.trim())
+                      void saveLibrary(p.id, lib.revision, {
+                        ...lib,
+                        categories: lib.categories.map((x) =>
+                          x.id === c.id ? { ...x, name: name.trim() } : x,
+                        ),
+                      });
+                  }}
+                >
+                  重命名 {c.name}
+                </button>
+              ))}
+              {lib.categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    if (confirm(`删除分类“${c.name}”？文献和笔记保留。`))
+                      void saveLibrary(p.id, lib.revision, {
+                        ...lib,
+                        categories: lib.categories.filter((x) => x.id !== c.id),
+                        items: lib.items.map((i) => ({
+                          ...i,
+                          categoryIds: i.categoryIds.filter((x) => x !== c.id),
+                        })),
+                      });
+                  }}
+                >
+                  移除 {c.name}
+                </button>
+              ))}
+            </div>
+          </details>
+          {!lib.items.length ? (
+            <section className="literature-empty frosted-surface">
+              <h2>还没有研究文献</h2>
+              <p>前往学校数据库检索并导入，开始建立你的研究资料库。</p>
+              <div className="workspace-actions">
+                <a
+                  href={p.workflow?.libraryURL ?? "https://www.lib.szu.edu.cn/"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  前往学校图书馆检索 ↗
+                </a>
+                <button
+                  className="button primary"
+                  onClick={() => setMode("import")}
+                >
+                  导入文献
+                </button>
+              </div>
+            </section>
+          ) : (
+            <div className="paper-list">
+              {filtered.map((i) => (
+                <article className="paper-card frosted-surface" key={i.id}>
+                  <span>{identityLabel(i.paper)}</span>
+                  <h2>{i.paper.title}</h2>
+                  <p>
+                    {i.paper.authors.join("；") || "作者未获取"} ·{" "}
+                    {i.paper.year ?? "年份未获取"} ·{" "}
+                    {i.paper.venue ?? "出版来源未获取"}
+                  </p>
+                  <p>
+                    {i.paper.citations === null
+                      ? "暂无被引数据"
+                      : `${i.paper.citations} 次被引（${i.paper.source}）`}{" "}
+                    ·{" "}
+                    {i.attachment
+                      ? "有本地 PDF"
+                      : i.paper.abstract
+                        ? "有摘要"
+                        : "仅有书目"}
+                  </p>
+                  {i.paper.recordUrl && (
+                    <a
+                      href={i.paper.recordUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      原始来源记录 ↗
+                    </a>
+                  )}
+                  <p>{i.note}</p>
+                  <div className="workspace-actions">
+                    <button onClick={() => setEditing(i)}>
+                      编辑资料、分类与笔记
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMode("reading");
+                        setEditing(null);
+                        sessionStorage.setItem(`paperi.reading.${p.id}`, i.id);
+                      }}
+                    >
+                      文献精析
+                    </button>
+                    <button onClick={() => void remove(i)}>删除文献</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+          <ResearchPreparation key={p.id + ":prep"} project={p} />
+        </>
+      )}
+      {mode === "import" && (
+        <section className="frosted-surface workflow-panel">
+          <h2>批量导入文献</h2>
+          <p>
+            支持 RIS、BibTeX、EndNote 标签题录和逐行参考文献。中文 UTF-8 /
+            GB18030；最大 2 MB。也可导入可提取文字的 PDF（20 MB / 150 页以内）。
+          </p>
+          <label>
+            选择题录或 PDF 文件
+            <input
+              aria-label="选择题录或 PDF 文件"
+              type="file"
+              accept=".ris,.bib,.txt,.enw,.pdf"
+              disabled={pending}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void readFile(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <label>
+            粘贴多条参考文献
+            <textarea
+              aria-label="粘贴多条参考文献"
+              rows={6}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="每行一篇：张三；李四. 品牌传播研究[J]. 测试期刊, 2024."
+            />
+          </label>
+          <button
+            className="button secondary"
+            disabled={pending}
+            onClick={() => parse()}
+          >
+            解析并预览
+          </button>
+          <details>
+            <summary>格式说明与样例</summary>
+            <p>
+              优先在数据库选择“导出 RIS / BibTeX / EndNote”。EndNote 应以 %0
+              开始；知网自定义 RefWorks 格式请改选上述格式。纯文字需有 [J]、[D]
+              或 [C] 标识，不能可靠拆分的行会列为失败。
+            </p>
+            <pre>
+              {
+                "TY  - JOUR\nTI  - 测试文献（仅格式演示）\nAU  - 张三\nPY  - 2024\nJO  - 测试期刊\nER  -"
+              }
+            </pre>
+            <button
+              onClick={() =>
+                downloadText(
+                  "Paperi-格式演示.ris",
+                  "TY  - JOUR\nTI  - 测试文献（仅格式演示）\nAU  - 张三\nPY  - 2024\nJO  - 测试期刊\nER  -",
+                  "text/plain",
+                )
+              }
+            >
+              下载演示 RIS
+            </button>
+          </details>
+          {pending && <p role="status">正在读取文件，请稍候…</p>}
+          {preview && (
+            <>
+              <h3>
+                导入预览：{preview.rows.length} 篇可编辑，
+                {preview.failures.length} 条失败
+              </h3>
+              {preview.failures.map((e, i) => (
+                <p role="alert" key={i}>
+                  第 {e.record} 条：{e.reason}
+                  <br />
+                  {e.raw}
+                </p>
+              ))}
+              {preview.rows.map((row, index) => {
+                const simulated = {
+                  ...lib,
+                  items: [
+                    ...lib.items,
+                    ...preview.rows.slice(0, index).map((r, j) => ({
+                      id: `preview-${j}`,
+                      paper: r.paper,
+                      categoryIds: [],
+                      note: "",
+                      savedAt: "",
+                      updatedAt: "",
+                    })),
+                  ],
+                };
+                const dup = duplicateOf(row.paper, simulated);
+                return (
+                  <details className="import-record" key={row.paper.key} open>
+                    <summary>
+                      {index + 1}. {row.paper.title || "标题待填写"}{" "}
+                      {dup ? "· 可能重复" : ""}
+                    </summary>
+                    <p>{row.warnings.join("；")}</p>
+                    <PaperFields
+                      paper={row.paper}
+                      onChange={(paper) =>
+                        setPreview({
+                          ...preview,
+                          rows: preview.rows.map((r, i) =>
+                            i === index ? { ...r, paper } : r,
+                          ),
+                        })
+                      }
+                    />
+                    <label>
+                      导入方式
+                      <select
+                        aria-label={`第 ${index + 1} 条导入方式`}
+                        value={decisions[index] ?? (dup ? "skip" : "keep")}
+                        onChange={(e) =>
+                          setDecisions({
+                            ...decisions,
+                            [index]: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="keep">保留为独立记录</option>
+                        <option value="skip">跳过</option>
+                        {dup && (
+                          <option value="merge">
+                            合并：保留原记录，补充缺失摘要
+                          </option>
+                        )}
+                      </select>
+                    </label>
+                    {dup && (
+                      <p>
+                        匹配：{dup.paper.title}
+                        。题名、作者和年份相同仅视为可能重复；合并保留原笔记和分类。
+                      </p>
+                    )}
+                    {pdf && (
+                      <details>
+                        <summary>PDF 首页可提取文本（用于核对）</summary>
+                        <pre>{row.raw}</pre>
+                      </details>
+                    )}
+                  </details>
+                );
+              })}
+              <button
+                className="button primary"
+                disabled={busy || pending || !preview.rows.length}
+                onClick={() => void commitImport()}
+              >
+                确认批量导入当前项目
+              </button>
+              <button
+                onClick={() => {
+                  setPreview(null);
+                  setPDF(null);
+                }}
+              >
+                取消预览
+              </button>
+            </>
+          )}
+        </section>
+      )}
+      {mode === "citations" && <CitationNetwork project={p} />}
+      {(mode === "context" || mode === "reading") && (
+        <LiteratureAnalysis key={mode} project={p} mode={mode} />
+      )}
+      {editing && (
+        <PaperEditor
+          key={editing.id}
+          item={editing}
+          project={p}
+          onClose={() => setEditing(null)}
+          onRemove={() => void remove(editing)}
+        />
+      )}
+    </>
+  );
 }
-
-function PaperCard({paper:p,saved,categories,query='',canSave,disabled,onManage,onRemove,assessment}:{assessment?:Assessment;paper:Paper;saved?:SavedPaper;categories:Category[];query?:string;canSave:boolean;disabled:boolean;onManage:()=>void;onRemove?:()=>void}) {
-  const [verify,setVerify]=useState<{paper:Paper;resolves:boolean|null;checkedAt:string}|null>(null);
-  const [checking,setChecking]=useState(false),[error,setError]=useState('');
-  const controller=useRef<AbortController|null>(null);
-  useEffect(()=>()=>controller.current?.abort(),[]);
-  async function checkDOI(){if(!p.doi || checking)return;setChecking(true);setError('');const c=new AbortController();controller.current=c;try{const r=await fetch(`/api/literature/verify?doi=${encodeURIComponent(p.doi)}`,{signal:c.signal,cache:'no-store'});const d:unknown=await r.json();if(!r.ok)throw new Error(isRecord(d)&&typeof d.error==='string'?d.error:'暂时无法核查。');if(!isRecord(d)||!isPaper(d.paper)||(d.resolves!==null&&typeof d.resolves!=='boolean')||typeof d.checkedAt!=='string')throw new Error('登记记录格式不完整，不能标记核查成功。');setVerify({paper:d.paper,resolves:d.resolves,checkedAt:d.checkedAt});}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'暂时无法核查。');}finally{if(!c.signal.aborted)setChecking(false);}}
-  const matchTerms=[...new Set(query.split(/\s+/).filter(w=>w.length>2 && !['and','the','for','with','from'].includes(w.toLowerCase())))].filter(w=>(p.title+' '+(p.abstract??'')).toLowerCase().includes(w.toLowerCase())).slice(0,6);
-  return <article className="paper-card frosted-surface"><div className="paper-badges"><span>{identityLabel(p)}</span><span>{sourceName(p)} 来源记录</span><span>{kindName(p.kind)}</span><span>{p.sourceIsCore===true?'CWTS 核心来源（OpenAlex 标记）':p.sourceIsCore===false?'未列入 CWTS 核心来源':'核心来源标记未提供'}</span><span>{p.oaUrl?'有开放全文入口':'书目 / 摘要信息'}</span>{p.retracted && <span className="paper-warning">来源标记撤稿，请核查</span>}</div><h3>{p.title}</h3><p className="paper-authors">{p.authors.length?p.authors.join('；')+(p.authorsTruncated?' 等':''):'作者未提供'}</p><p className="paper-venue">{p.venue??'期刊 / 来源未提供'}<span>·</span>{p.year??'年份未提供'}{p.citations!==null?<><span>·</span>{p.citations} 次被引（{sourceName(p)} 口径）</>:<><span>·</span>暂无被引数据</>}</p>
-    {query&&<div className={`paper-assessment assessment-${assessment?.level??'insufficient'}`}><strong>{assessment?{direct:'直接相关 · AI 初评',background:'理论 / 方法背景 · AI 初评',possible:'可能相关 · 待进一步核实',unrelated:'不推荐 · 主题不匹配',insufficient:'无法充分评估'}[assessment.level]:'尚未评估相关性'}</strong>{assessment&&<><p>{assessment.reason} · 建议用途：{assessment.use}</p><details><summary>为什么推荐这篇？判断依据与限制</summary><p>题名 / 可用来源依据：{assessment.basis}</p><p>{assessment.limitation}；请核对原文。</p></details></>}</div>}
-    {matchTerms.length>0&&<p className="paper-matches">题名 / 摘要含：{matchTerms.join(' · ')}</p>}
-    {p.doi?<p className="paper-doi">DOI：<a href={doiURL(p.doi)} target="_blank" rel="noopener noreferrer">{p.doi}<Icon name="arrow-up" size={13}/></a></p>:<p className="paper-missing">DOI 未获取 · 请核对原始来源</p>}
-    {p.webSummary&&<details className="paper-abstract"><summary>查看搜索返回的网页简介（非论文摘要）</summary><p>{p.webSummary}</p><span>仅为网页内容线索，未读取全文，不能当作论文结论。</span></details>}
-    {p.abstract?<details className="paper-abstract"><summary>查看{p.abstractTruncated?'摘要节选':'数据源摘要'}</summary><p>{p.abstract}</p><span>来自 {sourceName(p)}，未读取或推断论文全文。</span></details>:<p className="paper-missing">数据源未提供摘要，不能据此推断论文全文内容。</p>}
-    <div className="paper-links"><a href={p.recordUrl} target="_blank" rel="noopener noreferrer">查看来源记录<Icon name="arrow-up" size={13}/></a>{p.landingUrl&&<a href={p.landingUrl} target="_blank" rel="noopener noreferrer">出版 / 原始页面<Icon name="arrow-up" size={13}/></a>}{p.oaUrl&&<a href={p.oaUrl} target="_blank" rel="noopener noreferrer">开放全文入口<Icon name="arrow-up" size={13}/></a>}{p.doi&&<button onClick={()=>void checkDOI()} disabled={checking}>{checking?'正在核查…':'核查 DOI 登记'}</button>}</div>
-    {error&&<p className="paper-check-error" role="alert">{error}</p>}{verify&&<div className="paper-verification"><strong>{fold(verify.paper.title)===fold(p.title)?'题名与 Crossref 登记记录一致':'题名与 Crossref 记录不同，请人工核对版本或译名'}</strong><p>{verify.paper.title}</p><p>{verify.paper.authors.join('；')||'作者未提供'} · {verify.paper.year??'年份未提供'}</p>{p.year!==null&&verify.paper.year!==null&&p.year!==verify.paper.year&&<p className="paper-check-error">年份记录不同：当前来源 {p.year}，Crossref {verify.paper.year}。可能涉及在线发表与卷期年份，请到出版方核对后引用。</p>}<span>{verify.resolves===true?'DOI 解析器返回有效响应 / 跳转':verify.resolves===false?'DOI 解析器未找到该标识，请谨慎核查':'本次未能检查 DOI 解析状态'}</span><a href={crossrefRecordURL(verify.paper.doi!)} target="_blank" rel="noopener noreferrer">打开本次登记记录</a><p>此核查仅确认元数据与标识，不代表全文已阅读或内容质量已认证。</p></div>}
-    {saved&&<div className="paper-saved-info"><div className="concept-tags">{saved.categoryIds.length?saved.categoryIds.map(id=><span key={id}>{categories.find(c=>c.id===id)?.name??'分类已更新'}</span>):<span>未分类</span>}</div>{saved.note&&<p className="paper-note">我的笔记：{saved.note}</p>}</div>}
-    <div className="paper-actions"><span>采集 {new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(p.retrievedAt))}</span><div>{onRemove&&<button className="small-button delete-button" disabled={disabled} onClick={onRemove}>移出收藏</button>}{canSave&&(!!saved||isScholarlyPaper(p))?<button className={`button ${saved?'secondary':'primary'}`} disabled={disabled} onClick={onManage}>{saved?'已收藏 · 管理':'收藏文献'}<Icon name={saved?'check':'plus'} size={15}/></button>:!isScholarlyPaper(p)?<span>历史未核实线索，仅保留原收藏记录</span>:<Link className="text-button" href="/">创建研究后收藏<Icon name="arrow" size={15}/></Link>}</div></div>
-  </article>;
+function PaperFields({
+  paper,
+  onChange,
+}: {
+  paper: Paper;
+  onChange: (p: Paper) => void;
+}) {
+  return (
+    <div className="workflow-fields">
+      <label>
+        论文标题
+        <input
+          aria-label="论文标题"
+          maxLength={1200}
+          value={paper.title}
+          onChange={(e) => onChange({ ...paper, title: e.target.value })}
+        />
+      </label>
+      <label>
+        作者（分号分隔）
+        <input
+          aria-label="作者"
+          value={paper.authors.join("；")}
+          onChange={(e) =>
+            onChange({
+              ...paper,
+              authors: e.target.value ? e.target.value.split(/[;；]/) : [],
+            })
+          }
+        />
+      </label>
+      <label>
+        发表年份
+        <input
+          aria-label="发表年份"
+          type="number"
+          min={1000}
+          max={2200}
+          value={paper.year ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...paper,
+              year: e.target.value ? Number(e.target.value) : null,
+            })
+          }
+        />
+      </label>
+      <label>
+        期刊 / 学校 / 会议
+        <input
+          aria-label="出版来源"
+          maxLength={500}
+          value={paper.venue ?? ""}
+          onChange={(e) =>
+            onChange({ ...paper, venue: e.target.value || null })
+          }
+        />
+      </label>
+      <label>
+        DOI（选填）
+        <input
+          aria-label="DOI"
+          defaultValue={paper.doi ?? ""}
+          onBlur={(e) => {
+            const doi = normalizeDOI(e.target.value);
+            e.target.setCustomValidity(
+              e.target.value && !doi ? "请输入有效 DOI，或留空" : "",
+            );
+            if (!e.target.value || doi) onChange({ ...paper, doi });
+          }}
+        />
+      </label>
+      <label>
+        原始记录链接
+        <input
+          aria-label="原始记录链接"
+          value={paper.recordUrl}
+          onChange={(e) =>
+            onChange({
+              ...paper,
+              recordUrl: e.target.value,
+              landingUrl: safeWebURL(e.target.value),
+            })
+          }
+        />
+      </label>
+      <label>
+        文献类型
+        <select
+          aria-label="文献类型"
+          value={paper.kind}
+          onChange={(e) => onChange({ ...paper, kind: e.target.value })}
+        >
+          <option value="journal-article">期刊论文</option>
+          <option value="dissertation">学位论文</option>
+          <option value="proceedings-article">会议论文</option>
+          <option value="book-chapter">学术专著章节</option>
+        </select>
+      </label>
+      <label>
+        真实摘要（请从原文补充）
+        <textarea
+          aria-label="真实摘要"
+          maxLength={6000}
+          rows={5}
+          value={paper.abstract ?? ""}
+          onChange={(e) =>
+            onChange({ ...paper, abstract: e.target.value || null })
+          }
+        />
+      </label>
+    </div>
+  );
 }
-
-function DialogFrame({title,busy,onClose,children}:{title:string;busy:boolean;onClose:()=>void;children:ReactNode}){
-  const dialog=useRef<HTMLDialogElement>(null),id=useId();
-  useEffect(()=>{const el=dialog.current,opener=document.activeElement;el?.showModal();el?.querySelector<HTMLElement>('[data-first-focus]')?.focus();return()=>{el?.close();if(opener instanceof HTMLElement)opener.focus();};},[]);
-  return <dialog ref={dialog} className="project-dialog literature-dialog frosted-surface" aria-labelledby={id} onCancel={e=>{if(busy)e.preventDefault();else onClose();}}><div className="dialog-top"><span className="eyebrow">YOUR RESEARCH LIBRARY</span><button className="icon-button" disabled={busy} aria-label="关闭文献窗口" onClick={onClose}><Icon name="close"/></button></div><h2 id={id}>{title}</h2>{children}</dialog>;
-}
-function SavePaperDialog({paper,existing,categories,projectName,busy,onClose,onSave}:{paper:Paper;existing?:SavedPaper;categories:Category[];projectName:string;busy:boolean;onClose:()=>void;onSave:(ids:string[],note:string)=>Promise<boolean>}){
-  const [ids,setIds]=useState(existing?.categoryIds??(categories.some(c=>c.id==='reading')?['reading']:[])),[note,setNote]=useState(existing?.note??''),[error,setError]=useState('');
-  return <DialogFrame title={existing?'整理这篇文献':'收藏到当前研究'} busy={busy} onClose={onClose}><p className="save-target">研究：{projectName}</p><p className="save-paper-title">{paper.title}</p><form onSubmit={async e=>{e.preventDefault();setError('');if(!await onSave(ids,note))setError('还没有保存成功，你的编辑仍在这里，请查看页面提示。');}}><fieldset className="save-categories"><legend>放入分类 <span>可多选，不选则为未分类</span></legend>{categories.map((c,i)=><label key={c.id}><input data-first-focus={i===0?'true':undefined} type="checkbox" checked={ids.includes(c.id)} onChange={e=>setIds(e.target.checked?[...ids,c.id]:ids.filter(id=>id!==c.id))}/>{c.name}</label>)}</fieldset><label className="field-label" htmlFor="paper-note">我的阅读笔记 <span>选填，最多4000字</span></label><textarea data-first-focus={!categories.length?'true':undefined} id="paper-note" rows={4} maxLength={4000} value={note} onChange={e=>setNote(e.target.value)} placeholder="为什么这篇文献对你的研究有用？还需要核实什么？"/>{error&&<p role="alert" className="field-error">{error}</p>}<div className="dialog-actions"><button type="button" className="button secondary" disabled={busy} onClick={onClose}>取消</button><button className="button primary" disabled={busy}>{busy?'正在保存…':existing?'保存分类与笔记':'确认收藏'}</button></div></form></DialogFrame>;
-}
-function CategoryDialog({category,busy,onClose,onSave}:{category?:Category;busy:boolean;onClose:()=>void;onSave:(name:string)=>Promise<boolean>}){
-  const [name,setName]=useState(category?.name??''),[error,setError]=useState('');
-  return <DialogFrame title={category?'重命名分类':'新建文献分类'} busy={busy} onClose={onClose}><form onSubmit={async e=>{e.preventDefault();setError('');if(!await onSave(name.trim()))setError('分类未保存，请检查是否重名、超过容量或在其他页面发生更新。');}}><label className="field-label" htmlFor="category-name">分类名称</label><input data-first-focus id="category-name" required maxLength={40} value={name} onChange={e=>setName(e.target.value)} placeholder="例如：访谈方法、待读综述"/>{error&&<p className="field-error" role="alert">{error}</p>}<div className="dialog-actions"><button type="button" className="button secondary" disabled={busy} onClick={onClose}>取消</button><button className="button primary" disabled={busy||!name.trim()}>保存分类</button></div></form></DialogFrame>;
-}
-function RemovalDialog({removal,busy,onClose,onConfirm}:{removal:{item?:SavedPaper;category?:Category};busy:boolean;onClose:()=>void;onConfirm:()=>Promise<boolean>}){
-  const [error,setError]=useState('');
-  return <DialogFrame title={removal.category?'删除这个分类？':'从当前研究移出文献？'} busy={busy} onClose={onClose}><p className="delete-description">{removal.category?`将删除「${removal.category.name}」分类。文献和笔记都会保留，仅属于这个分类的文献会进入「未分类」。`:`将从当前研究移出「${removal.item?.paper.title}」及其笔记。其他研究里的收藏和原始论文不会受影响。`}</p>{error&&<p role="alert" className="field-error">{error}</p>}<div className="dialog-actions"><button data-first-focus type="button" className="button secondary" disabled={busy} onClick={onClose}>取消</button><button className="button danger" disabled={busy} onClick={async()=>{if(!await onConfirm())setError('操作未完成，原有内容未被更改，请查看页面提示。');}}>{removal.category?'确认删除分类':'确认移出收藏'}</button></div></DialogFrame>;
+function PaperEditor({
+  item,
+  project: p,
+  onClose,
+  onRemove,
+}: {
+  item: SavedPaper;
+  project: Project;
+  onClose: () => void;
+  onRemove: () => void;
+}) {
+  const { saveLibrary, busy } = useProjects();
+  const lib = p.library ?? emptyLibrary();
+  const [paper, setPaper] = useState(item.paper),
+    [note, setNote] = useState(item.note),
+    [categories, setCategories] = useState(item.categoryIds),
+    [revision] = useState(lib.revision),
+    [pdf, setPDF] = useState<LocalPDF | null>(null),
+    [detach, setDetach] = useState(false),
+    [verified, setVerified] = useState<Paper | null>(null),
+    [pending, setPending] = useState(false),
+    [error, setError] = useState("");
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  async function save() {
+    setError("");
+    if (lib.revision !== revision) {
+      setError("文献库已变化，请取消并重新打开编辑。");
+      return;
+    }
+    const changed = JSON.stringify(paper) !== JSON.stringify(item.paper);
+    const edited =
+      changed &&
+      paper.source !== "import" &&
+      JSON.stringify(paper) !== JSON.stringify(verified)
+        ? importedPaper({
+            ...paper,
+            key: `import:${crypto.randomUUID()}`,
+            source: "import",
+            identity: "imported",
+            verification: undefined,
+            openAlexId: null,
+            citations: null,
+          })
+        : paper;
+    if (!isPaper(edited)) {
+      setError("字段格式无效，请检查标题、年份和链接。");
+      return;
+    }
+    try {
+      if (pdf) await savePDF(pdf);
+      const next = {
+        ...item,
+        paper: edited,
+        ...(detach ? { attachment: undefined } : {}),
+        note,
+        categoryIds: categories,
+        updatedAt: new Date().toISOString(),
+        ...(pdf
+          ? {
+              attachment: {
+                id: pdf.id,
+                name: pdf.name,
+                pages: pdf.pages.length,
+                characters: pdf.pages.join("").length,
+                updatedAt: pdf.updatedAt,
+              },
+            }
+          : {}),
+      };
+      if (
+        await saveLibrary(p.id, revision, {
+          ...lib,
+          items: lib.items.map((i) => (i.id === item.id ? next : i)),
+        })
+      ) {
+        if ((pdf || detach) && item.attachment)
+          await removePDF(p.id, item.attachment.id);
+        onClose();
+      } else {
+        if (pdf) await removePDF(p.id, pdf.id);
+        setError("保存未完成，编辑内容保留。");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "保存失败");
+    }
+  }
+  return (
+    <dialog
+      ref={dialog}
+      className="project-dialog literature-dialog frosted-surface"
+      onCancel={(e) => {
+        if (pending || busy) e.preventDefault();
+        else onClose();
+      }}
+    >
+      <h2>编辑文献资料</h2>
+      <p>修改外部认证字段后将标记为用户编辑题录；不再冒充外部核验。</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <PaperFields paper={paper} onChange={setPaper} />
+        <button
+          type="button"
+          disabled={!paper.doi || pending}
+          onClick={async () => {
+            setPending(true);
+            setError("");
+            try {
+              const r = await fetch(
+                "/api/literature/verify?doi=" + encodeURIComponent(paper.doi!),
+              );
+              const data = await r.json();
+              if (!r.ok || !isPaper(data.paper))
+                throw new Error(data.error ?? "未取得完整登记记录");
+              setVerified(data.paper);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "核对失败");
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          按 DOI 核对登记元数据
+        </button>
+        {verified && (
+          <section>
+            <h3>登记记录（请比较后决定是否采用）</h3>
+            <p>
+              {verified.title} · {verified.authors.join("；")} · {verified.year}{" "}
+              · {verified.venue}
+            </p>
+            <a
+              href={verified.recordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              查看登记来源
+            </a>
+            <button type="button" onClick={() => setPaper(verified)}>
+              采用登记记录，保留笔记与分类
+            </button>
+          </section>
+        )}
+        {item.attachment && (
+          <label>
+            <input
+              type="checkbox"
+              checked={detach}
+              onChange={(e) => setDetach(e.target.checked)}
+            />
+            保存时移除 PDF 关联，保留书目和摘要
+          </label>
+        )}
+        <label>
+          阅读笔记
+          <textarea
+            aria-label="阅读笔记"
+            maxLength={4000}
+            rows={4}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </label>
+        <fieldset>
+          <legend>分类标签</legend>
+          {lib.categories.map((c) => (
+            <label key={c.id}>
+              <input
+                type="checkbox"
+                checked={categories.includes(c.id)}
+                onChange={(e) =>
+                  setCategories(
+                    e.target.checked
+                      ? [...categories, c.id]
+                      : categories.filter((x) => x !== c.id),
+                  )
+                }
+              />
+              {c.name}
+            </label>
+          ))}
+        </fieldset>
+        <label>
+          补充 / 替换 PDF
+          <input
+            aria-label="补充 PDF"
+            type="file"
+            accept=".pdf"
+            disabled={pending}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setPending(true);
+              setError("");
+              try {
+                const result = await extractPDF(file);
+                setPDF({
+                  id: crypto.randomUUID(),
+                  projectId: p.id,
+                  blob: file,
+                  name: file.name,
+                  pages: result.pages,
+                  updatedAt: new Date().toISOString(),
+                });
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "PDF 读取失败");
+              } finally {
+                setPending(false);
+              }
+            }}
+          />
+        </label>
+        <p>
+          {pdf
+            ? `待保存 PDF：${pdf.name}，${pdf.pages.length} 页`
+            : item.attachment
+              ? `已关联 PDF：${item.attachment.name}`
+              : "尚无 PDF"}
+        </p>
+        {item.attachment && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const file = await getPDF(p.id, item.attachment!.id);
+                if (!file)
+                  throw new Error("本浏览器找不到此 PDF，请重新附加。");
+                const url = URL.createObjectURL(file.blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = file.name;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "读取失败");
+              }
+            }}
+          >
+            下载 PDF 原文件备份
+          </button>
+        )}
+        {error && <p role="alert">{error}</p>}
+        <div className="dialog-actions">
+          <button type="button" disabled={pending || busy} onClick={onClose}>
+            取消
+          </button>
+          <button type="button" disabled={pending || busy} onClick={onRemove}>
+            删除文献
+          </button>
+          <button className="button primary" disabled={pending || busy}>
+            保存文献资料
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
 }

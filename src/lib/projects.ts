@@ -1,3 +1,4 @@
+import {isWorkflow,type Workflow} from './workflow';
 import { isWorkbench, type Workbench } from './workbench';
 import { isExploration, type Exploration } from './exploration';
 import { isLibrary, type Library } from './literature';
@@ -13,6 +14,7 @@ export type Project = {
   exploration?: Exploration;
   library?: Library;
   workbench?: Workbench;
+  workflow?: Workflow;
 };
 
 export type ProjectSnapshot = {
@@ -33,7 +35,7 @@ export const emptySnapshot = (): ProjectSnapshot => ({ version: 1, revision: 0, 
 const validDate = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const validText = (value: unknown, max: number): value is string => typeof value === 'string' && value.length <= max;
 
-function parseSnapshot(raw: string | null): ProjectSnapshot {
+export function parseSnapshot(raw: string | null): ProjectSnapshot {
   if (raw === null) return emptySnapshot();
   try {
     const data: unknown = JSON.parse(raw);
@@ -47,6 +49,7 @@ function parseSnapshot(raw: string | null): ProjectSnapshot {
           !validText(p.observation, 2000) || p.status !== 'starting' || !validDate(p.createdAt) || !validDate(p.updatedAt) ||
           (p.exploration !== undefined && !isExploration(p.exploration)) ||
           (p.library !== undefined && !isLibrary(p.library)) ||
+          (p.workflow !== undefined && !isWorkflow(p.workflow)) ||
           (p.workbench !== undefined && !isWorkbench(p.workbench))) throw new Error();
       ids.add(p.id);
     }

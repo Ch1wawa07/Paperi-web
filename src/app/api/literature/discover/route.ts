@@ -1,11 +1,2 @@
-import { readBoundedJSON } from '@/lib/ai-server';
-import { discover, discoveryError, parseDiscovery } from '@/lib/discovery-server';
-export const runtime='nodejs';
-export const dynamic='force-dynamic';
-export async function POST(request:Request){
-  const origin=request.headers.get('origin');
-  let valid=false;try{const u=new URL(origin??'');valid=u.origin===origin&&u.host===request.headers.get('host')&&u.protocol===new URL(request.url).protocol;}catch{}
-  if(!valid)return Response.json({error:'请从当前网站发起检索。'},{status:403});
-  try{return Response.json(await discover(parseDiscovery(await readBoundedJSON(request,12000)),request.signal),{headers:{'Cache-Control':'no-store'}});}
-  catch(e){const error=discoveryError(e);return Response.json({error:error.message},{status:error.status,headers:{'Cache-Control':'no-store'}});}
-}
+// Kept as an explicit tombstone for old clients. This route never calls a search provider.
+export async function POST(){return Response.json({error:'Paperi 已改为用户从学校数据库检索并导入题录；本站网页搜索已停用。'},{status:410});}
