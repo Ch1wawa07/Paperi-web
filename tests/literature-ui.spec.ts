@@ -277,6 +277,7 @@ for (const width of [1440, 390])
     await page.screenshot({
       path: `docs/screenshots/workflow/library-${width}.png`,
       fullPage: true,
+        animations: "disabled",
     });
     for (const mode of ["文献星图", "研究脉络", "文献精析"]) {
       await page
@@ -291,6 +292,7 @@ for (const width of [1440, 390])
       await page.screenshot({
         path: `docs/screenshots/workflow/${mode}-${width}.png`,
         fullPage: true,
+        animations: "disabled",
       });
     }
     for (const path of ["review", "canvas"]) {
@@ -309,6 +311,7 @@ for (const width of [1440, 390])
       await page.screenshot({
         path: `docs/screenshots/workflow/${path}-${width}.png`,
         fullPage: true,
+        animations: "disabled",
       });
     }
   });

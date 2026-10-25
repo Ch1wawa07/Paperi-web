@@ -12,7 +12,7 @@
     "postinstall": "node scripts/pdf-worker.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "dependencies": {
     "next": "16.4.2",
