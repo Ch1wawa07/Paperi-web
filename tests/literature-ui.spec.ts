@@ -7,7 +7,7 @@ async function mock(page: Page){
   await page.route('**/api/literature**',route=>{
     const u=new URL(route.request().url());
     if(u.pathname.endsWith('/verify'))return route.fulfill({json:{paper:{...a,title:'登记记录题名不同（测试夹具）',year:2025},resolves:true,checkedAt:at}});
-    const q=u.searchParams.get('query')??'';
+    const q=route.request().method()==='POST'?route.request().postDataJSON().query:u.searchParams.get('query')??'';
     if(q==='failed')return route.fulfill({status:503,json:{error:'测试数据源不可达，没有结果'}});
     return route.fulfill({json:{query:q,provider:q==='same-doi'?'openalex':'crossref',items:q==='empty'?[]:q==='same-doi'?[mapOpenAlex(records.openalex,at)!]:[a,b],total:q==='empty'?0:24,page:Number(u.searchParams.get('page')??1),pageSize:10,notices:['测试夹具，仅测试界面流程'],cached:false,hasMore:q!=='empty'}});
   });

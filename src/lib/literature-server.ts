@@ -101,6 +101,7 @@ async function lookupDOI(doi: string, signal: AbortSignal): Promise<Paper> {
   return paper;
 }
 export async function searchLiterature(o: SearchOptions, signal: AbortSignal): Promise<SearchResults> {
+  if(o.provider === 'auto' && !normalizeDOI(o.query)) throw new MetadataError(400,'默认文献发现请从 AI 学术联网检索提交研究问题；此接口只用于显式元数据查询或 DOI 核验。');
   const key = JSON.stringify(o), hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return { ...hit.value, cached: true };
   const release = reserve();

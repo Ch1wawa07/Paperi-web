@@ -33,7 +33,7 @@ export type Thread = {
 };
 export type Assessment = {
   id: string;
-  level: "direct" | "background" | "unrelated" | "insufficient";
+  level: "direct" | "background" | "possible" | "unrelated" | "insufficient";
   reason: string;
   use: string;
   basis: string;
@@ -136,7 +136,7 @@ export function isAssessments(v: unknown): v is Assessment[] {
       (a) =>
         isRecord(a) &&
         txt(a.id, 250) &&
-        ["direct", "background", "unrelated", "insufficient"].includes(
+        ["direct", "background", "possible", "unrelated", "insufficient"].includes(
           String(a.level),
         ) &&
         txt(a.reason, 800) &&

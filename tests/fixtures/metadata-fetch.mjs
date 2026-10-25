@@ -34,3 +34,20 @@ globalThis.fetch=async function(input,init){
   const items=query.includes('fixture-empty')?[]:[records.crossref,records.missing];
   return Response.json({message:{'total-results':items.length?24:0,items}});
 };
+
+// Official-schema Search/Fetch fixture. Synthetic pages only, never evidence of live success.
+const metadataFetch=globalThis.fetch;
+globalThis.fetch=async function(input,init){
+ const u=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url);
+ if(u.hostname!=='api.deepseek.com')return metadataFetch(input,init);
+ const body=JSON.parse(init.body);
+ if(!String(init.headers.Authorization).includes('test-only-search-key'))throw new Error('Unexpected credential in fixture');
+ const query=body.query??'';
+ if(query.length>128||body.count>10)throw new Error('Invalid official request contract');
+ const code=query.match(/fixture-status-(\d+)/)?.[1];if(code)return Response.json({error:'fixture only'},{status:Number(code)});
+ if(query.includes('fixture-empty'))return Response.json({results:[]});
+ if(u.pathname.endsWith('/fetch'))return Response.json({title:'fixture',content:'Fetched fixture article abstract content; not a real paper.'});
+ if(query.includes('fixture-malformed'))return Response.json({unexpected:[]});
+ const lang=query.includes('lang:en')?'en':'zh';
+ return Response.json({results:[{title:records.crossref.title[0],url:'https://doi.org/10.5555/paperi-fixture-a',summary:'Fixture algorithmic trust abstract.',content:'Fixture algorithmic trust abstract.',authority:4,rerank_score:3,date:'2026-10-01'},...Array.from({length:9},(_,i)=>({title:`${lang} 期刊论文 fixture ${i}`,url:`https://example.org/${lang}/${i}`,snippet:'论文线索，无身份登记信息',authority:4,rerank_score:3,date:'2025-01-01'}))]});
+};

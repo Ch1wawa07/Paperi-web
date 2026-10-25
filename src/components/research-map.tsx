@@ -222,9 +222,10 @@ function MapWorkspace({
                 {library.items.map((i) => (
                   <option
                     key={i.id}
+                    disabled={!i.paper.openAlexId && !i.paper.doi}
                     value={i.paper.openAlexId ?? i.paper.doi ?? ""}
                   >
-                    {i.paper.title}
+                    {i.paper.title}{!i.paper.openAlexId && !i.paper.doi ? " · 真实引用关系暂不可用" : ""}
                   </option>
                 ))}
               </select>

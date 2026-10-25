@@ -8,9 +8,9 @@ export class AIError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 function configuration() {
-  const key = process.env.AI_API_KEY?.trim();
-  const model = process.env.AI_MODEL?.trim();
-  const base = process.env.AI_BASE_URL?.trim();
+  const key = process.env.AI_API_KEY?.trim() || process.env.DEEPSEEK_API_KEY?.trim();
+  const model = process.env.AI_MODEL?.trim() || (process.env.DEEPSEEK_API_KEY?.trim() ? 'deepseek-flash' : '');
+  const base = process.env.AI_BASE_URL?.trim() || (process.env.DEEPSEEK_API_KEY?.trim() ? 'https://api.deepseek.com' : '');
   if (!key || !model || !base) throw new AIError(503, 'AI 服务尚未配置。请由项目维护者设置服务端接口地址、模型和密钥；当前不会生成模拟回答。');
   let url: URL;
   try { url = new URL(base.endsWith('/') ? base : `${base}/`); }

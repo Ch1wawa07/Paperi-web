@@ -47,8 +47,8 @@ test.describe('文献服务端适配器隔离集成验证（本地夹具，不�
     expect((await request.get('/api/literature?query=fixture-rate&provider=openalex')).status()).toBe(429);
     expect((await request.get('/api/literature?query=fixture-malformed&provider=openalex')).status()).toBe(502);
   });
-  test('自动源切换明确标识 Crossref，保持原检索词与缺失字段',async({request})=>{
-    const r=await request.get('/api/literature?query=fixture-fallback&provider=auto&coreOnly=false');expect(r.status()).toBe(200);const d=await r.json();expect(d.provider).toBe('crossref');expect(d.query).toBe('fixture-fallback');expect(d.notices.join(' ')).toContain('Crossref');expect(d.items[1].abstract).toBeNull();
+  test('显式辅助源保留 Crossref 真实登记记录与缺失字段',async({request})=>{
+    const r=await request.get('/api/literature?query=fixture-fallback&provider=crossref&coreOnly=false');expect(r.status()).toBe(200);const d=await r.json();expect(d.provider).toBe('crossref');expect(d.query).toBe('fixture-fallback');expect(d.notices.join(' ')).toContain('Crossref');expect(d.items[1].abstract).toBeNull();
   });
   test('Crossref 自动关闭不兼容核心来源筛选并明确告知',async({request})=>{
     const r=await request.get('/api/literature?query=fixture-strict&provider=crossref');expect(r.status()).toBe(200);expect((await r.json()).notices.join(' ')).toContain('已为你关闭');

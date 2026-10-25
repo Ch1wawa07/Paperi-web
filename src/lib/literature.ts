@@ -5,13 +5,14 @@ export type Paper = {
   venue: string | null; sourceIsCore: boolean | null; kind: string; doi: string | null; openAlexId: string | null;
   abstract: string | null; abstractTruncated: boolean; citations: number | null;
   retracted: boolean | null; oaUrl: string | null; landingUrl: string | null;
-  source: 'openalex' | 'crossref'; recordUrl: string; retrievedAt: string;
+  source: 'openalex' | 'crossref' | 'deepseek';
+  discoveryUrl?: string; webSummary?: string; identity?: 'verified' | 'lead' | 'webpage'; recordUrl: string; retrievedAt: string;
 };
 export type Category = { id: string; name: string };
 export type SavedPaper = { id: string; paper: Paper; categoryIds: string[]; note: string; savedAt: string; updatedAt: string };
 export type Library = { revision: number; categories: Category[]; items: SavedPaper[] };
 export type SearchOptions = { query: string; provider: 'auto' | 'openalex' | 'crossref'; sort: 'relevance' | 'newest' | 'citations'; yearFrom: string; yearTo: string; journalsOnly: boolean; doiOnly: boolean; coreOnly: boolean; page: number };
-export type SearchResults = { query: string; provider: 'openalex' | 'crossref'; items: Paper[]; total: number; page: number; pageSize: number; notices: string[]; cached: boolean; hasMore: boolean };
+export type SearchResults = { query: string; provider: 'openalex' | 'crossref' | 'deepseek'; items: Paper[]; total: number; page: number; pageSize: number; notices: string[]; cached: boolean; hasMore: boolean };
 export type KeywordSuggestions = { zh: string[]; en: string[] };
 export const emptyLibrary = (): Library => ({ revision: 0, categories: [
   { id: 'reading', name: '待读' }, { id: 'core', name: '核心文献' },
@@ -46,6 +47,11 @@ export function isPaper(v: unknown): v is Paper {
     (v.retracted !== null && typeof v.retracted !== 'boolean') || (v.sourceIsCore !== null && typeof v.sourceIsCore !== 'boolean')) return false;
   if (v.doi !== null && normalizeDOI(v.doi) !== v.doi) return false;
   if (v.openAlexId !== null && (typeof v.openAlexId !== 'string' || !/^https:\/\/openalex\.org\/W\d+$/.test(v.openAlexId))) return false;
+  if (v.discoveryUrl !== undefined && safeWebURL(v.discoveryUrl) !== v.discoveryUrl) return false;
+  if (v.webSummary !== undefined && !text(v.webSummary, 6000)) return false;
+  if (v.identity !== undefined && !['verified','lead','webpage'].includes(String(v.identity))) return false;
+  if (v.source === 'deepseek') return ['lead','webpage'].includes(String(v.identity)) && v.doi === null && v.openAlexId === null && v.citations === null && v.abstract === null && v.authors.length === 0 && v.year === null && v.venue === null && safeWebURL(v.recordUrl) === v.recordUrl && v.key === webKey(String(v.recordUrl)) && v.landingUrl === v.recordUrl && v.oaUrl === null;
+  if (v.identity !== undefined && v.identity !== 'verified') return false;
   if (!v.doi && !v.openAlexId) return false;
   if (v.key !== (v.doi ? `doi:${v.doi}` : `openalex:${v.openAlexId}`)) return false;
   if (v.source === 'crossref') { if (!v.doi || v.recordUrl !== crossrefRecordURL(String(v.doi))) return false; }
@@ -70,8 +76,12 @@ export function isLibrary(v: unknown): v is Library {
   return true;
 }
 export function isSearchResults(v: unknown): v is SearchResults {
-  return isRecord(v) && typeof v.query === 'string' && ['openalex', 'crossref'].includes(String(v.provider)) &&
+  return isRecord(v) && typeof v.query === 'string' && ['openalex', 'crossref', 'deepseek'].includes(String(v.provider)) &&
     Array.isArray(v.items) && v.items.length <= 10 && v.items.every(isPaper) && Number.isSafeInteger(v.total) && Number(v.total) >= 0 &&
     Number.isInteger(v.page) && Number(v.page) >= 1 && Number(v.page) <= 5 && v.pageSize === 10 &&
     Array.isArray(v.notices) && v.notices.every(n => text(n, 500)) && typeof v.cached === 'boolean' && typeof v.hasMore === 'boolean';
 }
+
+// Compact deterministic URL identity fits existing evidence-id limits.
+export function webKey(url: string) { let h = 2166136261; for (const c of url) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return 'web:' + (h >>> 0).toString(16); }
+export const identityLabel = (p: Paper) => p.source === 'deepseek' ? p.identity === 'lead' ? '论文线索 · 待核实' : '参考网页 · 非已核实论文' : '已核实的论文元数据';

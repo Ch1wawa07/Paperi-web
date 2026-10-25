@@ -194,12 +194,12 @@ test("项目A带入词不串到B，手动输入不被异步建议覆盖，刷新
   );
 });
 
-test("Crossref自动关闭不兼容筛选；机械工程同词记录归入不推荐且不进入直接结果", async ({
+test("默认联网入口；机械工程同词记录归入不推荐且不进入直接结果", async ({
   page,
 }) => {
   await mockAI(page);
   await load(page);
-  await page.route("**/api/literature?**", (r) =>
+  await page.route("**/api/literature/discover", (r) =>
     r.fulfill({
       json: {
         query: "fixture",
@@ -226,16 +226,6 @@ test("Crossref自动关闭不兼容筛选；机械工程同词记录归入不推
     }),
   );
   await page.goto("/literature");
-  await page.getByText("高级筛选", { exact: true }).click();
-  await page.getByLabel("仅 CWTS 核心来源").check();
-  await page.getByLabel("数据源", { exact: true }).selectOption("crossref");
-  await expect(page.getByLabel("仅 CWTS 核心来源")).not.toBeChecked();
-  await expect(page.getByLabel("仅 CWTS 核心来源")).toBeDisabled();
-  await expect(
-    page.getByText("Crossref 不支持该来源筛选，已为你关闭。"),
-  ).toBeVisible();
-  await page.getByLabel("数据源", { exact: true }).selectOption("openalex");
-  await expect(page.getByLabel("仅 CWTS 核心来源")).not.toBeChecked();
   await page
     .getByLabel("文献关键词或 DOI")
     .fill("psychological reactance advertising");
@@ -500,6 +490,6 @@ test('未编辑的旧设计页也不能覆盖其他标签的新设计',async({pa
  await load(page);await page.goto('/canvas');const other=await context.newPage();await other.goto('/canvas');await other.getByRole('button',{name:'添加节点'}).click();await other.getByLabel('名称',{exact:true}).fill('另一个页面的新设计');await other.getByRole('button',{name:'保存研究设计'}).click();await expect(page.getByRole('button',{name:'读取已保存版本'})).toBeVisible();await page.getByRole('button',{name:'添加节点'}).click();await expect(page.getByRole('alert').filter({hasText:'先读取已保存版本'})).toBeVisible();expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).projects[0].workbench.design.nodes[0].title,key)).toBe('另一个页面的新设计');
 });
 
-test('两组独立查询交替取样，第二组文献不被第一组填满挤掉',async({page})=>{
- await mockAI(page);await load(page);const queries:string[]=[];await page.route('**/api/literature?**',r=>{const q=new URL(r.request().url()).searchParams.get('query')!;queries.push(q);const prefix=q.startsWith('persuasion')?'first':'second';return r.fulfill({json:{query:q,provider:'crossref',items:Array.from({length:10},(_,i)=>({...paper,title:`${prefix} fixture ${i}`,openAlexId:null,key:`doi:10.5555/${prefix}-${i}`,doi:`10.5555/${prefix}-${i}`,source:'crossref',recordUrl:`https://api.crossref.org/works/10.5555%2F${prefix}-${i}`})),total:10,page:1,pageSize:10,notices:[],cached:false,hasMore:false}});});await page.goto('/literature');await page.getByRole('button',{name:'生成中英文检索词'}).click();await page.locator('.keyword-suggestions>summary').click();await page.getByRole('button',{name:'分别检索前两组并去重'}).click();await expect(page.locator('.assessment-direct')).toHaveCount(10);expect(queries).toEqual(['persuasion knowledge advertising','algorithmic trust consumer']);await expect(page.locator('.paper-card').nth(1)).toContainText('second fixture 0');
+test('联网入口只提交一次，读取项目概念且不自动搜索',async({page})=>{
+ await mockAI(page);await load(page);const requests:unknown[]=[];await page.route('**/api/literature/discover',r=>{requests.push(r.request().postDataJSON());return r.fulfill({json:{query:'fixture',provider:'deepseek',items:[paper],total:1,page:1,pageSize:10,notices:[],cached:false,hasMore:false}});});await page.goto('/literature');expect(requests).toHaveLength(0);await page.getByLabel('文献关键词或 DOI').fill('自然语言研究问题');await page.getByRole('button',{name:'检索',exact:true}).click();await expect(page.locator('.paper-card')).toHaveCount(1);expect(requests).toHaveLength(1);expect(requests[0]).toHaveProperty('query','自然语言研究问题');expect(requests[0]).toHaveProperty('concepts');
 });
