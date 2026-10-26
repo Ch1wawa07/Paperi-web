@@ -16,7 +16,7 @@ export function ProjectHistory({
     >
       <summary>旧版本研究资料 · 只读保留</summary>
       <p>
-        这些资料仍在项目备份中。当前流程以研究方向卡为终点，旧资料没有删除。
+        这些资料仍在项目备份中。新版研究设计可继续编辑，旧版资料只读保留，没有删除。
       </p>
       {p.workflow?.review.map((n) => (
         <article key={n.id}>

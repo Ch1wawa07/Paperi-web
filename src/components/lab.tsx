@@ -1,15 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import {ResearchPreparation} from './research-preparation';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { emptyExploration, isAIReply, isRecord, type Direction, type Exploration, type ResearchSeed } from '@/lib/exploration';
 import type { Project } from '@/lib/projects';
 import { useProjects } from './project-provider';
 import { Icon, LoadingState } from './ui';
-import { emptyNavigation, mergeConcepts, researchStages } from '@/lib/research-navigation';
+import { emptyNavigation, mergeConcepts } from '@/lib/research-navigation';
 import { WorkspaceToolbar } from './workspace-common';
-import { ResearchGuidePanel } from './research-guide';
 
 type Editor = { direction?: Direction; seed?: ResearchSeed; revision: number };
 type SeedFields = Pick<ResearchSeed, 'angle' | 'workingQuestion' | 'concepts'>;
@@ -19,7 +17,7 @@ export function Lab() {
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
   return <div className="module-page module-lab">
     <WorkspaceToolbar title="灵感实验室" project={project}/>
-    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <><LabProject key={project.id} project={project}/><div id="library-preparation"><ResearchPreparation key={project.id+':keywords'} project={project}/></div></> :
+    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <LabProject key={project.id} project={project}/> :
       <section className="lab-no-project frosted-surface"><Icon name="leaf" size={32}/><h2>为想法留一个位置</h2><p className="muted">先创建项目，对话和研究种子会保存在这个项目里。</p><Link className="button primary" href="/">去创建项目<Icon name="arrow" size={16}/></Link></section>}
   </div>;
 }
@@ -126,7 +124,7 @@ function LabProject({ project }: { project: Project }) {
   const suggested = exploration.directions.filter(d => d.status === 'suggested').slice().reverse();
   const locked = busy || pending;
   return <>
-    <div className="lab-compact-actions"><div className="research-stage-bar" aria-label="探索阶段">{researchStages.slice(0,2).map(stage=><button key={stage.id} aria-pressed={nav.stage===stage.id} disabled={locked} onClick={()=>void saveExploration(project.id,exploration.revision,{...exploration,navigation:{...nav,stage:stage.id}})}>{stage.label}</button>)}</div><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,'结合我的观察和已选概念，继续解释可能的研究切入点、边界和需要查证的内容。')}>继续探索</button><button className="text-button" disabled={locked||!status?.configured||nav.concepts.length>=24} onClick={()=>void send(false,false,"请再推荐一组与已有候选不同角度的学术概念；保留已选概念，避开已排除词，解释为何相关和边界。")}>再推荐一组不同角度</button><Link className="text-button" href="/literature?mode=context">研究脉络 →</Link><a className="text-button" href="#library-preparation">图书馆导航 →</a></div>
+    <div className="lab-compact-actions"><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,'结合我的观察和已选概念，继续解释可能的研究切入点、边界和需要查证的内容。')}>继续探索</button><Link className="button secondary" href="/concepts">进入概念锚定 →</Link><Link className="text-button" href="/research">研究脉络 →</Link><Link className="text-button" href="/concepts#library-preparation">图书馆导航 →</Link></div>
     <div className="lab-grid">
       <section className="lab-chat frosted-surface" aria-labelledby="chat-title">
         <div className="lab-panel-heading"><h2 id="chat-title">从一个念头开始</h2><span className="soft-badge">{status?.configured ? 'AI 已配置' : 'AI 待连接'}</span></div>
@@ -147,7 +145,7 @@ function LabProject({ project }: { project: Project }) {
       </section>
       <aside className="lab-directions" aria-label="探索辅助与研究种子">
         <details className="assistant-drawer" open><summary>探索辅助面板<span>可收起</span></summary>
-        <ResearchGuidePanel projectId={project.id} navigation={nav} papers={papers} seed={exploration.seed} revision={exploration.revision} disabled={locked} onChange={next=>saveExploration(project.id,exploration.revision,{...exploration,navigation:next})} onAsk={message=>setDraft(message)}/>
+        <section className="lab-concept-summary frosted-surface"><h2>已选概念 · {nav.concepts.filter(c=>c.status==='selected').length}</h2><div className="concept-tags">{nav.concepts.filter(c=>c.status==='selected').map(c=><span key={c.id}>{c.term}</span>)}</div><p>{nav.concepts.length?`已有 ${nav.concepts.length} 个候选概念。选择、排除、修改及双语检索词集中保存在概念锚定。`:'先聊聊你的观察，之后到概念锚定选择适合的学术解释。'}</p><Link className="button secondary" href="/concepts">查看并选择概念 →</Link></section>
 
         <details className="seed-advanced"><summary>高级编辑 · 已确认研究种子</summary><section className="lab-seed frosted-surface" aria-labelledby="seed-title"><div className="lab-panel-heading"><h2 id="seed-title">研究种子</h2><span className="seed-status">{exploration.seed ? '用户已确认' : '探索中'}</span></div>
           {exploration.seed ? <><h3>{exploration.seed.angle}</h3><p className="seed-question">{exploration.seed.workingQuestion}</p><div className="concept-tags">{exploration.seed.concepts.map((c, i) => <span key={i}>{c}</span>)}</div><p className="muted">第 {exploration.seed.version} 版 · 文献依据待核实</p><button className="text-button" disabled={locked} onClick={() => setEditor({ seed: exploration.seed!, revision: exploration.revision })}>编辑研究种子<Icon name="arrow" size={15}/></button></> :

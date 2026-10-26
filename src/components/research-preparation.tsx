@@ -62,7 +62,7 @@ export function ResearchPreparation({ project: p, initialOpen=true,automatic=fal
     } catch (e) {
       if(!signal?.aborted)setMessage(e instanceof DOMException&&e.name==="TimeoutError"?"AI 连接等待超时，已选概念保留，可手动重试。":e instanceof Error ? e.message : "生成失败");
     } finally {
-      if(!signal?.aborted)setPending(false);
+      setPending(false);
     }
   }
   const fingerprint=profileFingerprint(p);

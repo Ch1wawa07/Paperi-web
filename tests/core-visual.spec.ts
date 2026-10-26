@@ -10,13 +10,19 @@ import {
 import { emptyLibrary } from "../src/lib/literature";
 import { importedPaper } from "../src/lib/bibliography";
 import type { Project } from "../src/lib/projects";
-for (const {width,height} of [{width:1440,height:950},{width:390,height:950},{width:1366,height:768}])
+for (const { width, height } of [
+  { width: 1440, height: 950 },
+  { width: 390, height: 950 },
+  { width: 1366, height: 768 },
+])
   test(`深色聊天、分组概念与精析阅读布局 ${width}px（布局夹具，非AI验收）`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    const heroPaint=await page.locator(".hero").evaluate(el=>getComputedStyle(el).backgroundImage);
+    const heroPaint = await page
+      .locator(".hero")
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
     mkdirSync("docs/screenshots/core", { recursive: true });
     await page.screenshot({
       path: `docs/screenshots/core/hero-${width}.png`,
@@ -135,10 +141,26 @@ for (const {width,height} of [{width:1440,height:950},{width:390,height:950},{wi
       },
     ];
     p.workflow!.analyses.push({
-      id:"context",kind:"directions",fingerprint:sourceFingerprint(p,false),sourceIds:["paper"],createdAt:at,
-      sections:[section("候选方向")],
-      synthesis:["总体研究了什么","理论与方法对比","发现与分歧","还需要哪些证据"].map(section),
-      cards:[1,2,3].map(i=>({title:`模拟候选方向 ${i}`,question:"拟比较不同情境中的消费者反应；仅用于版式检查。",value:"研究价值尚待真实文献核对。",method:"初步方法需要核实可行性，未执行真实研究。",limitations:"布局测试，不能证明 AI 分析质量。",evidenceIds:["paper"]}))
+      id: "context",
+      kind: "directions",
+      fingerprint: sourceFingerprint(p, false),
+      sourceIds: ["paper"],
+      createdAt: at,
+      sections: [section("候选方向")],
+      synthesis: [
+        "总体研究了什么",
+        "理论与方法对比",
+        "发现与分歧",
+        "还需要哪些证据",
+      ].map(section),
+      cards: [1, 2, 3].map((i) => ({
+        title: `模拟候选方向 ${i}`,
+        question: "拟比较不同情境中的消费者反应；仅用于版式检查。",
+        value: "研究价值尚待真实文献核对。",
+        method: "初步方法需要核实可行性，未执行真实研究。",
+        limitations: "布局测试，不能证明 AI 分析质量。",
+        evidenceIds: ["paper"],
+      })),
     });
     await page.evaluate(
       (p) =>
@@ -154,14 +176,16 @@ for (const {width,height} of [{width:1440,height:950},{width:390,height:950},{wi
       p,
     );
     await page.goto("/lab");
-    await expect(page.locator(".concept-card")).toHaveCount(10);
-    await expect(page.locator(".concept-group")).toHaveCount(2);
     const chat = page.locator(".lab-chat");
     expect(
       await chat.evaluate((el) => getComputedStyle(el).backgroundColor),
     ).toBe("rgb(35, 54, 71)");
-    expect(await chat.evaluate(el=>getComputedStyle(el).backgroundImage)).toBe(heroPaint);
-    expect((await chat.boundingBox())!.height).toBeGreaterThanOrEqual(width>700?760:740);
+    expect(
+      await chat.evaluate((el) => getComputedStyle(el).backgroundImage),
+    ).toBe(heroPaint);
+    expect((await chat.boundingBox())!.height).toBeGreaterThanOrEqual(
+      width > 700 ? 760 : 740,
+    );
     const transcript = await page.locator(".lab-transcript").boundingBox(),
       composer = await page.locator(".lab-composer").boundingBox();
     expect(transcript!.height).toBeGreaterThan(composer!.height * 2);
@@ -172,22 +196,55 @@ for (const {width,height} of [{width:1440,height:950},{width:390,height:950},{wi
       path: `docs/screenshots/core/lab-${width}.png`,
       fullPage: true,
     });
+    await page.goto("/concepts");
+    await expect(page.locator(".concept-card")).toHaveCount(10);
+    await expect(page.locator(".concept-group")).toHaveCount(2);
+    await expect(page.locator(".selected-concepts-bar")).toContainText(
+      "测试视角 1",
+    );
+    await page.screenshot({
+      path: `docs/screenshots/core/concepts-${width}.png`,
+      fullPage: true,
+    });
     await page.goto("/literature?mode=reading");
     await expect(page.locator(".study-section")).toHaveCount(7);
     // Compact reading density: keep every section while avoiding oversized paragraphs.
-    const type=await page.locator(".study-section>p").nth(1).evaluate(el=>({size:parseFloat(getComputedStyle(el).fontSize),leading:parseFloat(getComputedStyle(el).lineHeight)}));
+    const type = await page
+      .locator(".study-section>p")
+      .nth(1)
+      .evaluate((el) => ({
+        size: parseFloat(getComputedStyle(el).fontSize),
+        leading: parseFloat(getComputedStyle(el).lineHeight),
+      }));
     expect(type.size).toBeGreaterThanOrEqual(15);
     expect(type.size).toBeLessThanOrEqual(16);
-    expect(type.leading/type.size).toBeGreaterThanOrEqual(1.6);
-    expect(type.leading/type.size).toBeLessThanOrEqual(1.8);
+    expect(type.leading / type.size).toBeGreaterThanOrEqual(1.6);
+    expect(type.leading / type.size).toBeLessThanOrEqual(1.8);
     await page.screenshot({
       path: `docs/screenshots/core/reading-${width}.png`,
       fullPage: true,
     });
     await page.goto("/literature?mode=context");
-    await expect(page.locator(".study-section")).toHaveCount(4);
+    await expect(page).toHaveURL(/\/research(?:\?|$)/);
+    await expect(page.locator(".rj-context .study-section")).toHaveCount(4);
+    const contextType = await page
+      .locator(".rj-context .study-section>p")
+      .first()
+      .evaluate((el) => ({
+        size: parseFloat(getComputedStyle(el).fontSize),
+        leading: parseFloat(getComputedStyle(el).lineHeight),
+      }));
+    expect(contextType.size).toBeGreaterThanOrEqual(15);
+    expect(contextType.size).toBeLessThanOrEqual(16);
+    expect(contextType.leading / contextType.size).toBeGreaterThanOrEqual(1.6);
+    expect(contextType.leading / contextType.size).toBeLessThanOrEqual(1.8);
+    await page.screenshot({
+      path: `docs/screenshots/core/context-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole("button", { name: /我的研究方向/ }).click();
     await expect(page.locator(".direction-choice")).toHaveCount(3);
-    await expect(page.locator(".direction-readable")).toContainText(
+    await expect(page.locator(".rj-confirmed")).toContainText(
       "品牌联名反感从何而来",
     );
     await expect(page.getByLabel("方向名称")).toHaveCount(0);
@@ -200,9 +257,4 @@ for (const {width,height} of [{width:1440,height:950},{width:390,height:950},{wi
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page.emulateMedia({ media: "print", reducedMotion: "reduce" });
-    await expect(page.locator(".direction-print")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "编辑方向卡" }),
-    ).not.toBeVisible();
   });

@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function Page(){redirect("/literature?mode=context&history=1");}
+export default function Page(){redirect("/research?history=1");}

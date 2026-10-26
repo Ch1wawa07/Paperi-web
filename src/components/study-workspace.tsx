@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { Project } from "@/lib/projects";
 import {
   emptyWorkflow,
@@ -365,6 +366,14 @@ export function StudyWorkspace({
               </p>
             )}
           </div>
+        </div>
+      )}
+      {mode === "reading" && analysis && (
+        <div className="study-actions">
+          <Link className="button primary" href="/research">
+            带着这篇文献去梳理研究脉络
+          </Link>
+          <p>当前项目文献默认全部带入，可在研究脉络中调整。</p>
         </div>
       )}
       {mode === "context" && (

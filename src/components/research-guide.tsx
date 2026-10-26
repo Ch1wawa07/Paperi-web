@@ -10,8 +10,9 @@ import { Icon } from './ui';
 type Props = {
   projectId:string; navigation: ResearchNavigation; papers: SavedPaper[]; seed: ResearchSeed | null; revision: number; disabled: boolean;
   onChange: (next: ResearchNavigation) => Promise<boolean>; onAsk: (message: string) => void;
+  conceptsOnly?: boolean; onPrepare?: () => void;
 };
-export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disabled,onChange,onAsk}:Props) {
+export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disabled,onChange,onAsk,conceptsOnly=false,onPrepare}:Props) {
   const [editing,setEditing] = useState<{concept?:ResearchConcept;revision:number}|null>(null);
   const [error,setError] = useState('');
   const [showAll,setShowAll]=useState(false);
@@ -26,11 +27,11 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disab
     const concept:ResearchConcept={...editing.concept,...fields,id:editing.concept?.id??crypto.randomUUID(),origin:'user',status:editing.concept?.status??'selected'};
     const ok=await update({...n,concepts:editing.concept?n.concepts.map(c=>c.id===concept.id?concept:c):[...n.concepts,concept]});if(ok)setEditing(null);return ok;
   }
-  return <section id="concepts" className="research-guide frosted-surface" aria-label="当前探索辅助面板">
-    <div className="lab-panel-heading"><h2>{researchStages.find(s=>s.id===n.stage)!.label}</h2><span className="seed-status">AI 建议 · 待核实</span></div>
-    <p className="guide-hint">{researchStages.find(s=>s.id===n.stage)!.hint}</p>
+  return <section id="concepts" className="research-guide frosted-surface" aria-label={conceptsOnly?'本项目概念选择':'当前探索辅助面板'}>
+    <div className="lab-panel-heading"><h2>{conceptsOnly?'把兴趣锚定为学术概念':researchStages.find(s=>s.id===n.stage)!.label}</h2><span className="seed-status">AI 建议 · 待核实</span></div>
+    <p className="guide-hint">{conceptsOnly?'选择、排除或修改与你的观察相关的概念，再带着检索词去学校图书馆。':researchStages.find(s=>s.id===n.stage)!.hint}</p>
     {error&&<p className="guide-error" role="alert">{error}</p>}
-    <div className="selected-concepts-bar"><strong>已选概念 · {n.concepts.filter(c=>c.status==='selected').length}</strong><div>{n.concepts.filter(c=>c.status==='selected').map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目的探索档案，研究问题可以稍后确定。</p><Link className="button primary" href={{pathname:'/literature',query:{project:projectId,concepts:'1'}}}>根据已选概念准备检索 →</Link></div>
+    <div className="selected-concepts-bar"><strong>已选概念 · {n.concepts.filter(c=>c.status==='selected').length}</strong><div>{n.concepts.filter(c=>c.status==='selected').map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目的探索档案，研究问题可以稍后确定。</p><Link className="button primary" onClick={conceptsOnly?onPrepare:undefined} href={conceptsOnly?'#library-preparation':{pathname:'/concepts',query:{project:projectId},hash:'library-preparation'}}>根据已选概念准备检索 →</Link></div>
     {<>
       <div className="guide-section-heading"><h3>候选概念</h3><button className="text-button" disabled={disabled||n.concepts.length>=24} onClick={()=>{setError('');setEditing({revision});}}><Icon name="plus" size={14}/>添加概念</button></div>
       {!n.concepts.length&&<p className="muted">先说说你的观察。这里会逐渐出现候选解释，不是已经验证的定义。</p>}

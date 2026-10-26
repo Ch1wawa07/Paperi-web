@@ -1,0 +1,461 @@
+.research-journey {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.rj-summary {
+  padding: 12px 18px;
+  margin-bottom: 16px;
+}
+.rj-summary summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  cursor: pointer;
+}
+.rj-summary summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.rj-summary p {
+  margin: 8px 0;
+}
+.rj-stages {
+  display: flex;
+  gap: 6px;
+  background: #f5f3fa8f;
+  padding: 6px;
+  border: 1px solid #fff9;
+  border-radius: 18px;
+  margin-bottom: 22px;
+  overflow-x: auto;
+}
+.rj-stages button {
+  flex: 1;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+}
+.rj-stages button span {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #687b8a;
+  margin-right: 8px;
+}
+.rj-stages button[aria-current] {
+  background: linear-gradient(120deg, #dceee8, #e5dff3);
+  box-shadow: 0 3px 12px #67748414;
+  color: #293c4e;
+}
+.rj-heading {
+  margin: 16px 0;
+}
+.rj-heading h2 {
+  font-size: 24px;
+  margin: 6px 0;
+}
+.rj-heading p {
+  margin: 6px 0;
+  color: var(--muted);
+}
+.rj-evidence-status {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.rj-evidence-status li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #8798ac20;
+  padding: 6px 0;
+}
+.rj-evidence-status small {
+  flex-shrink: 0;
+  color: #627786;
+  font-size: 12px;
+}
+.rj-cost-note {
+  font-size: 12px;
+  color: #687781;
+  margin: 10px 0 18px;
+}
+.rj-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.rj-section-grid .study-section {
+  margin: 0;
+  background: linear-gradient(125deg, #eef7f2cc, #f0edf6cc 64%, #f7eeecba);
+  border: 1px solid #fff9;
+  border-radius: 20px;
+  padding: 20px 24px;
+}
+.rj-section-grid h3 {
+  font-size: 18px;
+}
+.rj-section-grid p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.rj-section-grid .study-evidence {
+  margin-top: 12px;
+}
+.rj-chat.lab-chat {
+  width: 100%;
+  max-width: none;
+}
+.rj-chat .lab-chat-heading {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.rj-chat .lab-chat-heading h2 {
+  font-size: 23px;
+  margin: 4px 0;
+}
+.rj-chat .lab-chat-heading > span {
+  font-size: 12px;
+  color: #e0e8ee;
+}
+.rj-chat .lab-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 24px;
+  scrollbar-gutter: stable;
+}
+.rj-chat .message {
+  margin-bottom: 18px;
+  max-width: 90%;
+}
+.rj-chat .message-user {
+  margin-left: auto;
+}
+.rj-chat .message-body p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.8;
+  margin: 0;
+}
+.rj-chat .message-body small {
+  display: block;
+  color: #d6e9efbd;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.rj-chat .lab-composer {
+  position: static;
+  margin: 8px 20px 20px;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+.rj-chat .lab-composer textarea {
+  min-height: 60px;
+  max-height: 130px;
+  font-size: 15px;
+}
+.rj-message-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+.rj-message-actions button {
+  border: 0;
+  background: transparent;
+  color: #e2eef3;
+  font-size: 12px;
+  padding: 4px 0;
+}
+.rj-followups {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.rj-followups button {
+  padding: 8px 13px;
+  background: linear-gradient(120deg, #dfede5bd, #e8e0f2c9);
+  border: 1px solid #fff9;
+  border-radius: 20px;
+  font-size: 13px;
+}
+.rj-preferences {
+  padding: 16px 20px;
+  margin-bottom: 18px;
+}
+.rj-preferences summary {
+  cursor: pointer;
+}
+.rj-preferences label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.rj-preferences textarea {
+  width: 100%;
+  font: inherit;
+  border: 1px solid #bcc7cf;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff7;
+}
+.rj-candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.rj-candidate-grid .direction-choice {
+  padding: 20px;
+  margin: 0;
+  min-width: 0;
+}
+.rj-candidate-grid h3 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+.rj-candidate-grid h4 {
+  font-size: 13px;
+  margin: 16px 0 5px;
+  color: #52697b;
+}
+.rj-candidate-grid p {
+  font-size: 14px;
+  line-height: 1.75;
+  margin: 6px 0;
+}
+.rj-candidate-grid > .direction-choice:nth-child(3n + 1) {
+  background: linear-gradient(135deg, #dcefe5b3, #f6f4eac9);
+}
+.rj-candidate-grid > .direction-choice:nth-child(3n + 2) {
+  background: linear-gradient(135deg, #e5def3b3, #f5e6edc9);
+}
+.rj-candidate-grid > .direction-choice:nth-child(3n) {
+  background: linear-gradient(135deg, #dce8f3c9, #f4eddfb3);
+}
+.rj-candidate-grid .workspace-actions {
+  gap: 7px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+.rj-candidate-grid .workspace-actions button {
+  font-size: 12px;
+  padding: 8px 11px;
+}
+.rj-confirmed {
+  margin: 24px 0;
+  padding: 24px;
+}
+.rj-confirmed h3 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+.rj-confirmed h4 {
+  font-size: 20px;
+}
+.rj-confirmed h5 {
+  font-size: 13px;
+  color: #52697b;
+  margin: 14px 0 4px;
+}
+.rj-confirmed p {
+  margin: 5px 0;
+  font-size: 15px;
+}
+.rj-confirmed > .button,
+.rj-confirmed > button {
+  margin: 14px 10px 0 0;
+}
+.rj-evidence-check {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin: 8px 0;
+}
+.research-journey .study-history {
+  margin-top: 16px;
+}
+.research-journey .study-history button {
+  margin: 8px;
+}
+.research-journey .study-evidence ul {
+  padding-left: 18px;
+}
+.research-journey .literature-error button {
+  margin-left: 12px;
+}
+.research-journey .direction-fields textarea {
+  font-size: 15px;
+  padding: 10px 12px;
+}
+.research-journey .workspace-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 1050px) {
+  .rj-candidate-grid {
+    grid-template-columns: 1fr;
+  }
+  .rj-section-grid {
+    grid-template-columns: 1fr;
+  }
+  .rj-candidate-grid .direction-choice {
+    padding: 20px;
+  }
+  .rj-evidence-status li {
+    display: block;
+  }
+  .rj-evidence-status small {
+    display: block;
+  }
+}
+@media (max-width: 700px) {
+  .rj-summary {
+    padding: 12px 14px;
+  }
+  .rj-summary summary {
+    gap: 5px 12px;
+  }
+  .rj-summary summary strong {
+    width: 100%;
+  }
+  .rj-stages {
+    gap: 3px;
+    padding: 4px;
+  }
+  .rj-stages button {
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+  .rj-stages button span {
+    display: block;
+    margin: 0;
+  }
+  .rj-heading h2 {
+    font-size: 22px;
+  }
+  .rj-chat .lab-chat-heading {
+    padding: 18px;
+  }
+  .rj-chat .lab-chat-heading h2 {
+    font-size: 20px;
+  }
+  .rj-chat .lab-transcript {
+    padding: 10px 14px;
+  }
+  .rj-chat .message {
+    max-width: 96%;
+  }
+  .rj-chat .message-body {
+    padding: 15px 16px;
+  }
+  .rj-chat .lab-composer {
+    margin: 6px 12px 14px;
+    padding: 12px;
+  }
+  .rj-chat .lab-composer textarea {
+    min-height: 55px;
+  }
+  .rj-chat .lab-chat-heading > span {
+    max-width: 75px;
+  }
+  .rj-section-grid .study-section {
+    padding: 18px;
+  }
+  .rj-confirmed {
+    padding: 20px;
+  }
+  .rj-message-actions {
+    gap: 10px;
+  }
+  .rj-summary p {
+    overflow-wrap: anywhere;
+  }
+}
+
+.module-concepts {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.concept-context {
+  padding: 18px 22px;
+  margin: 14px 0;
+  background: linear-gradient(125deg, #e1eee7bd, #e7e0f3bd);
+}
+.concept-context h2 {
+  font-size: 20px;
+}
+.concept-context p {
+  margin: 6px 0;
+}
+.module-concepts .concept-card-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.lab-concept-summary {
+  padding: 20px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.lab-concept-summary h2 {
+  font-size: 18px;
+}
+.lab-concept-summary .concept-tags {
+  margin: 14px 0;
+}
+.module-concepts .concept-anchor {
+  margin-top: 18px;
+}
+.module-concepts .concept-card {
+  padding: 20px;
+}
+.module-concepts .concept-card h3 {
+  font-size: 18px;
+}
+.module-concepts .concept-card p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+@media (max-width: 1000px) {
+  .module-concepts .concept-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .module-concepts .concept-card-list {
+    grid-template-columns: 1fr;
+  }
+  .concept-context {
+    padding: 18px;
+  }
+  .lab-concept-summary {
+    padding: 18px;
+  }
+}
+
+.rj-chat-sources {
+  font-size: 12px;
+  color: #d7e9ee;
+  margin-top: 9px;
+}
+.rj-chat-sources summary {
+  cursor: pointer;
+}
+.rj-chat-sources p,
+.rj-chat-sources a {
+  color: inherit;
+}
+.rj-chat-sources > ul {
+  padding-left: 18px;
+}

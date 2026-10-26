@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useProjects } from "./project-provider";
 import { WorkspaceToolbar, downloadText } from "./workspace-common";
-import { ResearchPreparation } from "./research-preparation";
 import {
   emptyLibrary,
   identityLabel,
@@ -35,14 +34,13 @@ import { pdfMetadataCandidates } from "@/lib/pdf-metadata";
 export function Literature({
   requestProject,
   initialMode = "start",
-  fromConcepts=false,
-  showHistory=false,
+  showHistory = false,
 }: {
   requestProject?: string;
   initialMode?: string;
   initialQuery?: string;
   fromConcepts?: boolean;
-  showHistory?:boolean;
+  showHistory?: boolean;
 }) {
   const { snapshot, ready } = useProjects();
   const p = snapshot.projects.find((p) => p.id === snapshot.activeId);
@@ -54,7 +52,12 @@ export function Literature({
           链接属于另一个项目，请先在顶部切换项目。
         </p>
       ) : ready && p ? (
-        <LibraryWorkspace key={p.id+initialMode} p={p} initialMode={initialMode} prepare={fromConcepts} showHistory={showHistory} />
+        <LibraryWorkspace
+          key={p.id + initialMode}
+          p={p}
+          initialMode={initialMode}
+          showHistory={showHistory}
+        />
       ) : (
         <Link href="/">选择或创建研究项目</Link>
       )}
@@ -64,13 +67,11 @@ export function Literature({
 function LibraryWorkspace({
   p,
   initialMode,
-  prepare,
   showHistory,
 }: {
   p: Project;
   initialMode: string;
-  prepare:boolean;
-  showHistory:boolean;
+  showHistory: boolean;
 }) {
   const { saveLibrary, busy } = useProjects();
   const lib = p.library ?? emptyLibrary();
@@ -112,36 +113,101 @@ function LibraryWorkspace({
   );
   async function readFiles(files: File[]) {
     if (pending || !files.length) return;
-    if (files.length > 20) {setError("一次最多选择 20 个文件，请分批导入。");return;}
-    setError("");setPending(true);setPreview(null);setPDFs({});
-    const abort = new AbortController();reading.current = abort;
-    const combined: ImportPreview = {rows:[],failures:[]};
-    const attached: Record<number,LocalPDF>={};
+    if (files.length > 20) {
+      setError("一次最多选择 20 个文件，请分批导入。");
+      return;
+    }
+    setError("");
+    setPending(true);
+    setPreview(null);
+    setPDFs({});
+    const abort = new AbortController();
+    reading.current = abort;
+    const combined: ImportPreview = { rows: [], failures: [] };
+    const attached: Record<number, LocalPDF> = {};
     try {
-      for (const [index,file] of files.entries()) {
-        if(abort.signal.aborted)break;
-        setProgress(`正在读取 ${index+1} / ${files.length}：${file.name}`);
+      for (const [index, file] of files.entries()) {
+        if (abort.signal.aborted) break;
+        setProgress(`正在读取 ${index + 1} / ${files.length}：${file.name}`);
         try {
-          if (!/\.(pdf|ris|bib|txt|enw)$/i.test(file.name)) throw new Error("不支持的格式，请使用 PDF / RIS / BibTeX / EndNote / TXT。");
+          if (!/\.(pdf|ris|bib|txt|enw)$/i.test(file.name))
+            throw new Error(
+              "不支持的格式，请使用 PDF / RIS / BibTeX / EndNote / TXT。",
+            );
           if (/\.pdf$/i.test(file.name)) {
-            const result=await extractPDF(file,{signal:abort.signal,onProgress:q=>{if(mounted.current)setProgress(`${index+1} / ${files.length} · ${file.name} · ${q.stage}`)}});
-            attached[combined.rows.length]={id:crypto.randomUUID(),projectId:p.id,blob:file,name:file.name,pages:result.pages,updatedAt:new Date().toISOString()};
-            const metadata=pdfMetadataCandidates(result.pages,{title:result.title,author:result.author});
-            combined.rows.push({paper:importedPaper({...metadata.fields,title:metadata.fields.title||file.name.replace(/\.pdf$/i,""),authors:metadata.fields.authors||[]}),warnings:[`${file.name}：属性及正文识别仅为候选，请核对原文片段和字段。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`],raw:metadata.evidence});
+            const result = await extractPDF(file, {
+              signal: abort.signal,
+              onProgress: (q) => {
+                if (mounted.current)
+                  setProgress(
+                    `${index + 1} / ${files.length} · ${file.name} · ${q.stage}`,
+                  );
+              },
+            });
+            attached[combined.rows.length] = {
+              id: crypto.randomUUID(),
+              projectId: p.id,
+              blob: file,
+              name: file.name,
+              pages: result.pages,
+              updatedAt: new Date().toISOString(),
+            };
+            const metadata = pdfMetadataCandidates(result.pages, {
+              title: result.title,
+              author: result.author,
+            });
+            combined.rows.push({
+              paper: importedPaper({
+                ...metadata.fields,
+                title:
+                  metadata.fields.title || file.name.replace(/\.pdf$/i, ""),
+                authors: metadata.fields.authors || [],
+              }),
+              warnings: [
+                `${file.name}：属性及正文识别仅为候选，请核对原文片段和字段。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`,
+              ],
+              raw: metadata.evidence,
+            });
           } else {
-            if(file.size>2_000_000)throw new Error("题录文件最大 2 MB。");
-            const bytes=await file.arrayBuffer();let content=new TextDecoder("utf-8").decode(bytes);
-            if(content.includes("\uFFFD"))content=new TextDecoder("gb18030").decode(bytes);
-            const parsed=parseBibliography(content);
-            combined.rows.push(...parsed.rows.map(row=>({...row,warnings:[file.name,...row.warnings]})));
-            combined.failures.push(...parsed.failures.map(f=>({...f,reason:file.name+"："+f.reason})));
+            if (file.size > 2_000_000) throw new Error("题录文件最大 2 MB。");
+            const bytes = await file.arrayBuffer();
+            let content = new TextDecoder("utf-8").decode(bytes);
+            if (content.includes("\uFFFD"))
+              content = new TextDecoder("gb18030").decode(bytes);
+            const parsed = parseBibliography(content);
+            combined.rows.push(
+              ...parsed.rows.map((row) => ({
+                ...row,
+                warnings: [file.name, ...row.warnings],
+              })),
+            );
+            combined.failures.push(
+              ...parsed.failures.map((f) => ({
+                ...f,
+                reason: file.name + "：" + f.reason,
+              })),
+            );
           }
-        }catch(e){combined.failures.push({record:index+1,reason:file.name+"："+(e instanceof Error?e.message:"读取失败"),raw:""});}
+        } catch (e) {
+          combined.failures.push({
+            record: index + 1,
+            reason:
+              file.name + "：" + (e instanceof Error ? e.message : "读取失败"),
+            raw: "",
+          });
+        }
       }
-      if(!mounted.current)return;
-      setPreview(combined);setPDFs(attached);setPreviewRevision(lib.revision);setDecisions({});
-      setMessage(`本次选择 ${files.length} 个文件，得到 ${combined.rows.length} 条记录、${combined.failures.length} 条失败。${abort.signal.aborted?"已取消后续读取，已完成记录仍可导入。":"请核对后一次确认。"}`);
-    }finally{if(mounted.current)setPending(false);}
+      if (!mounted.current) return;
+      setPreview(combined);
+      setPDFs(attached);
+      setPreviewRevision(lib.revision);
+      setDecisions({});
+      setMessage(
+        `本次选择 ${files.length} 个文件，得到 ${combined.rows.length} 条记录、${combined.failures.length} 条失败。${abort.signal.aborted ? "已取消后续读取，已完成记录仍可导入。" : "请核对后一次确认。"}`,
+      );
+    } finally {
+      if (mounted.current) setPending(false);
+    }
   }
   function parse(content = text) {
     setError("");
@@ -163,7 +229,7 @@ function LibraryWorkspace({
       return;
     }
     let next: Library = { ...lib, items: [...lib.items] };
-    const savedFiles:LocalPDF[]=[];
+    const savedFiles: LocalPDF[] = [];
     setPending(true);
     try {
       for (const [index, row] of preview.rows.entries()) {
@@ -174,7 +240,7 @@ function LibraryWorkspace({
         const action = decisions[index] ?? (duplicate ? "skip" : "keep");
         if (action === "skip") continue;
         const now = new Date().toISOString();
-        const pdf=pdfs[index];
+        const pdf = pdfs[index];
         const attachment = pdf
           ? {
               id: pdf.id,
@@ -213,19 +279,25 @@ function LibraryWorkspace({
       }
       if (next.items.length > 300)
         throw new Error("每个项目最多 300 篇文献，请分项目管理。");
-      for(const pdf of Object.values(pdfs)) if(next.items.some(i=>i.attachment?.id===pdf.id)){await savePDF(pdf);savedFiles.push(pdf);}
-      if(!mounted.current)throw new Error("页面已切换，导入未保存。");
-      if(!(await saveLibrary(p.id,previewRevision,next)))throw new Error("导入尚未保存，请处理上方存储提示。");
+      for (const pdf of Object.values(pdfs))
+        if (next.items.some((i) => i.attachment?.id === pdf.id)) {
+          await savePDF(pdf);
+          savedFiles.push(pdf);
+        }
+      if (!mounted.current) throw new Error("页面已切换，导入未保存。");
+      if (!(await saveLibrary(p.id, previewRevision, next)))
+        throw new Error("导入尚未保存，请处理上方存储提示。");
       setPreview(null);
       setPDFs({});
       setText("");
       setMode("library");
       setMessage("导入已完成。题录未经外部认证，请核对来源。");
     } catch (e) {
-      for(const pdf of savedFiles)await removePDF(p.id,pdf.id);
+      for (const pdf of savedFiles) await removePDF(p.id, pdf.id);
       setError(e instanceof Error ? e.message : "保存失败");
-    }finally{if(mounted.current)setPending(false);}
-
+    } finally {
+      if (mounted.current) setPending(false);
+    }
   }
   async function remove(item: SavedPaper) {
     if (
@@ -259,7 +331,6 @@ function LibraryWorkspace({
         {[
           ["import", "导入文献"],
           ...(lib.items.length ? [["library", "已导入文献"]] : []),
-          ["context", "研究脉络"],
           ["reading", "文献精析"],
         ].map(([key, label]) => (
           <button
@@ -271,7 +342,6 @@ function LibraryWorkspace({
             {label}
           </button>
         ))}
-
       </div>
       {error && (
         <p role="alert" className="literature-error">
@@ -416,7 +486,17 @@ function LibraryWorkspace({
                       原始来源记录 ↗
                     </a>
                   )}
-                  <p className="paper-stage-status">{i.attachment?`文件已保存 · 文字已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字`:'已保存题录'} · 书目字段待原文核对 · {p.workflow?.analyses.some(a=>a.kind==='reading'&&a.sourceIds.includes(i.id))?'已有精析记录':'尚未精析'}</p>
+                  <p className="paper-stage-status">
+                    {i.attachment
+                      ? `文件已保存 · 文字已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字`
+                      : "已保存题录"}{" "}
+                    · 书目字段待原文核对 ·{" "}
+                    {p.workflow?.analyses.some(
+                      (a) => a.kind === "reading" && a.sourceIds.includes(i.id),
+                    )
+                      ? "已有精析记录"
+                      : "尚未精析"}
+                  </p>
                   <p>{i.note}</p>
                   <div className="workspace-actions">
                     <button onClick={() => setEditing(i)}>
@@ -437,11 +517,20 @@ function LibraryWorkspace({
               ))}
             </div>
           )}
-          <ResearchPreparation key={p.id + ":prep"} project={p} automatic={prepare}/>
+          <Link className="button secondary" href="/research">
+            带着这些文献去梳理研究脉络
+          </Link>
         </>
       )}
       {mode === "import" && (
-        <section className="frosted-surface workflow-panel import-surface" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!pending)void readFiles(Array.from(e.dataTransfer.files));}}>
+        <section
+          className="frosted-surface workflow-panel import-surface"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (!pending) void readFiles(Array.from(e.dataTransfer.files));
+          }}
+        >
           <div className="import-intro">
             <span className="eyebrow">BRING YOUR RESEARCH IN</span>
             <h2>把找到的论文，带进研究里。</h2>
@@ -454,7 +543,10 @@ function LibraryWorkspace({
             支持 RIS、BibTeX、EndNote 标签题录和逐行参考文献。中文 UTF-8 /
             GB18030；最大 2 MB。也可导入可提取文字的 PDF（20 MB / 150 页以内）。
           </p>
-          <p>支持一次多选或拖入最多 20 个文件，可混合格式；每个 PDF 最长读取 60 秒。导入无需等待 AI 分析。</p>
+          <p>
+            支持一次多选或拖入最多 20 个文件，可混合格式；每个 PDF 最长读取 60
+            秒。导入无需等待 AI 分析。
+          </p>
           <label>
             选择题录或 PDF 文件
             <input
@@ -464,7 +556,7 @@ function LibraryWorkspace({
               accept=".ris,.bib,.txt,.enw,.pdf"
               disabled={pending}
               onChange={(e) => {
-                const files=Array.from(e.target.files??[]);
+                const files = Array.from(e.target.files ?? []);
                 void readFiles(files);
                 e.target.value = "";
               }}
@@ -517,7 +609,8 @@ function LibraryWorkspace({
               <p>
                 {progress}
                 <small>
-                  本地提取文字，不调用 AI；每个 PDF 最长 60 秒。预览确认后才保存。
+                  本地提取文字，不调用 AI；每个 PDF 最长 60
+                  秒。预览确认后才保存。
                 </small>
               </p>
               <button
@@ -620,7 +713,32 @@ function LibraryWorkspace({
                 disabled={busy || pending || !preview.rows.length}
                 onClick={() => void commitImport()}
               >
-                导入这 {preview.rows.filter((row,index)=>(decisions[index]??(duplicateOf(row.paper,{...lib,items:[...lib.items,...preview.rows.slice(0,index).map((r,j)=>({id:`preview-${j}`,paper:r.paper,categoryIds:[],note:"",savedAt:"",updatedAt:""}))]})?"skip":"keep"))!=="skip").length} 篇
+                导入这{" "}
+                {
+                  preview.rows.filter(
+                    (row, index) =>
+                      (decisions[index] ??
+                        (duplicateOf(row.paper, {
+                          ...lib,
+                          items: [
+                            ...lib.items,
+                            ...preview.rows
+                              .slice(0, index)
+                              .map((r, j) => ({
+                                id: `preview-${j}`,
+                                paper: r.paper,
+                                categoryIds: [],
+                                note: "",
+                                savedAt: "",
+                                updatedAt: "",
+                              })),
+                          ],
+                        })
+                          ? "skip"
+                          : "keep")) !== "skip",
+                  ).length
+                }{" "}
+                篇
               </button>
               <button
                 onClick={() => {
@@ -634,12 +752,17 @@ function LibraryWorkspace({
           )}
         </section>
       )}
-      {mode === "import" && <ResearchPreparation key={p.id+":import-preparation"} project={p} initialOpen={prepare} automatic={prepare}/>}
-
-      {(mode === "context" || mode === "reading") && (
-        <StudyWorkspace key={p.id+mode} project={p} mode={mode} />
+      {mode === "import" && (
+        <p className="source-notice">
+          需要检索词？
+          <Link href="/concepts">在概念锚定查看双语关键词与图书馆入口</Link>
+        </p>
       )}
-      <ProjectHistory project={p} initiallyOpen={showHistory}/>
+
+      {mode === "reading" && (
+        <StudyWorkspace key={p.id + mode} project={p} mode="reading" />
+      )}
+      <ProjectHistory project={p} initiallyOpen={showHistory} />
       {editing && (
         <PaperEditor
           key={editing.id}

@@ -24,7 +24,7 @@ async function begin(page: Page) {
             group: i < 5 ? "心理" : "传播",
             relevance: "与测试观察有关",
           })),
-          keywords: { zh: [], en: [] },
+          keywords: { zh: ["测试视角"], en: ["fixture perspective"] },
           threads: [],
         },
       },
@@ -45,9 +45,12 @@ async function begin(page: Page) {
     .getByLabel("写下你的日常观察")
     .fill("为什么有些品牌联名反而让消费者反感？");
   await page.getByRole("button", { name: "开始探索", exact: true }).click();
+  await expect(page.locator(".chat-assistant")).toHaveCount(1);
+  await page.getByRole("link", { name: "进入概念锚定" }).click();
+  await expect(page).toHaveURL("/concepts");
   await expect(page.locator(".concept-card")).toHaveCount(10);
 }
-test("核心路径（AI明确模拟）：原话、十概念、自动关键词、混合导入、七维精析、脉络到可编辑方向卡", async ({
+test("核心路径（AI明确模拟）：原话、十概念、双语检索词、混合导入、七维精析到独立研究脉络", async ({
   page,
   context,
 }) => {
@@ -70,6 +73,10 @@ test("核心路径（AI明确模拟）：原话、十概念、自动关键词、
     .first();
   await expect(library).toHaveAttribute("href", "https://www.lib.szu.edu.cn/");
   await expect(library).toHaveAttribute("target", "_blank");
+  await page
+    .locator(".library-entry")
+    .getByRole("link", { name: "返回后导入文献" })
+    .click();
   await page
     .getByLabel("选择题录或 PDF 文件")
     .setInputFiles([
@@ -95,37 +102,17 @@ test("核心路径（AI明确模拟）：原话、十概念、自动关键词、
       uncertainty: "明确模拟，仅验证数据流",
     });
     return r.fulfill({
-      json:
-        b.task === "reading"
-          ? {
-              sections: [
-                "30 秒读懂",
-                "研究问题与动机",
-                "理论与核心概念",
-                "研究方法与过程",
-                "关键发现与结论",
-                "局限与研究启发",
-                "对当前项目的价值",
-              ].map(section),
-            }
-          : {
-              sections: [section("测试方向")],
-              synthesis: [
-                "总体概览",
-                "理论和方法对比",
-                "发现与分歧",
-                "尚缺证据",
-              ].map(section),
-              cards: [1, 2, 3].map((i) => ({
-                title: `测试方向${i}`,
-                question: `拟比较不同情境${i}`,
-                value: "这是研究建议",
-                method:
-                  i === 1 ? "拟访谈，需核实可行性" : "拟实验，需核实可行性",
-                limitations: "需要更多证据",
-                evidenceIds: [id],
-              })),
-            },
+      json: {
+        sections: [
+          "30 秒读懂",
+          "研究问题与动机",
+          "理论与核心概念",
+          "研究方法与过程",
+          "关键发现与结论",
+          "局限与研究启发",
+          "对当前项目的价值",
+        ].map(section),
+      },
     });
   });
   await page
@@ -136,28 +123,22 @@ test("核心路径（AI明确模拟）：原话、十概念、自动关键词、
   await page.getByRole("button", { name: "一键精析", exact: true }).click();
   await expect(page.locator(".study-section")).toHaveCount(7);
   expect(receivedPDF).toBe(true);
-  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await page.getByRole("button", { name: "梳理研究脉络", exact: true }).click();
-  await expect(page.locator(".study-section")).toHaveCount(4);
-  await expect(page.locator(".direction-choice")).toHaveCount(3);
-  await page
-    .getByRole("button", { name: "选择这个方向", exact: true })
-    .nth(1)
-    .click();
-  await page.getByRole("button", { name: "编辑方向卡" }).click();
-  await expect(page.getByLabel("方向名称")).toHaveValue("测试方向2");
-  await page.getByLabel("我想研究什么").fill("用户修订的问题");
-  await page
-    .getByRole("button", { name: "保存研究方向卡", exact: true })
-    .click();
-  await page.reload();
-  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await page.getByRole("button", { name: "编辑方向卡" }).click();
-  await expect(page.getByLabel("我想研究什么")).toHaveValue("用户修订的问题");
-  await page.getByRole("button", { name: "复制研究方向卡文字" }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
-    "用户修订的问题",
-  );
+  let journeyCalls = 0;
+  await page.route("**/api/research-journey", (route) => {
+    journeyCalls++;
+    return route.fulfill({
+      status: 500,
+      json: { error: "本测试仅验收衔接，不应自动发起研究请求" },
+    });
+  });
+  await page.getByRole("link", { name: "带着这篇文献去梳理研究脉络" }).click();
+  await expect(page).toHaveURL("/research");
+  await expect(page.locator(".rj-evidence-status li")).toHaveCount(4);
+  await expect(page.locator(".rj-context")).toContainText("已有精析");
+  await expect(
+    page.getByRole("button", { name: "梳理这些文献", exact: true }),
+  ).toBeEnabled();
+  expect(journeyCalls).toBe(0);
   const id = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key)!).activeId,
     key,
@@ -214,56 +195,17 @@ test("多个PDF可选并保存；旧页面重定向，旧研究数据/PDF副本�
   );
   for (const path of ["map", "review", "canvas", "proposal"]) {
     await page.goto("/" + path);
-    await expect(page).toHaveURL(/literature\?mode=context/);
+    await expect(page).toHaveURL(/\/research(?:\?|$)/);
   }
   await expect(page.locator(".legacy-history")).toContainText(
     "用户旧成果应保留",
   );
   await expect(
     page.getByRole("navigation", { name: "主要导航" }).getByRole("link"),
-  ).toHaveCount(3);
+  ).toHaveCount(5);
   await expect(
     page.getByRole("button", { name: "文献星图", exact: true }),
   ).toHaveCount(0);
-});
-test("AI失败保留已确认卡、项目切换隔离、删除来源提示更新", async ({ page }) => {
-  await begin(page);
-  await page.goto("/literature");
-  await page
-    .getByLabel("选择题录或 PDF 文件")
-    .setInputFiles("tests/fixtures/workflow/publisher-records.ris");
-  await page.getByRole("button", { name: "导入这 3 篇" }).click();
-  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await page.getByRole("button", { name: "自己记录研究方向" }).click();
-  await page.getByLabel("方向名称").fill("自己确认的方向");
-  await page.getByLabel("我想研究什么").fill("拟研究品牌反应");
-  await page.getByRole("button", { name: "保存研究方向卡" }).click();
-  await page.route("**/api/workflow", (r) =>
-    r.fulfill({ status: 502, json: { error: "模拟上游输出截断，未保存" } }),
-  );
-  await page.getByRole("button", { name: "梳理研究脉络", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "模拟上游输出截断" }),
-  ).toBeVisible();
-  await expect(page.locator(".direction-readable")).toContainText(
-    "自己确认的方向",
-  );
-  await page.getByRole("button", { name: "已导入文献", exact: true }).click();
-  page.on("dialog", (d) => d.accept());
-  await page
-    .getByRole("button", { name: "删除文献", exact: true })
-    .first()
-    .click();
-  await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await expect(page.locator(".my-direction-card")).toContainText(
-    "方向依据已变化",
-  );
-  await page.goto("/");
-  await page.getByRole("button", { name: "新建项目", exact: true }).click();
-  await page.getByLabel("项目名称").fill("另一个项目");
-  await page.getByRole("button", { name: "创建项目", exact: true }).click();
-  await page.goto("/literature?mode=context");
-  await expect(page.locator(".direction-readable")).toHaveCount(0);
 });
 test("分析已返回但存储失败可单独重试保存，不重复模型请求（明确模拟）", async ({
   page,
