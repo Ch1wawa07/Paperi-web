@@ -2,6 +2,7 @@ import { isRecord } from "./exploration";
 import { safeWebURL } from "./literature";
 import type { Project } from "./projects";
 import { selectedConcepts } from "./workbench";
+import { isResearchWorkspace, type ResearchWorkspace } from "./research-workspace";
 export type ReadingSection = {
   title: string;
   body: string;
@@ -37,6 +38,7 @@ export type ReviewNode = {
   y: number;
 };
 export type Workflow = {
+  research?: ResearchWorkspace;
   graphView?: { mode: string; expanded: boolean };
   version: 1;
   revision: number;
@@ -118,6 +120,7 @@ export function pdfExcerpts(pages: string[], budget: number) {
 export function isWorkflow(v: unknown): v is Workflow {
   if (
     !isRecord(v) ||
+    (v.research !== undefined && !isResearchWorkspace(v.research)) ||
     v.version !== 1 ||
     (v.graphView !== undefined &&
       (!isRecord(v.graphView) ||
