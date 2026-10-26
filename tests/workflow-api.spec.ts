@@ -55,7 +55,7 @@ test("真实HTTP工作流适配：书目不调用AI、摘要quote核对、未知
     });
     expect(badquote.status()).toBe(200);
     expect((await badquote.json()).sections[0].body).toContain(
-      "无法从本次提供的原文核对",
+      "结构草案",
     );
     expect(
       (

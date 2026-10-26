@@ -1,3 +1,4 @@
+import { cleanDirection } from "./workflow";
 import {workflowEvidence} from './workflow';
 import { isRecord } from "./exploration";
 import { isIds } from "./research-navigation";
@@ -209,7 +210,7 @@ export function researchContext(p: Project) {
   return {
     observation: p.observation,
     concepts: selectedConcepts(p),
-    question: (p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??"").slice(0,400),
+    question: cleanDirection(p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??"").slice(0,400),
     messages: (p.exploration?.messages ?? [])
       .slice(-4)
       .map((m) => m.content.slice(0, 1000)),

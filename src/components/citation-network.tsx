@@ -11,6 +11,8 @@ import { emptyWorkflow } from "@/lib/workflow";
 import { emptyLibrary, type Paper } from "@/lib/literature";
 import { useProjects } from "./project-provider";
 import { NodeCanvas } from "./node-canvas";
+import Link from "next/link";
+import { getPDF } from "@/lib/local-files";
 export function CitationNetwork({ project: p }: { project: Project }) {
   const { saveLibrary, saveWorkflow, busy } = useProjects();
   const lib = p.library ?? emptyLibrary(),
@@ -21,6 +23,7 @@ export function CitationNetwork({ project: p }: { project: Project }) {
     [expanded, setExpanded] = useState(f.graphView?.expanded ?? true),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
+    [references,setReferences]=useState<{page:number;text:string}[]>([]),
     [notices, setNotices] = useState<Record<string, string>>({});
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
@@ -50,6 +53,17 @@ export function CitationNetwork({ project: p }: { project: Project }) {
     return networkLayout(ids, e);
   }, [signature]);
   const detail = visible.find((p) => p.key === selected);
+  const missing=lib.items.filter(i=>!i.paper.doi&&!i.paper.openAlexId);
+  async function readReferences(){
+    setError("");setReferences([]);
+    const item=lib.items.find(i=>i.paper.key===selected);
+    if(!item?.attachment){setError("请先选择已关联 PDF 的一级文献；可在已导入文献中附加原文。");return;}
+    try{const file=await getPDF(p.id,item.attachment.id);if(!file)throw new Error("本浏览器找不到该 PDF，请重新附加。");
+      const start=file.pages.findIndex(t=>/参考文献|references\s*\n/i.test(t));
+      if(start<0)throw new Error("可提取正文中没有识别到参考文献标题。请在原 PDF 中核对；未推断引用关系。");
+      setReferences(file.pages.slice(start,start+6).map((text,i)=>({page:start+i+1,text:text.slice(0,10000)})));
+    }catch(e){setError(e instanceof Error?e.message:"读取失败");}
+  }
   async function load() {
     setPending(true);
     setError("");
@@ -160,12 +174,14 @@ export function CitationNetwork({ project: p }: { project: Project }) {
         </select>
       </div>
       {error && <p role="alert">{error}</p>}
+      {!visibleEdges.length && <div className="citation-empty" role="status"><h3>尚未取得可核实的引用连接</h3><p>当前 {lib.items.length} 篇一级文献中，{missing.length} 篇缺少 DOI / OpenAlex 标识。现有星图使用 OpenAlex 的引用记录，AI 不提供引用边；切换方向只筛选已取得数据，不会自动查出关系。</p><p>PDF 导入只读取文件属性和正文，可能没有作者、年份、出版来源及 DOI；这不代表论文不存在。中文学位论文及部分人文社科期刊可能不在 OpenAlex 中，补充 DOI 也不能保证收录。</p><Link href="/literature?mode=library">核对并编辑文献元数据 →</Link><button disabled={busy} onClick={()=>void readReferences()}>查看所选 PDF 的参考文献原文</button><p>PDF 参考文献仅作为人工核对线索，不自动转为已核实引用边。</p></div>}
       {secondary.length>80&&<p>为保持画布可读，本次最多显示 80 个二级节点；可切换引用方向查看。</p>}
       <div className="graph-workspace">
-        <div className="frosted-surface graph-surface">
+        <div className="frosted-surface graph-surface citation-sky">
           <NodeCanvas
             key={signature}
             initialFit
+            constellation
             label="多中心真实引用网络"
             nodes={visible.map((paper) => ({
               id: paper.key,
@@ -187,7 +203,7 @@ export function CitationNetwork({ project: p }: { project: Project }) {
               highlight:
                 !!selected && (e.from === selected || e.to === selected),
             }))}
-            onSelect={setSelected}
+            onSelect={id=>{setSelected(id);setReferences([]);}}
             onMove={(id, x, y) =>
               void saveWorkflow(p.id, f.revision, {
                 ...f,
@@ -247,6 +263,7 @@ export function CitationNetwork({ project: p }: { project: Project }) {
           )}
         </aside>
       </div>
+      {!!references.length&&<section className="reference-excerpts"><h3>PDF 参考文献原文 · 未逐条外部核验</h3>{references.map(r=><details key={r.page} open><summary>第 {r.page} 页</summary><pre>{r.text}</pre></details>)}</section>}
       <details>
         <summary>各篇文献的数据状态</summary>
         {lib.items.map((i) => (

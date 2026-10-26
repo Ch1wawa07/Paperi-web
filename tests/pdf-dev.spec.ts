@@ -26,7 +26,7 @@ test("Mac常用的Next开发模式：StrictMode重挂载后PDF完成预览并可
   await expect(
     page.getByRole("button", { name: "取消读取", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await page.getByRole("button", { name: /导入这 \d+ 篇/ }).click();
   await expect(page.locator(".paper-card")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: "已导入文献", exact: true }),

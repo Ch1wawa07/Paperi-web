@@ -77,7 +77,7 @@ async function runResearchRequest(v: unknown, signal: AbortSignal) {
       x.every((t) => typeof t === "string" && t.trim() && t.length <= 100);
     if (!isRecord(r) || !valid(r.zh) || !valid(r.en))
       throw new AIError(502, "检索表达格式不完整，请重试或手动检索。");
-    if ((r.synonyms!==undefined&&!valid(r.synonyms))||(r.expressions!==undefined&&!valid(r.expressions)))throw new AIError(502,'扩展关键词格式不完整，请重试。');
+    if ((r.synonyms!==undefined&&!valid(r.synonyms))||(r.expressions!==undefined&&!(Array.isArray(r.expressions)&&r.expressions.length>=1&&r.expressions.length<=6&&r.expressions.every(t=>typeof t==="string"&&t.length<=100))))throw new AIError(502,'扩展关键词格式不完整，请重试。');
     return r;
   }
   if (v.task === "assess") {

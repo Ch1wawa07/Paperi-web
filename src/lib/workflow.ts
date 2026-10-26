@@ -9,6 +9,7 @@ export type ReadingSection = {
   quote: string;
   page: number | null;
   uncertainty: string;
+  evidenceStatus?: "verified" | "insufficient" | "proposal";
 };
 export type Analysis = {
   inputSnapshot?: string;
@@ -85,9 +86,26 @@ export function isSections(v: unknown): v is ReadingSection[] {
         ids(s.evidenceIds) &&
         str(s.quote, 1200) &&
         (s.page === null || (Number.isInteger(s.page) && Number(s.page) > 0)) &&
-        str(s.uncertainty, 1500),
+        str(s.uncertainty, 1500) && (s.evidenceStatus === undefined || ["verified","insufficient","proposal"].includes(String(s.evidenceStatus))),
     )
   );
+}
+/** Old diagnostics stay in stored history, but never become the active research topic. */
+export function cleanDirection(text: string) {
+  return text.replace(/无法从本次提供的原文核对这一分析，请补充资料或重试。/g, "").trim();
+}
+export function isFailedSection(s: ReadingSection) {
+  return s.evidenceStatus === "insufficient" || s.body.includes("无法从本次提供的原文核对这一分析");
+}
+
+/** Sample across the document, prioritizing methods/results instead of silently sending only its start. */
+export function pdfExcerpts(pages: string[], budget: number) {
+  const all = pages.reduce((n,p)=>n+p.length,0);
+  if (all <= budget) return pages.map((text,i)=>({page:i+1,text}));
+  const headings = pages.flatMap((text,i)=> /研究方法|研究设计|数据分析|研究结果|结论|讨论|method|results|discussion|conclusion/i.test(text) ? [i] : []);
+  const indices = [...new Set([0, ...headings, ...Array.from({length:12},(_,i)=>Math.round(i*(pages.length-1)/11))])];
+  const perPage = Math.floor(budget/indices.length);
+  return indices.sort((a,b)=>a-b).map(i=>({page:i+1,text:pages[i].slice(0,perPage)}));
 }
 export function isWorkflow(v: unknown): v is Workflow {
   if (
@@ -178,7 +196,7 @@ export const sourceFingerprint = (p: Project) =>
     p.workflow?.keywords ?? emptyWorkflow().keywords,
     p.workflow?.selection ?? null,
     (p.library?.items ?? []).map((i) => [i.id, i.paper, i.attachment]),
-    p.workflow?.direction?.text,
+    cleanDirection(p.workflow?.direction?.text ?? ""),
   ]);
 export const frameworkFingerprint = (p: Project) =>
   hash([
@@ -191,7 +209,7 @@ export function exportFramework(p: Project) {
   const find = (id: string) =>
     p.library?.items.find((i) => i.id === id)?.paper.title ??
     "来源已移除，需要更新";
-  return `# ${p.name} · 研究框架\n\n状态：${f.confirmedFingerprint === frameworkFingerprint(p) ? "用户已确认" : "草案 / 内容已变化，待确认"}\n\n研究想法：${p.observation}\n\n研究方向：${f.direction?.text || "待确认"}\n\n## 文献综述提纲\n\n${f.review.map((n) => `### ${n.title}\n\n${n.body}\n\n依据：${n.evidenceIds.map(find).join("；") || "尚无"}\n\n待核实：${n.uncertainty}`).join("\n\n")}\n\n## 参考文献\n\n${workflowEvidence(
+  return `# ${p.name} · 研究框架\n\n状态：${f.confirmedFingerprint === frameworkFingerprint(p) ? "用户已确认" : "草案 / 内容已变化，待确认"}\n\n研究想法：${p.observation}\n\n研究方向：${cleanDirection(f.direction?.text ?? "") || "待确认"}\n\n## 文献综述提纲\n\n${f.review.map((n) => `### ${n.title}\n\n${n.body}\n\n依据：${n.evidenceIds.map(find).join("；") || "尚无"}\n\n待核实：${n.uncertainty}`).join("\n\n")}\n\n## 参考文献\n\n${workflowEvidence(
     p,
   )
     .map(

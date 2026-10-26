@@ -39,7 +39,7 @@ async function importTen(page: Page) {
   await page.getByLabel("粘贴多条参考文献").fill(ris);
   await page.getByRole("button", { name: "解析并预览" }).click();
   await expect(page.getByText("导入预览：10 篇可编辑，0 条失败")).toBeVisible();
-  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await page.getByRole("button", { name: /导入这 \d+ 篇/ }).click();
   await expect(page.locator(".paper-card")).toHaveCount(10);
 }
 async function snapshot(page: Page) {
@@ -59,7 +59,7 @@ test("十篇批量导入、重复预览默认跳过、项目切换刷新隔离�
   await expect(page.getByLabel("第 1 条导入方式", { exact: true })).toHaveValue(
     "skip",
   );
-  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await page.getByRole("button", { name: /导入这 \d+ 篇/ }).click();
   await expect(page.locator(".paper-card")).toHaveCount(10);
   await page.getByLabel("当前项目", { exact: true }).selectOption("b");
   await expect(page.locator(".paper-card")).toHaveCount(0);
@@ -70,7 +70,7 @@ test("十篇批量导入、重复预览默认跳过、项目切换刷新隔离�
     .getByRole("button", { name: "文献精析", exact: true })
     .first()
     .click();
-  await page.getByRole("button", { name: "分析 / 追问这篇文献" }).click();
+  await page.getByRole("button", { name: "一键精析" }).click();
   await expect(page.locator(".analysis-card")).toHaveCount(10);
   await expect(page.locator(".analysis-card").nth(5)).toContainText("信息不足");
   expect(
@@ -143,7 +143,7 @@ test("真实形状引用网络、二级晋升、方向综述设计导出完整�
     });
   });
   await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await page.getByRole("button", { name: "生成 / 追问候选研究方向" }).click();
+  await page.getByRole("button", { name: "一键生成研究方向" }).click();
   await page.getByRole("button", { name: "选择这个研究方向" }).click();
   await page.getByRole("link", { name: "进入文献综述与研究整合" }).click();
   await page.getByRole("button", { name: "生成综述结构候选" }).click();
@@ -254,7 +254,7 @@ test("AI失败明确可重试且不覆盖历史，PDF格式错误不会新增假
     r.fulfill({ status: 504, json: { error: "测试：AI 请求超时" } }),
   );
   await page.getByRole("button", { name: "研究脉络", exact: true }).click();
-  await page.getByRole("button", { name: "生成 / 追问候选研究方向" }).click();
+  await page.getByRole("button", { name: "一键生成研究方向" }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "测试：AI 请求超时" }),
   ).toBeVisible();
@@ -333,7 +333,7 @@ test("真实PDF解析器读取本地合成文件，确认前不入库，刷新�
   });
   expect((await snapshot(page)).projects[0].library).toBeUndefined();
   await page.getByLabel("论文标题").fill("测试 PDF 书目（用户确认）");
-  await page.getByRole("button", { name: "确认批量导入当前项目" }).click();
+  await page.getByRole("button", { name: /导入这 \d+ 篇/ }).click();
   await expect(page.locator(".paper-card")).toHaveCount(1);
   await expect(page.locator(".paper-card")).toContainText("有本地 PDF");
   await page.reload();

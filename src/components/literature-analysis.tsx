@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Project } from "@/lib/projects";
 import {
   emptyWorkflow,
+  pdfExcerpts,
+  cleanDirection,
+  isFailedSection,
   isSections,
   sourceFingerprint,
   workflowEvidence,
@@ -116,14 +119,9 @@ export async function requestWorkflow(
         throw new Error(
           `《${i.paper.title}》的 PDF 在当前浏览器不可读，请重新附加，或移除 PDF 关联后使用摘要。`,
         );
-      let budget = Math.min(24000, Math.floor(60000 / items.length), remaining);
-      for (const [index, text] of file.pages.entries()) {
-        if (budget <= 0) break;
-        const excerpt = text.slice(0, budget);
-        pages.push({ page: index + 1, text: excerpt });
-        budget -= excerpt.length;
-        remaining -= excerpt.length;
-      }
+      const budget = Math.min(task === "reading" ? 40000 : 24000, Math.floor(60000 / items.length), remaining);
+      pages.push(...pdfExcerpts(file.pages, budget));
+      remaining -= pages.reduce((n,p)=>n+p.text.length,0);
     }
     evidence.push({ id: i.id, paper: i.paper, pages });
   }
@@ -134,7 +132,7 @@ export async function requestWorkflow(
       task,
       observation: p.observation,
       concepts: selectedConcepts(p),
-      direction: p.workflow?.direction?.text ?? "",
+      direction: cleanDirection(p.workflow?.direction?.text ?? ""),
       question,
       evidence,
     }),
@@ -159,7 +157,7 @@ export async function requestWorkflow(
     inputSnapshot: JSON.stringify({
       observation: p.observation,
       concepts: selectedConcepts(p),
-      direction: p.workflow?.direction?.text ?? "",
+      direction: cleanDirection(p.workflow?.direction?.text ?? ""),
       question,
       evidence,
     }),
@@ -184,7 +182,7 @@ export function LiteratureAnalysis({
     [question, setQuestion] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
-    [direction, setDirection] = useState(f.direction?.text ?? ""),
+    [direction, setDirection] = useState(cleanDirection(f.direction?.text ?? "")),
     [result, setResult] = useState<Analysis | null>(null);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
@@ -297,12 +295,13 @@ export function LiteratureAnalysis({
           </select>
         </label>
       )}
+      {mode === "reading" && (()=>{const i=p.library?.items.find(x=>x.id===selected);return <p className="source-notice">资料状态：{i?.attachment ? `PDF 已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字；将选取含方法、结果及首尾的限量正文` : i?.paper.abstract ? "已有摘要，可做摘要层面分析" : "只有题录，不能判断方法和结论，请补充摘要或 PDF"}。</p>})()}
       <p>
         只有书目时不分析具体方法与结论；摘要支持有限分析；PDF
         仅发送限量可提取文字节选并保留页码。点击分析才发送所选资料给已配置的
         AI。
       </p>
-      <label>
+      <details className="optional-question"><summary>可选：补充关注点</summary><label>
         追问或本次关注点
         <input
           aria-label="追问或本次关注点"
@@ -311,7 +310,7 @@ export function LiteratureAnalysis({
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="例如：这些研究适合本科生怎样继续？"
         />
-      </label>
+      </label></details>
       <button
         className="button primary"
         disabled={pending || busy || !p.library?.items.length}
@@ -320,8 +319,8 @@ export function LiteratureAnalysis({
         {pending
           ? "正在分析…"
           : mode === "reading"
-            ? "分析 / 追问这篇文献"
-            : "生成 / 追问候选研究方向"}
+            ? "一键精析"
+            : "一键生成研究方向"}
       </button>
       {error && (
         <p role="alert" className="literature-error">
@@ -342,7 +341,7 @@ export function LiteratureAnalysis({
           {analysis.sections.map((s, index) => (
             <details key={index} className="analysis-card" open>
               <summary>{s.title}</summary>
-              <p>{s.body}</p>
+              {isFailedSection(s) ? <p className="source-notice">这一维度尚无可核对依据，暂不能采纳；请补充原文或重新分析。</p> : <p>{s.body}</p>}
               {s.quote && (
                 <blockquote>
                   {s.quote}
@@ -355,15 +354,15 @@ export function LiteratureAnalysis({
                 {mode === "context" ? (
                   <>
                     <button
-                      disabled={busy || stale}
+                      disabled={busy || stale || isFailedSection(s)}
                       onClick={() => {
-                        setDirection(`${s.title}\n${s.body}`);
+                        setDirection(cleanDirection(`${s.title}\n${s.body}`));
                         void saveWorkflow(p.id, f.revision, {
                           ...f,
                           direction: {
-                            text: `${s.title}\n${s.body}`,
+                            text: cleanDirection(`${s.title}\n${s.body}`),
                             evidenceIds: s.evidenceIds,
-                            fingerprint: sourceFingerprint(p),
+                            fingerprint: sourceFingerprint({...p,workflow:{...f,direction:{text:cleanDirection(`${s.title}\n${s.body}`),evidenceIds:s.evidenceIds,fingerprint:""}}}),
                           },
                         });
                       }}
@@ -394,25 +393,25 @@ export function LiteratureAnalysis({
                 ) : (
                   <>
                     <button
-                      disabled={busy || stale}
+                      disabled={busy || stale || isFailedSection(s)}
                       onClick={() => void keep(s, "note")}
                     >
                       保存为研究笔记
                     </button>
                     <button
-                      disabled={busy || stale}
+                      disabled={busy || stale || isFailedSection(s)}
                       onClick={() => void keep(s, "concept")}
                     >
                       加入理论 / 概念候选
                     </button>
                     <button
-                      disabled={busy || stale}
+                      disabled={busy || stale || isFailedSection(s)}
                       onClick={() => void keep(s, "design")}
                     >
                       加入研究设计参考
                     </button>
                     <button
-                      disabled={busy || stale}
+                      disabled={busy || stale || isFailedSection(s)}
                       onClick={() =>
                         void saveWorkflow(p.id, f.revision, {
                           ...f,
@@ -444,7 +443,9 @@ export function LiteratureAnalysis({
       {mode === "context" && (
         <>
           <h3>我的研究方向</h3>
+          {f.direction && <div className="chosen-direction"><strong>{cleanDirection(f.direction.text).split("\n")[0]}</strong><Sources project={p} ids={f.direction.evidenceIds}/><p>方向由你选择；文献支持与待核实事项请单独核对。</p></div>}
           <textarea
+            className="direction-editor"
             aria-label="我的研究方向"
             rows={5}
             maxLength={4000}
@@ -459,7 +460,7 @@ export function LiteratureAnalysis({
               void saveWorkflow(p.id, f.revision, {
                 ...f,
                 direction: {
-                  text: direction,
+                  text: cleanDirection(direction),
                   evidenceIds:
                     f.direction?.evidenceIds ??
                     workflowEvidence(p).map((i) => i.id),

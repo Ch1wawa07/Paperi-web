@@ -84,7 +84,7 @@ function LibraryWorkspace({
     [query, setQuery] = useState(""),
     [category, setCategory] = useState(""),
     [tag, setTag] = useState(""),
-    [pdf, setPDF] = useState<LocalPDF | null>(null),
+    [pdfs, setPDFs] = useState<Record<number, LocalPDF>>({}),
     [progress, setProgress] = useState(""),
     [pending, setPending] = useState(false),
     [previewRevision, setPreviewRevision] = useState(lib.revision);
@@ -104,61 +104,41 @@ function LibraryWorkspace({
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
-  async function readFile(file: File) {
-    setError("");
-    setPending(true);
-    reading.current = new AbortController();
-    setProgress("正在读取文件…");
+  async function readFiles(files: File[]) {
+    if (pending || !files.length) return;
+    if (files.length > 20) {setError("一次最多选择 20 个文件，请分批导入。");return;}
+    setError("");setPending(true);setPreview(null);setPDFs({});
+    const abort = new AbortController();reading.current = abort;
+    const combined: ImportPreview = {rows:[],failures:[]};
+    const attached: Record<number,LocalPDF>={};
     try {
-      if (/\.pdf$/i.test(file.name)) {
-        const result = await extractPDF(file, {
-          signal: reading.current!.signal,
-          onProgress: (p) => setProgress(p.stage),
-        });
-        if (!mounted.current) return;
-        setPDF({
-          id: crypto.randomUUID(),
-          projectId: p.id,
-          blob: file,
-          name: file.name,
-          pages: result.pages,
-          updatedAt: new Date().toISOString(),
-        });
-        setPreview({
-          rows: [
-            {
-              paper: importedPaper({
-                title: result.title || file.name.replace(/\.pdf$/i, ""),
-                authors: result.author ? [result.author] : [],
-              }),
-              warnings: [
-                "PDF 属性可能不准确，请逐项确认标题和作者；年份与出版机构需自行补充。",
-              ],
-              raw: result.pages[0].slice(0, 2000),
-            },
-          ],
-          failures: [],
-        });
-        setPreviewRevision(lib.revision);
-        setDecisions({});
-      } else {
-        if (file.size > 2_000_000) throw new Error("题录文件最大 2 MB。");
-        const bytes = await file.arrayBuffer();
-        let content = new TextDecoder("utf-8").decode(bytes);
-        if (content.includes("\uFFFD"))
-          content = new TextDecoder("gb18030").decode(bytes);
-        setText(content);
-        parse(content);
+      for (const [index,file] of files.entries()) {
+        if(abort.signal.aborted)break;
+        setProgress(`正在读取 ${index+1} / ${files.length}：${file.name}`);
+        try {
+          if (!/\.(pdf|ris|bib|txt|enw)$/i.test(file.name)) throw new Error("不支持的格式，请使用 PDF / RIS / BibTeX / EndNote / TXT。");
+          if (/\.pdf$/i.test(file.name)) {
+            const result=await extractPDF(file,{signal:abort.signal,onProgress:q=>{if(mounted.current)setProgress(`${index+1} / ${files.length} · ${file.name} · ${q.stage}`)}});
+            attached[combined.rows.length]={id:crypto.randomUUID(),projectId:p.id,blob:file,name:file.name,pages:result.pages,updatedAt:new Date().toISOString()};
+            combined.rows.push({paper:importedPaper({title:result.title||file.name.replace(/\.pdf$/i,""),authors:result.author?[result.author]:[]}),warnings:[`${file.name}：PDF 属性可能不完整，请核对标题、作者、年份和出版来源。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`],raw:result.pages[0]?.slice(0,2000)??""});
+          } else {
+            if(file.size>2_000_000)throw new Error("题录文件最大 2 MB。");
+            const bytes=await file.arrayBuffer();let content=new TextDecoder("utf-8").decode(bytes);
+            if(content.includes("\uFFFD"))content=new TextDecoder("gb18030").decode(bytes);
+            const parsed=parseBibliography(content);
+            combined.rows.push(...parsed.rows.map(row=>({...row,warnings:[file.name,...row.warnings]})));
+            combined.failures.push(...parsed.failures.map(f=>({...f,reason:file.name+"："+f.reason})));
+          }
+        }catch(e){combined.failures.push({record:index+1,reason:file.name+"："+(e instanceof Error?e.message:"读取失败"),raw:""});}
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "文件读取失败");
-    } finally {
-      if (mounted.current) setPending(false);
-    }
+      if(!mounted.current)return;
+      setPreview(combined);setPDFs(attached);setPreviewRevision(lib.revision);setDecisions({});
+      setMessage(`本次选择 ${files.length} 个文件，得到 ${combined.rows.length} 条记录、${combined.failures.length} 条失败。${abort.signal.aborted?"已取消后续读取，已完成记录仍可导入。":"请核对后一次确认。"}`);
+    }finally{if(mounted.current)setPending(false);}
   }
   function parse(content = text) {
     setError("");
-    setPDF(null);
+    setPDFs({});
     try {
       setPreview(parseBibliography(content));
       setDecisions({});
@@ -176,7 +156,8 @@ function LibraryWorkspace({
       return;
     }
     let next: Library = { ...lib, items: [...lib.items] };
-    let fileSaved = false;
+    const savedFiles:LocalPDF[]=[];
+    setPending(true);
     try {
       for (const [index, row] of preview.rows.entries()) {
         const paper = row.paper;
@@ -186,6 +167,7 @@ function LibraryWorkspace({
         const action = decisions[index] ?? (duplicate ? "skip" : "keep");
         if (action === "skip") continue;
         const now = new Date().toISOString();
+        const pdf=pdfs[index];
         const attachment = pdf
           ? {
               id: pdf.id,
@@ -224,26 +206,19 @@ function LibraryWorkspace({
       }
       if (next.items.length > 300)
         throw new Error("每个项目最多 300 篇文献，请分项目管理。");
-      if (pdf && next.items.some((i) => i.attachment?.id === pdf.id)) {
-        await savePDF(pdf);
-        fileSaved = true;
-      }
-      if (!mounted.current) {
-        if (fileSaved && pdf) await removePDF(p.id, pdf.id);
-        return;
-      }
-      if (!(await saveLibrary(p.id, previewRevision, next))) {
-        if (fileSaved && pdf) await removePDF(p.id, pdf.id);
-        throw new Error("导入尚未保存，请处理上方存储提示。");
-      }
+      for(const pdf of Object.values(pdfs)) if(next.items.some(i=>i.attachment?.id===pdf.id)){await savePDF(pdf);savedFiles.push(pdf);}
+      if(!mounted.current)throw new Error("页面已切换，导入未保存。");
+      if(!(await saveLibrary(p.id,previewRevision,next)))throw new Error("导入尚未保存，请处理上方存储提示。");
       setPreview(null);
-      setPDF(null);
+      setPDFs({});
       setText("");
       setMode("library");
       setMessage("导入已完成。题录未经外部认证，请核对来源。");
     } catch (e) {
+      for(const pdf of savedFiles)await removePDF(p.id,pdf.id);
       setError(e instanceof Error ? e.message : "保存失败");
-    }
+    }finally{if(mounted.current)setPending(false);}
+
   }
   async function remove(item: SavedPaper) {
     if (
@@ -459,7 +434,7 @@ function LibraryWorkspace({
         </>
       )}
       {mode === "import" && (
-        <section className="frosted-surface workflow-panel import-surface">
+        <section className="frosted-surface workflow-panel import-surface" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(!pending)void readFiles(Array.from(e.dataTransfer.files));}}>
           <div className="import-intro">
             <span className="eyebrow">BRING YOUR RESEARCH IN</span>
             <h2>把找到的论文，带进研究里。</h2>
@@ -472,16 +447,18 @@ function LibraryWorkspace({
             支持 RIS、BibTeX、EndNote 标签题录和逐行参考文献。中文 UTF-8 /
             GB18030；最大 2 MB。也可导入可提取文字的 PDF（20 MB / 150 页以内）。
           </p>
+          <p>支持一次多选或拖入最多 20 个文件，可混合格式；每个 PDF 最长读取 60 秒。导入无需等待 AI 分析。</p>
           <label>
             选择题录或 PDF 文件
             <input
               aria-label="选择题录或 PDF 文件"
               type="file"
+              multiple
               accept=".ris,.bib,.txt,.enw,.pdf"
               disabled={pending}
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void readFile(f);
+                const files=Array.from(e.target.files??[]);
+                void readFiles(files);
                 e.target.value = "";
               }}
             />
@@ -533,7 +510,7 @@ function LibraryWorkspace({
               <p>
                 {progress}
                 <small>
-                  本地提取文字，不调用 AI；最长 60 秒。预览确认后才保存。
+                  本地提取文字，不调用 AI；每个 PDF 最长 60 秒。预览确认后才保存。
                 </small>
               </p>
               <button
@@ -578,7 +555,7 @@ function LibraryWorkspace({
                 };
                 const dup = duplicateOf(row.paper, simulated);
                 return (
-                  <details className="import-record" key={row.paper.key} open>
+                  <details className="import-record" key={index} open>
                     <summary>
                       {index + 1}. {row.paper.title || "标题待填写"}{" "}
                       {dup ? "· 可能重复" : ""}
@@ -622,7 +599,7 @@ function LibraryWorkspace({
                         。题名、作者和年份相同仅视为可能重复；合并保留原笔记和分类。
                       </p>
                     )}
-                    {pdf && (
+                    {pdfs[index] && (
                       <details>
                         <summary>PDF 首页可提取文本（用于核对）</summary>
                         <pre>{row.raw}</pre>
@@ -636,12 +613,12 @@ function LibraryWorkspace({
                 disabled={busy || pending || !preview.rows.length}
                 onClick={() => void commitImport()}
               >
-                确认批量导入当前项目
+                导入这 {preview.rows.filter((row,index)=>(decisions[index]??(duplicateOf(row.paper,{...lib,items:[...lib.items,...preview.rows.slice(0,index).map((r,j)=>({id:`preview-${j}`,paper:r.paper,categoryIds:[],note:"",savedAt:"",updatedAt:""}))]})?"skip":"keep"))!=="skip").length} 篇
               </button>
               <button
                 onClick={() => {
                   setPreview(null);
-                  setPDF(null);
+                  setPDFs({});
                 }}
               >
                 取消预览

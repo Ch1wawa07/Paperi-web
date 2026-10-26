@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Project } from "@/lib/projects";
 import {
   emptyWorkflow,
+  cleanDirection,
   sourceFingerprint,
   frameworkFingerprint,
   exportFramework,
@@ -132,7 +133,7 @@ function Integration({
     <>
       <div className="profile-strip">
         研究方向：
-        {f.direction?.text || "尚未确认，可返回研究脉络选择或自行输入。"}
+        {cleanDirection(f.direction?.text ?? "") || "尚未确认，可返回研究脉络选择或自行输入。"}
       </div>
       <div className="workspace-actions">
         <Link href="/literature">返回文献工作台</Link>
@@ -192,6 +193,12 @@ function Integration({
             >
               {pending ? "正在组织…" : "生成综述结构候选"}
             </button>
+            <button disabled={pending || !workflowEvidence(p).length || draft.length >= 56} onClick={()=>{
+              const items=workflowEvidence(p);
+              const topics=["概念界定与研究对象","理论与研究路径候选","已有研究的联系与分歧","当前项目切入点与缺失证据"];
+              setRevision(f.revision);
+              setDraft([...draft,...topics.map((title,i)=>({id:crypto.randomUUID(),title,body:`结构草案，尚未归纳论文结论。围绕“${cleanDirection(f.direction?.text ?? "") || p.observation || p.name}”整理本节。待核对文献：${items.map(x=>x.paper.title).join("；")}。`,evidenceIds:items.map(x=>x.id),uncertainty:"本地结构骨架，未调用 AI，不代表已完成文献分析。请据摘要或原文补充观点和关系。",x:40+(i%3)*270,y:40+Math.floor(i/3)*170}))]);
+            }}>生成可编辑结构草案（不调用 AI）</button>
             <button
               disabled={draft.length >= 60}
               onClick={() => {

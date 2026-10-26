@@ -107,7 +107,7 @@ export async function requestStructured(system: string, messages: Input['message
       method: 'POST', redirect: 'error', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.key}` },
       signal: AbortSignal.any([signal, AbortSignal.timeout(maxTokens>1800?60_000:30_000)]),
-      body: JSON.stringify({ model: config.model, max_tokens: maxTokens, response_format: { type: 'json_object' }, messages: [
+      body: JSON.stringify({ ...(config.url.hostname === 'api.deepseek.com' && config.model !== 'deepseek-reasoner' ? {thinking:{type:'disabled'}} : {}), model: config.model, max_tokens: maxTokens, response_format: { type: 'json_object' }, messages: [
         { role: 'system', content: system }, ...messages,
       ] }),
     });
@@ -115,19 +115,27 @@ export async function requestStructured(system: string, messages: Input['message
       await response.body?.cancel();
       if (response.status === 402) throw new AIError(402, 'AI 服务账户余额不足。请在所用服务商控制台检查 API 余额，或换用已有额度的接口；你的提问仍已本地保存。');
       if (response.status === 401 || response.status === 403) throw new AIError(502, 'AI 服务拒绝了接口凭证，请维护者检查密钥、模型权限和地址。');
+      if (response.status === 400 || response.status === 404) throw new AIError(502, 'AI 服务拒绝请求（HTTP ' + response.status + '）。请核对 AI_MODEL、AI_BASE_URL（根地址，不含 chat/completions）及 JSON object 模式支持。未保存分析。');
       if (response.status === 429) throw new AIError(429, 'AI 服务额度不足或请求过于频繁，请稍后再试并检查服务商额度。');
       throw new AIError(502, 'AI 服务暂时没有完成回复，请稍后重试。');
     }
     let data: unknown;
-    try { data = await readBoundedJSON(response, 80_000); }
+    try { data = await readBoundedJSON(response, 160_000); }
     catch { throw new AIError(502, 'AI 服务返回的内容不完整或过长，请重试。'); }
-    if (!isRecord(data) || !Array.isArray(data.choices) || !isRecord(data.choices[0]) ||
-        !isRecord(data.choices[0].message) || typeof data.choices[0].message.content !== 'string' || data.choices[0].finish_reason !== 'stop') {
-      throw new AIError(502, 'AI 回复未完成或格式不受支持，没有保存为有效建议，请重试。');
+    if (!isRecord(data) || !Array.isArray(data.choices) || !isRecord(data.choices[0]) || !isRecord(data.choices[0].message))
+      throw new AIError(502, 'AI 响应协议不匹配：未返回 Chat Completions choices/message。请核对 AI_BASE_URL 和 AI_MODEL。');
+    const choice = data.choices[0], message = choice.message as Record<string,unknown>;
+    if (choice.finish_reason === 'length') {
+      throw new AIError(502, `AI 输出达到本次 ${maxTokens} token 上限，被截断，未保存。若使用推理模型，推理也可能占用预算；请减少本次文献或检查模型模式后手动重试。不会自动重试扣费。`);
     }
-    if (!data.choices[0].message.content.trim()) throw new AIError(502,'AI 本次返回了空内容，未保存为探索结果。原消息仍在，可稍后手动重试。');
-    try { return JSON.parse(data.choices[0].message.content); }
-    catch { throw new AIError(502, 'AI 返回的结构不完整，没有保存为有效建议，请重试。'); }
+    if (choice.finish_reason !== 'stop')
+      throw new AIError(502, 'AI 未正常结束回答（结束状态不支持），未保存。请检查模型是否适配 JSON Chat Completions；不会自动重试。');
+    if (typeof message.content !== 'string' || !message.content.trim())
+      throw new AIError(502, message.reasoning_content ? 'AI 仅返回推理内容，没有最终分析。请核对模型模式和输出预算后重试；未将推理过程保存为分析。' : 'AI 返回空内容，未保存。请稍后手动重试。');
+    const content = message.content.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+    try { return JSON.parse(content); }
+    catch { throw new AIError(502, 'AI 最终内容不是有效 JSON，结构解析失败，未保存。请手动重试；原始文献仍在。'); }
+
   } catch (e) {
     if (e instanceof AIError) throw e;
     throw new AIError(504, 'AI 连接中断或超过等待时间。你的提问仍保留，可以手动重试。');

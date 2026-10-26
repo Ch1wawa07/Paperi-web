@@ -3,17 +3,21 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Project } from "@/lib/projects";
 import { emptyWorkflow } from "@/lib/workflow";
-import { profileFingerprint, researchContext } from "@/lib/workbench";
+import { profileFingerprint, researchContext, selectedConcepts } from "@/lib/workbench";
 import { useProjects } from "./project-provider";
 import { researchFetch } from "./workspace-common";
 export function ResearchPreparation({ project: p, initialOpen=true }: { project: Project;initialOpen?:boolean }) {
   const { saveWorkflow, busy } = useProjects();
   const f = p.workflow ?? emptyWorkflow();
-  const [draft, setDraft] = useState(f.keywords),
+  const concepts=selectedConcepts(p);
+  const guide=p.exploration?.navigation?.guide?.keywords;
+  const defaults={...f.keywords,zh:concepts.join("\n"),expressions:guide?.zh?.join("\n") || concepts.join(" "),en:guide?.en?.join("\n") || ""};
+  const [edited, setDraft] = useState<typeof f.keywords | null>(null),
     [url, setURL] = useState(f.libraryURL),
     [revision, setRevision] = useState(f.revision),
     [pending, setPending] = useState(false),
     [message, setMessage] = useState("");
+  const draft=edited ?? (f.keywords.fingerprint ? f.keywords : defaults);
   async function save() {
     const ok = await saveWorkflow(p.id, revision, {
       ...f,
@@ -36,7 +40,7 @@ export function ResearchPreparation({ project: p, initialOpen=true }: { project:
       });
       if (!Array.isArray(d.zh) || !Array.isArray(d.en))
         throw new Error("关键词格式不完整");
-      setDraft({
+      const next = {
         ...draft,
         zh: d.zh.join("\n"),
         en: d.en.join("\n"),
@@ -47,7 +51,10 @@ export function ResearchPreparation({ project: p, initialOpen=true }: { project:
           ? d.expressions
           : [...d.zh, ...d.en]
         ).join("\n"),
-      });
+      };
+      setDraft(next);
+      if(await saveWorkflow(p.id, revision,{...f,keywords:{...next,fingerprint:profileFingerprint(p)},libraryURL:url})) setRevision(revision+1);
+      else throw new Error("关键词已返回但尚未保存，请处理存储冲突后保存。");
       setMessage(
         "候选关键词已生成，请编辑、删除不需要的词后保存。扩展同义词可自行补充。",
       );
@@ -70,12 +77,16 @@ export function ResearchPreparation({ project: p, initialOpen=true }: { project:
       <summary>
         <strong>检索准备</strong> · 带着问题去找文献
       </summary>
-      <p>选择要使用的词，编辑或删除不需要的行；保存后会随项目保留。</p>
+      <p>已选概念自动带入；已有 AI 检索建议直接复用。点击生成可补充双语词和同义词，无需重新填写。</p>
+      <div className="concept-tags" aria-label="检索使用的已选概念">{concepts.map(c=><span key={c}>{c}</span>)}</div>
+      <div className="library-entry"><a className="button primary" href={f.libraryURL} target="_blank" rel="noopener noreferrer">前往学校图书馆检索 ↗</a><button onClick={()=>void copy(draft.expressions || draft.zh)}>复制检索关键词</button><Link href="/literature">返回后导入文献 →</Link></div>
+      {!draft.en && <p className="source-notice">当前显示已选概念，英文和扩展词尚未由 AI 生成。点击下方生成；失败时会保留这些概念。</p>}
+      <div className="keyword-preview">{([['zh','中文核心词'],['synonyms','扩展词'],['en','英文词'],['expressions','检索组合']] as const).map(([key,title])=><section key={key}><h3>{title}</h3>{draft[key].split("\n").filter(Boolean).map((term,i)=><button key={i} onClick={()=>void copy(term)}>{term} · 复制</button>)}{!draft[key]&&<p>待生成</p>}</section>)}</div>
       {f.keywords.fingerprint &&
         f.keywords.fingerprint !== profileFingerprint(p) && (
           <p className="source-notice">研究问题或概念已变化，请复核检索词。</p>
         )}
-      <div className="workflow-fields">
+      <details><summary>编辑检索词与学校地址（可选）</summary><div className="workflow-fields">
         {(
           [
             ["zh", "中文核心关键词"],
@@ -120,7 +131,7 @@ export function ResearchPreparation({ project: p, initialOpen=true }: { project:
           onChange={(e) => setURL(e.target.value)}
         />
       </label>
-      <div className="workspace-actions">
+      </details><div className="workspace-actions">
         <button
           className="button secondary"
           disabled={pending || busy}

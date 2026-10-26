@@ -18,6 +18,7 @@ export function NodeCanvas({
   label,
   dashed = false,
   initialFit = false,
+  constellation = false,
 }: {
   nodes: VisualNode[];
   edges: { from: string; to: string; label?: string; kind?:string; highlight?:boolean }[];
@@ -26,6 +27,7 @@ export function NodeCanvas({
   label: string;
   dashed?: boolean;
   initialFit?: boolean;
+  constellation?: boolean;
 }) {
   const svg = useRef<SVGSVGElement>(null),
     marker = useId().replace(/:/g, "");
@@ -65,7 +67,7 @@ export function NodeCanvas({
       scale: Math.max(0.15, Math.min(2.5, v.scale * factor)),
     }));
   return (
-    <div className="node-canvas-wrap">
+    <div className={`node-canvas-wrap ${constellation ? "constellation" : ""}`}>
       <div className="canvas-controls">
         <button
           className="small-button"
@@ -251,6 +253,8 @@ export function NodeCanvas({
                   svg.current?.setPointerCapture(e.pointerId);
                 }}
               >
+                <title>{n.title}</title>
+                {constellation&&<circle className="star-halo" cx="110" cy="45" r={n.secondary?"36":"48"}/>}
                 <rect width="220" height="90" rx="24" />
                 <text x="16" y="28" className="node-subtitle">
                   {n.subtitle?.slice(0, 24)}
