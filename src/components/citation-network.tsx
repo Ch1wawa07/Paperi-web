@@ -59,17 +59,17 @@ export function CitationNetwork({ project: p }: { project: Project }) {
     const item=lib.items.find(i=>i.paper.key===selected);
     if(!item?.attachment){setError("请先选择已关联 PDF 的一级文献；可在已导入文献中附加原文。");return;}
     try{const file=await getPDF(p.id,item.attachment.id);if(!file)throw new Error("本浏览器找不到该 PDF，请重新附加。");
-      const start=file.pages.findIndex(t=>/参考文献|references\s*\n/i.test(t));
+      const start=file.pages.findLastIndex(t=>/(?:^|[\n\r])\s*(?:\d+[.、]?\s*)?(?:参考文献|references)\s*(?:\n|$)/i.test(t));
       if(start<0)throw new Error("可提取正文中没有识别到参考文献标题。请在原 PDF 中核对；未推断引用关系。");
       setReferences(file.pages.slice(start,start+6).map((text,i)=>({page:start+i+1,text:text.slice(0,10000)})));
     }catch(e){setError(e instanceof Error?e.message:"读取失败");}
   }
-  async function load() {
+  async function load(only?:string) {
     setPending(true);
     setError("");
     controller.current = new AbortController();
     const todo = lib.items
-      .filter((i) => (i.paper.doi || i.paper.openAlexId) && !graphs[i.id])
+      .filter((i) => (i.paper.doi || i.paper.openAlexId) && (only ? i.paper.key===only : !graphs[i.id]))
       .slice(0, 3);
     if (!todo.length) {
       setError(
@@ -240,6 +240,7 @@ export function CitationNetwork({ project: p }: { project: Project }) {
                   加入当前文献库
                 </button>
               )}
+              {primaryKeys.has(detail.key)&&<button disabled={pending||!detail.doi&&!detail.openAlexId} onClick={()=>void load(detail.key)}>加载这篇文献的真实引用</button>}
               <h4>相邻引用关系及依据</h4>
               {network.edges
                 .filter((e) => e.from === detail.key || e.to === detail.key)

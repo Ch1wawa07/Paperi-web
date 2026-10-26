@@ -1,4 +1,5 @@
 "use client";
+import {cleanDirection} from "@/lib/workflow";
 import Link from "next/link";
 import {sourceFingerprint} from "@/lib/workflow";
 import {WorkflowSelection} from "./literature-analysis";
@@ -261,7 +262,7 @@ function Designer({
         </button>
         <span role="status">{dirty ? "有未保存修改" : "已保存内容"}</span>
       </div>
-      <WorkflowSelection project={p} /><p className="source-notice">研究问题与方向：{p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??p.observation}。模型连线是待检验假设或设计逻辑。</p><Link href="/review">返回文献综述</Link> · <Link href="/proposal">确认并导出完整研究框架 →</Link>
+      <WorkflowSelection project={p} /><p className="source-notice">研究问题与方向：{cleanDirection(p.workflow?.direction?.text??p.exploration?.seed?.workingQuestion??p.observation)}。模型连线是待检验假设或设计逻辑。</p><Link href="/review">返回文献综述</Link> · <Link href="/proposal">确认并导出完整研究框架 →</Link>
       {error && (
         <p className="literature-error" role="alert">
           {error}

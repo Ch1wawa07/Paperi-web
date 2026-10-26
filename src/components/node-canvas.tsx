@@ -173,7 +173,7 @@ export function NodeCanvas({
               y = position(b),
               dx = y.x - x.x,
               dy = y.y - x.y,
-              t = Math.min(110 / (Math.abs(dx) || 1), 45 / (Math.abs(dy) || 1));
+              t = constellation ? 22 / Math.max(1,Math.hypot(dx,dy)) : Math.min(110 / (Math.abs(dx) || 1), 45 / (Math.abs(dy) || 1));
             return (
               <g key={i} className="canvas-edge">
                 <path
@@ -254,20 +254,20 @@ export function NodeCanvas({
                 }}
               >
                 <title>{n.title}</title>
-                {constellation&&<circle className="star-halo" cx="110" cy="45" r={n.secondary?"36":"48"}/>}
+                {constellation ? <>
+                  <rect className="star-hit" width="220" height="120" rx="32"/>
+                  <circle className="star-halo" cx="110" cy="45" r={n.secondary?"30":"42"}/>
+                  <circle className="star-core" cx="110" cy="45" r={n.secondary?"12":"19"}/>
+                  <circle className="star-glint" cx="105" cy="40" r="4"/>
+                  <text x="110" y="-6" textAnchor="middle" className="node-subtitle">{n.subtitle}</text>
+                  <text x="110" y="90" textAnchor="middle">{n.title.slice(0,16)}</text>
+                  {n.title.length>16&&<text x="110" y="112" textAnchor="middle">{n.title.slice(16,31)}{n.title.length>31?"…":""}</text>}
+                </> : <>
                 <rect width="220" height="90" rx="24" />
-                <text x="16" y="28" className="node-subtitle">
-                  {n.subtitle?.slice(0, 24)}
-                </text>
-                <text x="16" y="53">
-                  {n.title.slice(0, 24)}
-                </text>
-                {n.title.length > 24 && (
-                  <text x="16" y="73">
-                    {n.title.slice(24, 47)}
-                    {n.title.length > 47 ? "…" : ""}
-                  </text>
-                )}
+                <text x="16" y="28" className="node-subtitle">{n.subtitle?.slice(0,24)}</text>
+                <text x="16" y="53">{n.title.slice(0,24)}</text>
+                {n.title.length>24&&<text x="16" y="73">{n.title.slice(24,47)}{n.title.length>47?"…":""}</text>}
+                </>}
               </g>
             );
           })}

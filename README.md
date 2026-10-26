@@ -1,6 +1,8 @@
 # Paperi 纸里
 
-最新调整：[导入优先、开发模式 PDF 卡住修复与彩色磨砂界面](docs/IMPORT_AND_GLASS_REFINEMENT.md)。
+最新验收修复：[八项原始反馈的根因、修复、真实能力边界与 Mac 复验](docs/ACCEPTANCE_REPAIR_2026_10_26.md)。
+
+此前调整：[导入优先、开发模式 PDF 卡住修复与彩色磨砂界面](docs/IMPORT_AND_GLASS_REFINEMENT.md)。
 
 **让研究想法、学术文献和研究设计连成一个可持续编辑的工作流。**
 
