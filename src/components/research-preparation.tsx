@@ -60,7 +60,7 @@ export function ResearchPreparation({ project: p, initialOpen=true,automatic=fal
         "候选关键词已生成，请编辑、删除不需要的词后保存。扩展同义词可自行补充。",
       );
     } catch (e) {
-      if(!signal?.aborted)setMessage(e instanceof Error ? e.message : "生成失败");
+      if(!signal?.aborted)setMessage(e instanceof DOMException&&e.name==="TimeoutError"?"AI 连接等待超时，已选概念保留，可手动重试。":e instanceof Error ? e.message : "生成失败");
     } finally {
       if(!signal?.aborted)setPending(false);
     }
@@ -75,7 +75,7 @@ export function ResearchPreparation({ project: p, initialOpen=true,automatic=fal
       sessionStorage.setItem(marker,'1');await generate(signal);
     }catch{if(!signal.aborted)setMessage('连接检查失败，已选概念仍可复制；可手动生成重试。');}
   });
-  useEffect(()=>{if(!automatic)return;const c=new AbortController();void fetch('/api/lab',{signal:c.signal}).then(r=>r.json()).then(state=>autoGenerate(state,c.signal)).catch(()=>{});return()=>c.abort();},[automatic,fingerprint]);
+  useEffect(()=>{if(!automatic)return;const c=new AbortController();void fetch('/api/lab',{signal:AbortSignal.any([c.signal,AbortSignal.timeout(8000)])}).then(r=>r.json()).then(state=>autoGenerate(state,c.signal)).catch(()=>{if(!c.signal.aborted)setMessage('AI 配置检查超时或网络失败，已选概念保留，可手动生成重试。');});return()=>c.abort();},[automatic,fingerprint]);
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -91,7 +91,7 @@ export function ResearchPreparation({ project: p, initialOpen=true,automatic=fal
       </summary>
       <p>已选概念自动带入；已有 AI 检索建议直接复用。点击生成可补充双语词和同义词，无需重新填写。</p>
       <div className="concept-tags" aria-label="检索使用的已选概念">{concepts.map(c=><span key={c}>{c}</span>)}</div>
-      <div className="library-entry"><a className="button primary" href={f.libraryURL} target="_blank" rel="noopener noreferrer">前往深圳大学图书馆 ↗</a><button onClick={()=>void copy(draft.expressions || draft.zh)}>复制检索关键词</button><Link href="/literature">返回后导入文献 →</Link></div>
+      <div className="library-entry"><a className="button primary" href={f.libraryURL} target="_blank" rel="noopener noreferrer">{f.libraryURL==='https://www.lib.szu.edu.cn/'?'前往深圳大学图书馆 ↗':'前往学校图书馆 ↗'}</a><button onClick={()=>void copy(draft.expressions || draft.zh)}>复制检索关键词</button><Link href="/literature">返回后导入文献 →</Link></div>
       {!draft.en && <p className="source-notice">当前显示已选概念，英文和扩展词尚未由 AI 生成。点击下方生成；失败时会保留这些概念。</p>}
       <div className="keyword-preview">{([['zh','中文核心词'],['synonyms','扩展词'],['en','英文词'],['expressions','检索组合']] as const).map(([key,title])=><section key={key}><h3>{title}</h3>{draft[key].split("\n").filter(Boolean).map((term,i)=><button key={i} onClick={()=>void copy(term)}>{term} · 复制</button>)}{!draft[key]&&<p>待生成</p>}</section>)}</div>
       {f.keywords.fingerprint &&
@@ -170,7 +170,7 @@ export function ResearchPreparation({ project: p, initialOpen=true,automatic=fal
           target="_blank"
           rel="noopener noreferrer"
         >
-          前往深圳大学图书馆 ↗
+          {f.libraryURL==='https://www.lib.szu.edu.cn/'?'前往深圳大学图书馆 ↗':'前往学校图书馆 ↗'}
         </a>
         <Link href="/literature">返回后导入文献 →</Link>
       </div>

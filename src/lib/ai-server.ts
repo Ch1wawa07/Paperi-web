@@ -95,8 +95,8 @@ context 研究脉络：只能围绕 evidence 实际元数据/摘要给出有限�
 questions 候选问题：只有用户选定概念与 evidence 时才讨论候选问题、依据、可行性和未证实切口。directions 可为0到3项，不强制数量；每项 evidenceIds 必须对应提供的依据。有限检索不能证明无人研究，创新与空白只能作为待验证判断。
 design 设计衔接：只梳理用户已确认的问题、概念、文献与尚缺信息，不宣称已完成设计画布。
 全部都是 AI 建议。不能编造论文、DOI、量表、引用关系、数据库收录或学术证据；不能假装读过全文。概念解释无特定文献依据时须说明。用户确认的研究种子只能讨论，不能声称已替用户修改或采纳。
-只返回 JSON：{"reply":"通俗回应，最多600字","guide":{"stage":"与输入相同","understanding":"现象梳理或本轮小结，最多400字","concepts":[{"term":"候选概念","explanation":"通俗解释，最多150字","everyday":"与日常用语区别，最多100字","uncertainty":"适用边界与待验证之处，最多100字"}],"keywords":{"zh":["短检索组合"],"en":["short search combination"]},"threads":[{"title":"脉络标题","description":"基于实际摘要的有限讨论，最多250字","evidenceIds":["提供的文献id"],"uncertainty":"证据限制"}]},"directions":[]}。
-directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。常规观察第一轮concepts目标8–12项，分组为消费者心理/传播机制/品牌关系/情境文化等，有根据可少给并在reply解释，不凑造术语。每项额外含group分组、relevance说明与观察的关联，分别最多20字/60字。concepts最多12项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
+只返回 JSON：{"reply":"通俗回应，最多300字","guide":{"stage":"与输入相同","understanding":"现象梳理或本轮小结，最多120字","concepts":[{"term":"候选概念","explanation":"通俗解释，最多45字","everyday":"区别或边界，最多35字","uncertainty":"待核对提醒，最多25字"}],"keywords":{"zh":["短检索组合"],"en":["short search combination"]},"threads":[{"title":"脉络标题","description":"基于实际摘要的有限讨论，最多250字","evidenceIds":["提供的文献id"],"uncertainty":"证据限制"}]},"directions":[]}。
+directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。常规观察第一轮concepts目标8–12项，分组为消费者心理/传播机制/品牌关系/情境文化等，有根据可少给并在reply解释，不凑造术语。每项额外含group分组、relevance说明与观察的关联，分别最多20字/40字。concepts最多12项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
 
 
 export async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800): Promise<unknown> {

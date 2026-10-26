@@ -54,7 +54,7 @@ export function Literature({
           链接属于另一个项目，请先在顶部切换项目。
         </p>
       ) : ready && p ? (
-        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} prepare={fromConcepts} showHistory={showHistory} />
+        <LibraryWorkspace key={p.id+initialMode} p={p} initialMode={initialMode} prepare={fromConcepts} showHistory={showHistory} />
       ) : (
         <Link href="/">选择或创建研究项目</Link>
       )}

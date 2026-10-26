@@ -14,6 +14,8 @@ type Props = {
 export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disabled,onChange,onAsk}:Props) {
   const [editing,setEditing] = useState<{concept?:ResearchConcept;revision:number}|null>(null);
   const [error,setError] = useState('');
+  const [showAll,setShowAll]=useState(false);
+  const groups=Object.groupBy(showAll?n.concepts:n.concepts.slice(0,12),c=>c.group||'学术视角');
   const guide = n.guides?.[n.stage] ?? (n.guide?.stage===n.stage?n.guide:null);
   const selected=papers.filter(p=>n.evidenceIds.includes(p.id));
   async function update(next:ResearchNavigation) { setError('');const ok=await onChange(next);if(!ok)setError('本次修改尚未保存，请处理页面提示，原有确认内容没有被覆盖。');return ok; }
@@ -21,7 +23,7 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disab
     if(!editing || editing.revision!==revision) {setError('探索已在其他页面更新，请取消编辑后重新打开。');return false;}
     const term=fields.term.normalize('NFKC').trim().toLowerCase();
     if(n.concepts.some(c=>c.id!==editing.concept?.id&&c.term.normalize('NFKC').trim().toLowerCase()===term)){setError('已有同名概念，请编辑现有概念。');return false;}
-    const concept:ResearchConcept={...fields,id:editing.concept?.id??crypto.randomUUID(),origin:'user',status:editing.concept?.status??'selected'};
+    const concept:ResearchConcept={...editing.concept,...fields,id:editing.concept?.id??crypto.randomUUID(),origin:'user',status:editing.concept?.status??'selected'};
     const ok=await update({...n,concepts:editing.concept?n.concepts.map(c=>c.id===concept.id?concept:c):[...n.concepts,concept]});if(ok)setEditing(null);return ok;
   }
   return <section id="concepts" className="research-guide frosted-surface" aria-label="当前探索辅助面板">
@@ -32,7 +34,8 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disab
     {<>
       <div className="guide-section-heading"><h3>候选概念</h3><button className="text-button" disabled={disabled||n.concepts.length>=24} onClick={()=>{setError('');setEditing({revision});}}><Icon name="plus" size={14}/>添加概念</button></div>
       {!n.concepts.length&&<p className="muted">先说说你的观察。这里会逐渐出现候选解释，不是已经验证的定义。</p>}
-      <div className="concept-card-list">{n.concepts.map(c=><article key={c.id} className={`concept-card concept-${c.status}`}><div><h4>{c.term}</h4><span>{c.status==='selected'?'已选择':c.status==='excluded'?'已排除':'候选解释'}</span></div><p>{c.explanation}</p>{c.relevance&&<p><strong>与你的想法：</strong>{c.relevance}</p>}<details><summary>概念边界与待核实</summary>{c.everyday&&<p><strong>与日常用语的区别：</strong>{c.everyday}</p>}<p className="concept-uncertainty">待核实：{c.uncertainty}</p></details><div className="concept-actions"><button className="small-button" disabled={disabled} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:c.status==='selected'?'suggested':'selected'}:x)})}>{c.status==='selected'?'取消选择':'选择概念'}</button><button className="small-button" disabled={disabled} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:c.status==='excluded'?'suggested':'excluded'}:x)})}>{c.status==='excluded'?'恢复候选':'排除'}</button><button className="small-button" disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>修改</button><button className="small-button" disabled={disabled} onClick={()=>onAsk(`请进一步解释「${c.term}」与我的观察有什么联系，以及什么时候不适合用这个概念。暂时不要替我确定研究问题。`)}>追问</button></div></article>)}</div>
+      {Object.entries(groups).map(([group,concepts])=><section className="concept-group" key={group}><h3>{group}</h3><div className="concept-card-list">{concepts?.map(c=><article key={c.id} className={`concept-card concept-${c.status}`}><div><h4>{c.term}</h4><span>{c.status==='selected'?'已选择':c.status==='excluded'?'已排除':'候选解释'}</span></div><p>{c.explanation}</p>{c.relevance&&<p><strong>与你的想法：</strong>{c.relevance}</p>}<details><summary>概念边界与待核实</summary>{c.everyday&&<p><strong>与日常用语的区别：</strong>{c.everyday}</p>}<p className="concept-uncertainty">待核实：{c.uncertainty}</p></details><div className="concept-actions"><button className="small-button" disabled={disabled} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:c.status==='selected'?'suggested':'selected'}:x)})}>{c.status==='selected'?'取消选择':'选择概念'}</button><button className="small-button" disabled={disabled} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:c.status==='excluded'?'suggested':'excluded'}:x)})}>{c.status==='excluded'?'恢复候选':'排除'}</button><button className="small-button" disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>修改</button><button className="small-button" disabled={disabled} onClick={()=>onAsk(`请进一步解释「${c.term}」与我的观察有什么联系，以及什么时候不适合用这个概念。暂时不要替我确定研究问题。`)}>追问</button></div></article>)}</div></section>)}
+      {n.concepts.length>12&&<button className="button secondary" onClick={()=>setShowAll(!showAll)}>{showAll?'收起更多概念':`查看其余 ${n.concepts.length-12} 个概念`}</button>}
       <p className="guide-footnote">选择与排除会保存；新一轮建议不会覆盖你编辑或确认的概念。概念识别不是变量操作化。</p>
     </>}
     {n.stage==='literature'&&<>

@@ -101,7 +101,7 @@ export async function researchFetch(body: unknown, signal?: AbortSignal) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal,
+    signal: AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(80000)]),
   });
   const data = await r.json();
   if (!r.ok) throw new Error(data.error ?? "研究辅助暂未完成。");
