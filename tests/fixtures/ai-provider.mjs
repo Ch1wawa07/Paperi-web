@@ -16,9 +16,9 @@ createServer(async (request, response) => {
       const message=input.question==='REASONING_ONLY'?{content:'',reasoning_content:'fixture reasoning only'}:{content:input.question==='INVALID_JSON'?'not json':'{"sections":['};
       response.end(JSON.stringify({choices:[{finish_reason:input.question==='TRUNCATED'?'length':'stop',message}]}));return;
     }
-    const titles=input.task==='reading'?['研究主题','研究缘由','核心概念','理论基础','研究问题与假设','研究方法','样本与数据','主要发现','研究局限','对当前项目的价值']:['测试候选方向'];
+    const titles=input.task==='reading'?['30 秒读懂','研究问题与动机','理论与核心概念','研究方法与过程','关键发现与结论','局限与研究启发','对当前项目的价值']:['测试候选方向'];
     const sections=titles.map(title=>({title,body:'仅测试模型协议，不代表研究结论',evidenceIds:[input.question==='FORGED'?'unknown':e.id],quote:input.question==='BADQUOTE'?'不存在的原文':e.pages?.[0]?.text||e.abstract||e.title,page:e.pages?.[0]?.page??null,uncertainty:'测试限制'}));
-    response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections})}}]}));return;
+    response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections,...(input.task==='directions'?{synthesis:sections,cards:[{title:'测试方向A',question:'拟比较测试反应',value:'仅测试协议',method:'待实际核对',limitations:'测试夹具，非学术结论',evidenceIds:[e.id]}]}:{})})}}]}));return;
   }
   if(body.messages?.[0]?.content?.includes('你是 Paperi 人文社科研究助手')){
     const system=body.messages[0].content,input=JSON.parse(body.messages[1].content),context=input.context??input;
@@ -35,7 +35,7 @@ createServer(async (request, response) => {
     response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({zh:['测试主题','测试概念','测试对象'],en:['fixture topic','fixture concept','fixture population']})}}]})); return;
   }
   if (request.url !== '/v1/chat/completions' || request.headers.authorization !== 'Bearer test-only-not-a-real-key' ||
-    body.model !== 'fixture-model' || body.max_tokens !== 1800 || body.response_format?.type !== 'json_object' ||
+    body.model !== 'fixture-model' || body.max_tokens !== 5000 || body.response_format?.type !== 'json_object' ||
     body.messages?.[0]?.role !== 'system' || !body.messages[0].content.includes('不能声称已替用户修改')) {
     response.statusCode = 400; response.end('{"error":"incorrect adapter contract"}'); return;
   }

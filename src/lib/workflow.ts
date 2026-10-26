@@ -11,8 +11,15 @@ export type ReadingSection = {
   uncertainty: string;
   evidenceStatus?: "verified" | "insufficient" | "proposal";
 };
+export type DirectionCard = {title:string;question:string;value:string;method:string;limitations:string;evidenceIds:string[]};
+export function isDirectionCard(v:unknown):v is DirectionCard{
+ return isRecord(v)&&["title","question","value","method","limitations"].every(k=>typeof v[k]==="string"&&(v[k] as string).length<=1200)&&typeof v.title==="string"&&!!v.title.trim()&&Array.isArray(v.evidenceIds)&&v.evidenceIds.every(id=>typeof id==="string");
+}
+export const directionPlainText=(c:DirectionCard,titles:string[])=>`${c.title}\n\n研究问题：${c.question}\n\n为什么值得研究：${c.value}\n\n文献依据：${titles.join("；")||"待补充"}\n\n初步可以怎样研究：${c.method}\n\n待确认事项：${c.limitations}`;
 export type Analysis = {
   inputSnapshot?: string;
+  synthesis?:ReadingSection[];
+  cards?:DirectionCard[];
   id: string;
   kind: "directions" | "reading" | "review";
   fingerprint: string;
@@ -43,6 +50,7 @@ export type Workflow = {
   };
   selection: string[] | null;
   direction: {
+    card?:DirectionCard;
     text: string;
     evidenceIds: string[];
     fingerprint: string;
@@ -136,6 +144,7 @@ export function isWorkflow(v: unknown): v is Workflow {
   if (
     v.direction !== null &&
     (!isRecord(v.direction) ||
+      (v.direction.card!==undefined&&!isDirectionCard(v.direction.card)) ||
       !str(v.direction.text, 4000) ||
       !ids(v.direction.evidenceIds) ||
       !str(v.direction.fingerprint, 12000))
@@ -152,7 +161,7 @@ export function isWorkflow(v: unknown): v is Workflow {
         ids(a.sourceIds) &&
         str(a.createdAt, 100) &&
         Number.isFinite(Date.parse(a.createdAt)) &&
-        isSections(a.sections),
+        isSections(a.sections) && (a.synthesis===undefined||isSections(a.synthesis)) && (a.cards===undefined||(Array.isArray(a.cards)&&a.cards.length<=3&&a.cards.every(isDirectionCard))),
     ) &&
     v.review.every(
       (n) =>
@@ -188,7 +197,7 @@ export const workflowEvidence = (p: Project) =>
   (p.library?.items ?? []).filter(
     (i) => p.workflow?.selection == null || p.workflow.selection.includes(i.id),
   );
-export const sourceFingerprint = (p: Project) =>
+export const sourceFingerprint = (p: Project, includeDirection=true) =>
   hash([
     p.observation,
     selectedConcepts(p),
@@ -196,7 +205,7 @@ export const sourceFingerprint = (p: Project) =>
     p.workflow?.keywords ?? emptyWorkflow().keywords,
     p.workflow?.selection ?? null,
     (p.library?.items ?? []).map((i) => [i.id, i.paper, i.attachment]),
-    cleanDirection(p.workflow?.direction?.text ?? ""),
+    includeDirection ? cleanDirection(p.workflow?.direction?.text ?? "") : "",
   ]);
 export const frameworkFingerprint = (p: Project) =>
   hash([

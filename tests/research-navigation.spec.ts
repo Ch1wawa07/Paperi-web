@@ -1,7 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { emptyExploration, isExploration, readAIReply } from '../src/lib/exploration';
 import { emptyNavigation, mergeConcepts } from '../src/lib/research-navigation';
-import { emptyLibrary } from '../src/lib/literature';
 import { mapCrossref } from '../src/lib/literature-mapping';
 import records from './fixtures/metadata-records.json';
 
@@ -46,13 +45,8 @@ test('概念编辑排除后跨页检索，不强制种子；确认问题不被�
  let calls=0;await mock(page,()=>calls++);await page.route('**/api/research',r=>r.fulfill({json:{zh:['测试概念 消费'],en:['fixture trust consumer']}}));await start(page);await expect(page.locator('.concept-card')).toHaveCount(1);
  await page.getByRole('button',{name:'概念锚定',exact:true}).click();await page.getByRole('button',{name:'选择概念',exact:true}).click();await expect(page.locator('.selected-concepts-bar')).toContainText('测试概念');await page.getByRole('button',{name:'修改',exact:true}).click();await page.getByLabel('候选解释',{exact:true}).fill('用户修改并保留的解释');await page.getByRole('button',{name:'保存概念',exact:true}).click();await page.getByRole('button',{name:'排除',exact:true}).click();
  await page.getByRole('button',{name:'继续探索',exact:true}).click();await expect(page.locator('.chat-assistant')).toHaveCount(2);await expect(page.locator('.concept-card')).toContainText('已排除');await page.reload();await expect(page.locator('.concept-card')).toContainText('用户修改并保留的解释');await page.getByRole('button',{name:'选择概念',exact:true}).click();
- let searches=0;await page.route('**/api/literature/discover',r=>{searches++;return r.abort();});await page.getByRole('link',{name:'根据已选概念准备检索'}).click();await page.getByRole('button',{name:'生成 / 重新生成检索词'}).click();await expect(page.getByLabel('英文核心关键词')).toHaveValue('fixture trust consumer');await page.getByRole('button',{name:'保存检索准备'}).click();expect(searches).toBe(0);await page.goto('/lab');
+ let searches=0;await page.route('**/api/literature/discover',r=>{searches++;return r.abort();});await page.getByRole('link',{name:'根据已选概念准备检索'}).click();await expect(page.getByLabel('英文核心关键词')).toHaveValue('fixture trust consumer');await page.getByRole('button',{name:'保存检索准备'}).click();expect(searches).toBe(0);await page.goto('/lab');
  await page.locator('.seed-advanced>summary').click();await page.getByRole('button',{name:'手动写研究种子'}).click();await page.getByLabel('研究视角',{exact:true}).fill('用户决定的视角');await page.getByLabel('研究问题',{exact:true}).fill('用户确认的问题不会被覆盖？');await page.getByRole('button',{name:'保存研究种子',exact:true}).click();await page.getByRole('button',{name:'继续探索',exact:true}).click();await expect(page.locator('.chat-assistant')).toHaveCount(3);await expect(page.locator('.lab-seed')).toContainText('用户确认的问题不会被覆盖？');expect(calls).toBe(3);
-});
-
-test('旧版文献依据自动衔接到独立研究设计，不要求返回实验室重新选择',async({page})=>{
- await mock(page);await start(page);await expect(page.locator('.concept-card')).toHaveCount(1);
- const paper=mapCrossref(records.crossref,at)!;await page.evaluate(({paper,key,library})=>{const s=JSON.parse(localStorage.getItem(key)!);s.projects[0].library={...library,items:[{id:'evidence-a',paper,categoryIds:['reading'],note:'测试旧笔记',savedAt:paper.retrievedAt,updatedAt:paper.retrievedAt}]};s.projects[0].exploration.navigation.evidenceIds=['evidence-a'];localStorage.setItem(key,JSON.stringify(s));},{paper,key,library:emptyLibrary()});await page.goto('/canvas');await page.locator('.shared-evidence>summary').click();await expect(page.locator('.evidence-picker input')).toBeChecked();await expect(page.locator('.evidence-picker')).toContainText(paper.title);await expect(page.getByRole('button',{name:'添加节点'})).toBeVisible();
 });
 
 test('390px 研究导航、自动首轮与可收起辅助面板不溢出；桌面入口在首屏',async({page})=>{

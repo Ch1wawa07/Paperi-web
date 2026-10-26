@@ -1,2 +1,2 @@
-import { DesignCanvas } from '@/components/design-canvas';
-export default function Page() { return <DesignCanvas/>; }
+import { redirect } from "next/navigation";
+export default function Page(){redirect("/literature?mode=context&history=1");}

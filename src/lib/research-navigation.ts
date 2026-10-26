@@ -9,7 +9,7 @@ export const researchStages = [
   { id: 'design', label: '设计衔接', hint: '把已确认的问题、概念与依据带到下一环节。' },
 ] as const;
 export type ResearchStage = typeof researchStages[number]['id'];
-export type ConceptSuggestion = { term: string; explanation: string; everyday: string; uncertainty: string };
+export type ConceptSuggestion = { term: string; explanation: string; everyday: string; uncertainty: string; relevance?:string; group?:string };
 export type ResearchConcept = ConceptSuggestion & { id: string; status: 'suggested' | 'selected' | 'excluded'; origin: 'ai' | 'user' };
 export type Guide = {
   stage: ResearchStage; understanding: string;
@@ -23,11 +23,11 @@ export const isStage = (v: unknown): v is ResearchStage => researchStages.some(s
 const text = (v: unknown, max: number, empty = false): v is string => typeof v === 'string' && v.length <= max && (empty || !!v.trim());
 export const isIds = (v: unknown, max = 5): v is string[] => Array.isArray(v) && v.length <= max && new Set(v).size === v.length && v.every(x => text(x, 100));
 export function isConceptSuggestion(v: unknown): v is ConceptSuggestion & Record<string, unknown> {
-  return isRecord(v) && text(v.term, 80) && text(v.explanation, 500) && text(v.everyday, 300, true) && text(v.uncertainty, 300);
+  return isRecord(v) && text(v.term, 80) && text(v.explanation, 500) && text(v.everyday, 300, true) && text(v.uncertainty, 300) && (v.relevance===undefined||text(v.relevance,300,true)) && (v.group===undefined||text(v.group,40));
 }
 export function isGuide(v: unknown): v is Guide {
   return isRecord(v) && isStage(v.stage) && text(v.understanding, 1200, true) &&
-    Array.isArray(v.concepts) && v.concepts.length <= 6 && v.concepts.every(isConceptSuggestion) &&
+    Array.isArray(v.concepts) && v.concepts.length <= 12 && v.concepts.every(isConceptSuggestion) &&
     isRecord(v.keywords) && [v.keywords.zh, v.keywords.en].every(a => Array.isArray(a) && a.length <= 6 && a.every(x => text(x, 100))) &&
     Array.isArray(v.threads) && v.threads.length <= 4 && v.threads.every(t => isRecord(t) && text(t.title, 120) && text(t.description, 1000) && isIds(t.evidenceIds) && text(t.uncertainty, 500));
 }

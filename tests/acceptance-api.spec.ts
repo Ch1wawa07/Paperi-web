@@ -14,6 +14,6 @@ test('共享故障真实HTTP复现（本地协议夹具，非真实DeepSeek）�
   const review=await r.post('/api/workflow',{data:{...body,task:'review',question:'BADQUOTE'}});
   expect((await review.json()).sections[0]).toMatchObject({evidenceStatus:'insufficient',quote:''});
   const pdf=await r.post('/api/workflow',{data:{...body,task:'reading',evidence:[{...body.evidence[0],pages:[{page:8,text:'这是实际传入的测试正文方法部分，采用测试访谈，仅用于协议验证。'}]}]}});
-  expect(pdf.status()).toBe(200);expect((await pdf.json()).sections[5]).toMatchObject({page:8,evidenceStatus:'verified'});
+  expect(pdf.status()).toBe(200);expect((await pdf.json()).sections[3]).toMatchObject({page:8,evidenceStatus:'verified'});
  }finally{await r.dispose();}
 });

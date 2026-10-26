@@ -108,7 +108,7 @@ test('两个标签页同步创建、改名和删除', async ({ page, context }) 
 });
 
 for (const width of [1440, 1280, 768, 390]) {
-  test(`${width}px 布局、六路由导航与返回`, async ({ page }) => {
+  test(`${width}px 布局、核心导航与返回`, async ({ page }) => {
     await page.setViewportSize({ width, height: 950 });
     const errors: string[] = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -116,7 +116,7 @@ for (const width of [1440, 1280, 768, 390]) {
     await expect(page.getByRole('heading', { name: /此刻，有什么新想法？/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/home-${width}.png`, fullPage: true });
-    for (const [route, title] of [['lab', '灵感实验室'], ['literature', '文献工作台'], ['review', '研究整合'], ['canvas', '研究设计'], ['proposal', '研究框架']]) {
+    for (const [route, title] of [['lab', '灵感实验室'], ['literature', '文献工作台']]) {
       if (width <= 900) await page.getByRole('button', { name: '展开导航' }).click();
       await page.getByRole('navigation', { name: '主要导航' }).getByRole('link', { name: title }).click();
       await expect(page).toHaveURL(`/${route}`);

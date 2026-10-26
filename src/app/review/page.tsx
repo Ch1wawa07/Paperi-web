@@ -1,3 +1,2 @@
-import {ResearchIntegration} from '@/components/research-integration';
-export const metadata={title:'研究整合'};
-export default function Page(){return <ResearchIntegration/>;}
+import { redirect } from "next/navigation";
+export default function Page(){redirect("/literature?mode=context&history=1");}

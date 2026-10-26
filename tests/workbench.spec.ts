@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import {
   emptyWorkbench,
   isWorkbench,
@@ -10,8 +10,7 @@ import { emptyLibrary } from "../src/lib/literature";
 import { mapOpenAlex } from "../src/lib/literature-mapping";
 import type { Project } from "../src/lib/projects";
 import records from "./fixtures/metadata-records.json";
-const at = "2026-10-22T06:00:00Z",
-  key = "paperi.projects.v1";
+const at = "2026-10-22T06:00:00Z";
 const paper = mapOpenAlex(records.openalex, at)!;
 function project(id = "a"): Project {
   return {
@@ -57,23 +56,6 @@ function project(id = "a"): Project {
     },
   };
 }
-async function load(page: Page, projects = [project()]) {
-  await page.goto("/");
-  await page.evaluate(
-    ({ projects, key }) =>
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          version: 1,
-          revision: 0,
-          activeId: projects[0].id,
-          projects,
-        }),
-      ),
-    { projects, key },
-  );
-  await page.reload();
-}
 const design = {
   path: "qualitative",
   nodes: [
@@ -102,54 +84,6 @@ const design = {
   ],
   edges: [{ id: "e1", from: "n1", to: "n2", label: "资料收集规划" }],
 };
-async function mockAI(page: Page) {
-  await page.route("**/api/lab", (r) =>
-    r.fulfill({ json: { configured: true, message: "测试专用" } }),
-  );
-  await page.route("**/api/research", (r) => {
-    const b = r.request().postDataJSON();
-    return r.fulfill({
-      json:
-        b.task === "design"
-          ? { design: { ...design, path: b.path } }
-          : b.task === "context"
-            ? {
-                threads: [
-                  {
-                    title: "商业意图识别",
-                    kind: "主题",
-                    body: "仅测试来源归纳",
-                    evidenceIds: ["source-a"],
-                    uncertainty: "未读全文",
-                  },
-                ],
-              }
-            : b.task === "assess"
-              ? {
-                  assessments: b.context.evidence.map(
-                    (e: { id: string; paper: { title: string } }) => ({
-                      id: e.id,
-                      level: e.paper.title.includes("Mechanical")
-                        ? "unrelated"
-                        : "direct",
-                      reason: "主题匹配测试",
-                      basis: e.paper.title,
-                      use: "概念定义",
-                      limitation: "仅测试摘要",
-                    }),
-                  ),
-                }
-              : {
-                  zh: ["说服知识 商业意图"],
-                  en: [
-                    "persuasion knowledge advertising",
-                    "algorithmic trust consumer",
-                  ],
-                },
-    });
-  });
-}
-
 test("V1.1无工作台记录直接读取；新增设计校验并保留来源导出", () => {
   const p = project();
   expect(isWorkbench(emptyWorkbench())).toBe(true);
@@ -247,118 +181,5 @@ test("研究辅助接口严格校验来源，实际HTTP适配关键词、相关�
   } finally {
     await request.dispose();
   }
-});
-
-test("质化AI草案可拒绝、采纳、编辑、确认、增删关系、保存刷新、导出；跨项目不混入设计", async ({
-  page,
-}) => {
-  await mockAI(page);
-  await load(page, [project(), project("b")]);
-  await page.goto("/canvas");
-  page.on("dialog",d=>d.accept());
-  await page.getByLabel("研究路径").selectOption("qualitative");
-  await page.getByRole("button", { name: "AI 辅助生成草案" }).click();
-  await expect(page.locator(".design-suggestions")).toBeVisible();
-  await page.getByRole("button", { name: "拒绝本次草案" }).click();
-  await expect(page.locator(".canvas-node")).toHaveCount(0);
-  await page.getByRole("button", { name: "AI 辅助生成草案" }).click();
-  await page.getByRole("button", { name: "加入画布并继续编辑" }).click();
-  await page
-    .getByLabel("研究内容", { exact: true })
-    .fill("由用户修改的访谈研究问题");
-  await page.getByLabel("确认状态").selectOption("confirmed");
-  await page.getByRole("button", { name: "保存研究设计" }).click();
-  await expect(page.getByText("有未保存修改", { exact: true })).toHaveCount(0);
-  await page.reload();
-  await expect(page.locator(".canvas-node")).toHaveCount(2);
-  await page
-    .getByRole("button", { name: "如何识别推荐中的商业影响？", exact: true })
-    .click();
-  await expect(page.getByLabel("研究内容", { exact: true })).toHaveValue(
-    "由用户修改的访谈研究问题",
-  );
-  await expect(page.getByLabel("确认状态")).toHaveValue("confirmed");
-  await page.getByRole("button", { name: "添加节点" }).click();
-  await page.getByLabel("名称", { exact: true }).fill("人工方法节点");
-  await page.getByText("编辑关系 · 1", { exact: true }).click();
-  await page
-    .getByLabel("起点", { exact: true })
-    .selectOption({ label: "半结构访谈" });
-  await page
-    .getByLabel("终点", { exact: true })
-    .selectOption({ label: "人工方法节点" });
-  await page.getByRole("button", { name: "添加关系", exact: true }).click();
-  await expect(page.locator(".canvas-edge")).toHaveCount(2);
-  await page.getByRole("button", { name: "保存研究设计" }).click();
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "导出 Markdown" }).click();
-  expect((await download).suggestedFilename()).toBe("Paperi-研究设计.md");
-  await page.getByLabel("当前项目", { exact: true }).selectOption("b");
-  await expect(page.locator(".canvas-node")).toHaveCount(0);
-  await page.getByLabel("当前项目", { exact: true }).selectOption("a");
-  await expect(page.locator(".canvas-node")).toHaveCount(3);
-  await page.reload();
-  await expect(page.locator(".canvas-node")).toHaveCount(3);
-});
-
-test("研究画布保存失败保留本地编辑，不显示假保存；标签页冲突拒绝覆盖", async ({
-  page,
-  context,
-}) => {
-  await load(page);
-  await page.goto("/canvas");
-  await page.getByRole("button", { name: "添加节点" }).click();
-  await page.getByLabel("名称", { exact: true }).fill("必须保留的编辑");
-  const other = await context.newPage();
-  await other.goto("/canvas");
-  await other.getByRole("button", { name: "添加节点" }).click();
-  await other.getByLabel("名称", { exact: true }).fill("另一个页面已保存");
-  await other.getByRole("button", { name: "保存研究设计" }).click();
-  await page.getByRole("button", { name: "保存研究设计" }).click();
-  await expect(page.locator(".literature-error")).toContainText("尚未保存");
-  await expect(page.getByLabel("名称", { exact: true })).toHaveValue(
-    "必须保留的编辑",
-  );
-  expect(
-    await page.evaluate(
-      (key) =>
-        JSON.parse(localStorage.getItem(key)!).projects[0].workbench.design
-          .nodes[0].title,
-      key,
-    ),
-  ).toBe("另一个页面已保存");
-});
-
-for (const size of [
-  { width: 1440, height: 900 },
-  { width: 1366, height: 768 },
-  { width: 390, height: 844 },
-])
-  test(`核心输入与交互画布可见无横向溢出 ${size.width}`, async ({ page }) => {
-    await page.setViewportSize(size);
-    await load(page);
-    for (const path of ["lab", "literature", "map", "canvas", "proposal"]) {
-      await page.goto("/" + path);
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-      ).toBe(true);
-      if (size.width > 900) {
-        const locator =
-          path === "lab"
-            ? page.getByLabel("给 AI 的消息")
-            : path === "literature"
-              ? page.getByLabel("筛选我的文献")
-              : path === "canvas"
-                ? page.getByRole("button", { name: "添加节点" })
-                : null;
-        if (locator) await expect(locator).toBeInViewport();
-      }
-    }
-  });
-
-test('未编辑的旧设计页也不能覆盖其他标签的新设计',async({page,context})=>{
- await load(page);await page.goto('/canvas');const other=await context.newPage();await other.goto('/canvas');await other.getByRole('button',{name:'添加节点'}).click();await other.getByLabel('名称',{exact:true}).fill('另一个页面的新设计');await other.getByRole('button',{name:'保存研究设计'}).click();await expect(page.getByRole('button',{name:'读取已保存版本'})).toBeVisible();await page.getByRole('button',{name:'添加节点'}).click();await expect(page.getByRole('alert').filter({hasText:'先读取已保存版本'})).toBeVisible();expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).projects[0].workbench.design.nodes[0].title,key)).toBe('另一个页面的新设计');
 });
 

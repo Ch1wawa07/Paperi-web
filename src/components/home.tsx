@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {ProjectBackup} from './project-backup';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { navigation } from '@/lib/navigation';
+
 import type { Project } from '@/lib/projects';
 import { useProjects } from './project-provider';
 import { ProjectDialog } from './project-dialog';
@@ -12,7 +12,7 @@ import { EmptyState, Icon, LoadingState } from './ui';
 import { GlassBloom } from './glass-art';
 
 type Modal = { mode: 'create' | 'rename' | 'delete'; project?: Project };
-const journeyCopy = ['理解现象，探索概念', '导入、理解和组织文献', '构建文献综述结构', '衔接定量或质性', '确认并导出研究框架'];
+const journeyCopy = ['从你的原始想法开始', '比较与选择学术视角', '带着检索词去找真实论文', '读懂论文，形成研究方向'];
 
 export function Home() {
   const [observation, setObservation] = useState('');
@@ -46,7 +46,7 @@ export function Home() {
     </div>
     <section className="journey-section" aria-labelledby="journey-title">
       <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">你的研究路径</h2></div><span className="section-aside">随时返回，也可以交叉探索</span></div>
-      <div className="journey-grid">{navigation.slice(1).map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
+      <div className="journey-grid">{[{href:'/lab',label:'灵感探索',english:'IDEA'},{href:'/lab#concepts',label:'概念锚定',english:'CONCEPTS'},{href:'/lab#library-preparation',label:'图书馆导航',english:'LIBRARY'},{href:'/literature',label:'文献工作台',english:'LITERATURE'}].map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
         <div className="journey-card-top"><span>{item.english}</span><span className="circle-arrow"><Icon name="arrow-up" size={17}/></span></div>
         <span className="journey-number" aria-hidden="true">0{index + 1}</span><div className="journey-card-bottom"><h3>{item.label}</h3><p>{journeyCopy[index]}</p></div>
       </Link>)}</div>

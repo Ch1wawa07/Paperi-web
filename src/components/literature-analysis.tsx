@@ -8,6 +8,7 @@ import {
   cleanDirection,
   isFailedSection,
   isSections,
+  isDirectionCard,
   sourceFingerprint,
   workflowEvidence,
   type Analysis,
@@ -103,6 +104,7 @@ export async function requestWorkflow(
   sourceIds: string[],
   question: string,
   signal: AbortSignal,
+  report?: (stage:string)=>void,
 ): Promise<Analysis> {
   const items = (p.library?.items ?? []).filter((i) =>
     sourceIds.includes(i.id),
@@ -125,6 +127,7 @@ export async function requestWorkflow(
     }
     evidence.push({ id: i.id, paper: i.paper, pages });
   }
+  report?.("资料已整理，正在等待 AI 返回完整分析…");
   const r = await fetch("/api/workflow", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -147,13 +150,16 @@ export async function requestWorkflow(
     )
   )
     throw new Error("分析格式或来源不完整，未保存。");
+  if ((data.synthesis!==undefined&&(!isSections(data.synthesis)||data.synthesis.some((s:ReadingSection)=>s.evidenceIds.some(id=>!sourceIds.includes(id))))) || (data.cards!==undefined&&(!Array.isArray(data.cards)||!data.cards.every(isDirectionCard)||data.cards.some((c:import("@/lib/workflow").DirectionCard)=>c.evidenceIds.some(id=>!sourceIds.includes(id))))))throw new Error("研究脉络或方向卡引用不完整，未保存。");
   return {
     id: crypto.randomUUID(),
     kind: task,
-    fingerprint: sourceFingerprint(p),
+    fingerprint: sourceFingerprint(p,task!=="directions"),
     sourceIds,
     createdAt: new Date().toISOString(),
     sections: data.sections,
+    ...(isSections(data.synthesis)?{synthesis:data.synthesis}:{}),
+    ...(Array.isArray(data.cards)&&data.cards.every(isDirectionCard)?{cards:data.cards}:{}),
     inputSnapshot: JSON.stringify({
       observation: p.observation,
       concepts: selectedConcepts(p),

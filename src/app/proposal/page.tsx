@@ -1,2 +1,2 @@
-import {ResearchIntegration} from '@/components/research-integration';
-export default function Page(){return <ResearchIntegration final/>;}
+import { redirect } from "next/navigation";
+export default function Page(){redirect("/literature?mode=context&history=1");}

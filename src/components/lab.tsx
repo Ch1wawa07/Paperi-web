@@ -19,7 +19,7 @@ export function Lab() {
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
   return <div className="module-page module-lab">
     <WorkspaceToolbar title="灵感实验室" project={project}/>
-    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <><LabProject key={project.id} project={project}/><ResearchPreparation key={project.id+':keywords'} project={project}/></> :
+    {!ready ? (error ? <p className="muted">请先处理上方的存储提示，原有项目未被清除。</p> : <LoadingState/>) : project ? <><LabProject key={project.id} project={project}/><div id="library-preparation"><ResearchPreparation key={project.id+':keywords'} project={project}/></div></> :
       <section className="lab-no-project frosted-surface"><Icon name="leaf" size={32}/><h2>为想法留一个位置</h2><p className="muted">先创建项目，对话和研究种子会保存在这个项目里。</p><Link className="button primary" href="/">去创建项目<Icon name="arrow" size={16}/></Link></section>}
   </div>;
 }
@@ -126,7 +126,7 @@ function LabProject({ project }: { project: Project }) {
   const suggested = exploration.directions.filter(d => d.status === 'suggested').slice().reverse();
   const locked = busy || pending;
   return <>
-    <div className="lab-compact-actions"><div className="research-stage-bar" aria-label="探索阶段">{researchStages.slice(0,2).map(stage=><button key={stage.id} aria-pressed={nav.stage===stage.id} disabled={locked} onClick={()=>void saveExploration(project.id,exploration.revision,{...exploration,navigation:{...nav,stage:stage.id}})}>{stage.label}</button>)}</div><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,'结合我的观察和已选概念，继续解释可能的研究切入点、边界和需要查证的内容。')}>继续探索</button><Link className="text-button" href="/map">文献脉络 →</Link><Link className="text-button" href="/canvas">研究设计 →</Link></div>
+    <div className="lab-compact-actions"><div className="research-stage-bar" aria-label="探索阶段">{researchStages.slice(0,2).map(stage=><button key={stage.id} aria-pressed={nav.stage===stage.id} disabled={locked} onClick={()=>void saveExploration(project.id,exploration.revision,{...exploration,navigation:{...nav,stage:stage.id}})}>{stage.label}</button>)}</div><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,'结合我的观察和已选概念，继续解释可能的研究切入点、边界和需要查证的内容。')}>继续探索</button><button className="text-button" disabled={locked||!status?.configured} onClick={()=>void send(false,false,"请再推荐一组与已有候选不同角度的学术概念；保留已选概念，避开已排除词，解释为何相关和边界。")}>再推荐一组不同角度</button><Link className="text-button" href="/literature?mode=context">研究脉络 →</Link><a className="text-button" href="#library-preparation">图书馆导航 →</a></div>
     <div className="lab-grid">
       <section className="lab-chat frosted-surface" aria-labelledby="chat-title">
         <div className="lab-panel-heading"><h2 id="chat-title">从一个念头开始</h2><span className="soft-badge">{status?.configured ? 'AI 已配置' : 'AI 待连接'}</span></div>

@@ -28,17 +28,21 @@ import {
   type LocalPDF,
 } from "@/lib/local-files";
 import type { Project } from "@/lib/projects";
-import { CitationNetwork } from "./citation-network";
-import { LiteratureAnalysis } from "./literature-analysis";
+import { StudyWorkspace } from "./study-workspace";
+import { ProjectHistory } from "./project-history";
+import { pdfMetadataCandidates } from "@/lib/pdf-metadata";
+
 export function Literature({
   requestProject,
   initialMode = "start",
   fromConcepts=false,
+  showHistory=false,
 }: {
   requestProject?: string;
   initialMode?: string;
   initialQuery?: string;
   fromConcepts?: boolean;
+  showHistory?:boolean;
 }) {
   const { snapshot, ready } = useProjects();
   const p = snapshot.projects.find((p) => p.id === snapshot.activeId);
@@ -50,7 +54,7 @@ export function Literature({
           链接属于另一个项目，请先在顶部切换项目。
         </p>
       ) : ready && p ? (
-        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} prepare={fromConcepts} />
+        <LibraryWorkspace key={p.id} p={p} initialMode={initialMode} prepare={fromConcepts} showHistory={showHistory} />
       ) : (
         <Link href="/">选择或创建研究项目</Link>
       )}
@@ -61,10 +65,12 @@ function LibraryWorkspace({
   p,
   initialMode,
   prepare,
+  showHistory,
 }: {
   p: Project;
   initialMode: string;
   prepare:boolean;
+  showHistory:boolean;
 }) {
   const { saveLibrary, busy } = useProjects();
   const lib = p.library ?? emptyLibrary();
@@ -120,7 +126,8 @@ function LibraryWorkspace({
           if (/\.pdf$/i.test(file.name)) {
             const result=await extractPDF(file,{signal:abort.signal,onProgress:q=>{if(mounted.current)setProgress(`${index+1} / ${files.length} · ${file.name} · ${q.stage}`)}});
             attached[combined.rows.length]={id:crypto.randomUUID(),projectId:p.id,blob:file,name:file.name,pages:result.pages,updatedAt:new Date().toISOString()};
-            combined.rows.push({paper:importedPaper({title:result.title||file.name.replace(/\.pdf$/i,""),authors:result.author?[result.author]:[]}),warnings:[`${file.name}：PDF 属性可能不完整，请核对标题、作者、年份和出版来源。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`],raw:result.pages[0]?.slice(0,2000)??""});
+            const metadata=pdfMetadataCandidates(result.pages,{title:result.title,author:result.author});
+            combined.rows.push({paper:importedPaper({...metadata.fields,title:metadata.fields.title||file.name.replace(/\.pdf$/i,""),authors:metadata.fields.authors||[]}),warnings:[`${file.name}：属性及正文识别仅为候选，请核对原文片段和字段。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`],raw:metadata.evidence});
           } else {
             if(file.size>2_000_000)throw new Error("题录文件最大 2 MB。");
             const bytes=await file.arrayBuffer();let content=new TextDecoder("utf-8").decode(bytes);
@@ -252,7 +259,6 @@ function LibraryWorkspace({
         {[
           ["import", "导入文献"],
           ...(lib.items.length ? [["library", "已导入文献"]] : []),
-          ["citations", "文献星图"],
           ["context", "研究脉络"],
           ["reading", "文献精析"],
         ].map(([key, label]) => (
@@ -265,7 +271,7 @@ function LibraryWorkspace({
             {label}
           </button>
         ))}
-        <Link href="/review">研究整合 →</Link>
+
       </div>
       {error && (
         <p role="alert" className="literature-error">
@@ -410,6 +416,7 @@ function LibraryWorkspace({
                       原始来源记录 ↗
                     </a>
                   )}
+                  <p className="paper-stage-status">{i.attachment?`文件已保存 · 文字已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字`:'已保存题录'} · 书目字段待原文核对 · {p.workflow?.analyses.some(a=>a.kind==='reading'&&a.sourceIds.includes(i.id))?'已有精析记录':'尚未精析'}</p>
                   <p>{i.note}</p>
                   <div className="workspace-actions">
                     <button onClick={() => setEditing(i)}>
@@ -430,7 +437,7 @@ function LibraryWorkspace({
               ))}
             </div>
           )}
-          <ResearchPreparation key={p.id + ":prep"} project={p} />
+          <ResearchPreparation key={p.id + ":prep"} project={p} automatic={prepare}/>
         </>
       )}
       {mode === "import" && (
@@ -440,7 +447,7 @@ function LibraryWorkspace({
             <h2>把找到的论文，带进研究里。</h2>
             <p>
               从一篇 PDF
-              或一组书目开始。先核对导入预览，再进入文献理解与研究设计。
+              或一组书目开始。先核对导入预览，再进入文献理解与研究方向。
             </p>
           </div>
           <p>
@@ -601,7 +608,7 @@ function LibraryWorkspace({
                     )}
                     {pdfs[index] && (
                       <details>
-                        <summary>PDF 首页可提取文本（用于核对）</summary>
+                        <summary>PDF 元数据候选的原文与页码（待确认）</summary>
                         <pre>{row.raw}</pre>
                       </details>
                     )}
@@ -627,11 +634,12 @@ function LibraryWorkspace({
           )}
         </section>
       )}
-      {mode === "import" && <ResearchPreparation key={p.id+":import-preparation"} project={p} initialOpen={prepare}/>}
-      {mode === "citations" && <CitationNetwork project={p} />}
+      {mode === "import" && <ResearchPreparation key={p.id+":import-preparation"} project={p} initialOpen={prepare} automatic={prepare}/>}
+
       {(mode === "context" || mode === "reading") && (
-        <LiteratureAnalysis key={mode} project={p} mode={mode} />
+        <StudyWorkspace key={p.id+mode} project={p} mode={mode} />
       )}
+      <ProjectHistory project={p} initiallyOpen={showHistory}/>
       {editing && (
         <PaperEditor
           key={editing.id}

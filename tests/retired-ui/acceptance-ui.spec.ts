@@ -1,7 +1,7 @@
 import { test,expect,type Page } from '@playwright/test';
-import {emptyWorkflow} from '../src/lib/workflow';
-import {emptyExploration} from '../src/lib/exploration';
-import {emptyNavigation} from '../src/lib/research-navigation';
+import {emptyWorkflow} from '../../src/lib/workflow';
+import {emptyExploration} from '../../src/lib/exploration';
+import {emptyNavigation} from '../../src/lib/research-navigation';
 import {readFileSync,mkdirSync} from 'node:fs';
 async function setup(page:Page){
  await page.goto('/');

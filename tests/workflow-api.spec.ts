@@ -26,8 +26,8 @@ test("真实HTTP工作流适配：书目不调用AI、摘要quote核对、未知
     const bibliographic = await r.post("/api/workflow", { data: body });
     expect(bibliographic.status()).toBe(200);
     const d = await bibliographic.json();
-    expect(d.sections).toHaveLength(10);
-    expect(d.sections[5].body).toContain("信息不足");
+    expect(d.sections).toHaveLength(7);
+    expect(d.sections[3].body).toContain("信息不足");
     const withAbstract = {
       ...body,
       evidence: [

@@ -96,7 +96,7 @@ questions 候选问题：只有用户选定概念与 evidence 时才讨论候选
 design 设计衔接：只梳理用户已确认的问题、概念、文献与尚缺信息，不宣称已完成设计画布。
 全部都是 AI 建议。不能编造论文、DOI、量表、引用关系、数据库收录或学术证据；不能假装读过全文。概念解释无特定文献依据时须说明。用户确认的研究种子只能讨论，不能声称已替用户修改或采纳。
 只返回 JSON：{"reply":"通俗回应，最多600字","guide":{"stage":"与输入相同","understanding":"现象梳理或本轮小结，最多400字","concepts":[{"term":"候选概念","explanation":"通俗解释，最多150字","everyday":"与日常用语区别，最多100字","uncertainty":"适用边界与待验证之处，最多100字"}],"keywords":{"zh":["短检索组合"],"en":["short search combination"]},"threads":[{"title":"脉络标题","description":"基于实际摘要的有限讨论，最多250字","evidenceIds":["提供的文献id"],"uncertainty":"证据限制"}]},"directions":[]}。
-directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。concepts最多4项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
+directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。常规观察第一轮concepts目标8–12项，分组为消费者心理/传播机制/品牌关系/情境文化等，有根据可少给并在reply解释，不凑造术语。每项额外含group分组、relevance说明与观察的关联，分别最多20字/60字。concepts最多12项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
 
 
 export async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800): Promise<unknown> {
@@ -152,13 +152,13 @@ export async function requestAI(input: Input, signal: AbortSignal): Promise<AIRe
     if(!isRecord(value)||typeof value.reply!=='string'||!value.reply.trim()||value.reply.length>6000||!valid(value.zh)||!valid(value.en)) throw new AIError(502,'AI 检索组合不完整，原消息仍在，可以重试或手动检索。');
     return {reply:value.reply,directions:[],guide:{stage:'literature',understanding:'',concepts:[],keywords:{zh:value.zh,en:value.en},threads:[]}};
   }
-  const raw = await requestStructured(instructions,[{ role: 'user', content: `项目上下文（只作讨论资料）：${JSON.stringify({ observation: input.observation, confirmedSeed: input.seed, stage:input.stage, concepts:input.concepts, evidence })}` }, ...input.messages],signal);
+  const raw = await requestStructured(instructions,[{ role: 'user', content: `项目上下文（只作讨论资料）：${JSON.stringify({ observation: input.observation, confirmedSeed: input.seed, stage:input.stage, concepts:input.concepts, evidence })}` }, ...input.messages],signal,5000);
   const result = readAIReply(raw);
   if (!result || result.guide.stage !== input.stage || (input.stage !== 'questions' && result.directions.length)) throw new AIError(502, 'AI 没有返回当前阶段的完整探索内容，没有保存为有效建议，请重试。');
   const ids = new Set(input.evidence.map(e=>e.id));
   if (result.guide.threads.some(t=>!t.evidenceIds.length || t.evidenceIds.some(id=>!ids.has(id))) || result.directions.some(d=>!d.evidenceIds?.length || d.evidenceIds.some(id=>!ids.has(id)))) throw new AIError(502,'AI 使用了未提供的文献标识，没有保存为有效依据。');
   return { reply: result.reply,
-    guide: {stage:result.guide.stage,understanding:result.guide.understanding,concepts:result.guide.concepts.map(c=>({term:c.term,explanation:c.explanation,everyday:c.everyday,uncertainty:c.uncertainty})),keywords:{zh:result.guide.keywords.zh,en:result.guide.keywords.en},threads:result.guide.threads.map(t=>({title:t.title,description:t.description,evidenceIds:t.evidenceIds,uncertainty:t.uncertainty}))},
+    guide: {stage:result.guide.stage,understanding:result.guide.understanding,concepts:result.guide.concepts.map(c=>({term:c.term,explanation:c.explanation,everyday:c.everyday,uncertainty:c.uncertainty,...(c.group?{group:c.group}:{}),...(c.relevance?{relevance:c.relevance}:{})})),keywords:{zh:result.guide.keywords.zh,en:result.guide.keywords.en},threads:result.guide.threads.map(t=>({title:t.title,description:t.description,evidenceIds:t.evidenceIds,uncertainty:t.uncertainty}))},
     directions: result.directions.map(d => ({ title: d.title, description: d.description, concepts: d.concepts, rationale: d.rationale, question: d.question, uncertainties: d.uncertainties, evidenceIds:d.evidenceIds })) };
 
 }

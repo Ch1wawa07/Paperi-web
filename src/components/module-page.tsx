@@ -15,8 +15,8 @@ const modules = {
 export type ModuleKey = keyof typeof modules;
 export function ModulePage({ module }: { module: ModuleKey }) {
   const m = modules[module];
-  const nav = navigation[m.index];
-  const previous = navigation[m.index - 1];
+  const nav = navigation[Math.min(m.index,2) as 0|1|2];
+  const previous = navigation[Math.min(m.index - 1,2) as 0|1|2];
   const { ready, snapshot, error } = useProjects();
   const project = snapshot.projects.find(p => p.id === snapshot.activeId);
   return <div className={`module-page module-${module}`}>
