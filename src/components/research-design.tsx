@@ -14,6 +14,8 @@ import {
   researchDesignPlainText,
   researchFingerprint,
   updateQualitativeTheme,
+  updateHypothesisEndpoints,
+  isModerationHypothesis,
   type QualitativeDesign,
   type QuantitativeDesign,
   type ResearchHypothesis,
@@ -22,6 +24,8 @@ import {
   type ResearchWorkspace,
 } from "@/lib/research-workspace";
 import "@/app/research-design.css";
+import { QuantitativeModel } from "./quantitative-model";
+export { QuantitativeModel } from "./quantitative-model";
 
 type Design = QuantitativeDesign | QualitativeDesign;
 type DesignRequest = (
@@ -53,6 +57,22 @@ const stepTasks = {
   qualitative: ["question", "themes", "questions", "method"],
 };
 const isQuant = (d: Design): d is QuantitativeDesign => "variables" in d;
+function replaceBoundNames(text: string, edits: [string, string][]) {
+  const replacements = new Map(
+    edits.filter(([before, after]) => before && before !== after),
+  );
+  const keys = [...replacements.keys()].sort((a, b) => b.length - a.length);
+  let result = "",
+    at = 0;
+  while (at < text.length) {
+    const key = keys.find((k) => text.startsWith(k, at));
+    if (key) {
+      result += replacements.get(key);
+      at += key.length;
+    } else result += text[at++];
+  }
+  return result;
+}
 const validate = (d: unknown): d is Design =>
   isQuantitativeDesign(d) || isQualitativeDesign(d);
 // An empty variable name is a recoverable in-progress edit, never a valid project save.
@@ -591,13 +611,15 @@ function DesignEditor({
           </span>
           <h3>{stepNames[method][step]}</h3>
         </div>
-        <button
-          className="button secondary"
-          disabled={busy || directionChanged}
-          onClick={() => void generate()}
-        >
-          {phaseHasContent ? "重新建议这一环节" : "AI 帮我梳理这一环节"}
-        </button>
+        {!(isQuant(draft) && step === 2 && !draft.hypotheses.length) && (
+          <button
+            className="button secondary"
+            disabled={busy || directionChanged}
+            onClick={() => void generate()}
+          >
+            {phaseHasContent ? "重新建议这一环节" : "AI 帮我梳理这一环节"}
+          </button>
+        )}
       </div>
       <p className="rd-step-note">
         只为当前环节请求一次 AI
@@ -671,7 +693,12 @@ function DesignEditor({
               <QuantVariables draft={draft} edit={edit} project={project} />
             )}
             {step === 2 && (
-              <QuantHypotheses draft={draft} edit={edit} project={project} />
+              <QuantHypotheses
+                draft={draft}
+                edit={edit}
+                project={project}
+                onSuggest={() => void generate()}
+              />
             )}
             {step === 3 && (
               <>
@@ -941,6 +968,15 @@ function QuantVariables({
     } else
       edit({
         ...draft,
+        ...(field === "role"
+          ? {
+              hypotheses: draft.hypotheses.map((h) =>
+                [h.from, h.to, h.moderatorId].includes(id)
+                  ? { ...h, confirmed: false }
+                  : h,
+              ),
+            }
+          : {}),
         variables: draft.variables.map((v) =>
           v.id === id
             ? {
@@ -1071,16 +1107,32 @@ function QuantHypotheses({
   draft,
   edit,
   project,
+  onSuggest,
 }: {
   draft: QuantitativeDesign;
   edit: (d: Design) => void;
   project: Project;
+  onSuggest: () => void;
 }) {
   const [editingVariable, setEditingVariable] = useState<string | null>(null);
+  const [creation, setCreation] = useState<"direct" | "moderation" | null>(
+    null,
+  );
+  const [newFrom, setNewFrom] = useState(""),
+    [newTo, setNewTo] = useState(""),
+    [newTarget, setNewTarget] = useState(""),
+    [newModerator, setNewModerator] = useState("");
   const selected = draft.variables.find((v) => v.id === editingVariable);
+  const direct = draft.hypotheses.filter((h) => !isModerationHypothesis(h));
+  const newTargetPath = direct.find((h) => h.id === newTarget);
+  const name = (id: string) =>
+    draft.variables.find((v) => v.id === id)?.name ?? "变量已移除";
+  const label = (id: string) =>
+    `H${draft.hypotheses.findIndex((h) => h.id === id) + 1}`;
   function patch(id: string, value: Partial<ResearchHypothesis>) {
     edit({
       ...draft,
+      confirmed: false,
       hypotheses: draft.hypotheses.map((h) =>
         h.id === id
           ? { ...h, ...value, confirmed: value.confirmed ?? false }
@@ -1093,47 +1145,80 @@ function QuantHypotheses({
     endpoint: "from" | "to",
     id: string,
   ) {
-    const before = draft.variables.find((v) => v.id === h[endpoint])?.name;
-    const after = draft.variables.find((v) => v.id === id)?.name;
-    patch(h.id, {
-      [endpoint]: id,
-      text: before && after ? h.text.split(before).join(after) : h.text,
-    });
+    edit(
+      updateHypothesisEndpoints(
+        draft,
+        h.id,
+        endpoint === "from" ? id : h.from,
+        endpoint === "to" ? id : h.to,
+      ),
+    );
+  }
+  function excludedModerators(h: ResearchHypothesis) {
+    return new Set(
+      [
+        h.moderatorId,
+        ...draft.hypotheses
+          .filter((m) => m.moderatesId === h.id)
+          .map((m) => m.moderatorId),
+      ].filter(Boolean),
+    );
+  }
+  function begin(kind: "direct" | "moderation") {
+    setCreation(kind);
+    setNewFrom("");
+    setNewTo("");
+    setNewTarget("");
+    setNewModerator("");
   }
   function add() {
-    const [from, to] = draft.variables;
-    if (!from || !to) return;
-    edit({
-      ...draft,
-      hypotheses: [
-        ...draft.hypotheses,
-        {
-          id: crypto.randomUUID(),
-          from: from.id,
-          to: to.id,
-          text: `拟检验${from.name}与${to.name}的关系（方向待论证）`,
-          rationale: "待结合文献提出理由；尚未验证。",
-          evidenceIds: [],
-          confirmed: false,
-        },
-      ],
-    });
+    const target = creation === "moderation" ? newTargetPath : null;
+    const from = target?.from ?? newFrom,
+      to = target?.to ?? newTo;
+    if (
+      !from ||
+      !to ||
+      from === to ||
+      (creation === "moderation" &&
+        (!target || !newModerator || [from, to].includes(newModerator)))
+    )
+      return;
+    const h: ResearchHypothesis = {
+      id: crypto.randomUUID(),
+      from,
+      to,
+      kind: creation ?? "direct",
+      text:
+        creation === "moderation"
+          ? `拟检验${name(newModerator)}是否调节${name(from)}与${name(to)}的关系（待检验）`
+          : `拟检验${name(from)}与${name(to)}的关系（待检验）`,
+      rationale: "用户添加的候选关系，待结合文献论证；尚未验证。",
+      evidenceIds: [],
+      confirmed: false,
+      ...(creation === "moderation"
+        ? { moderatorId: newModerator, moderatesId: newTarget }
+        : {}),
+    };
+    edit({ ...draft, confirmed: false, hypotheses: [...draft.hypotheses, h] });
+    setCreation(null);
   }
   return (
     <>
-      <p>
-        先用普通中文说明关系，再提出少量完整假设。通常 H1–H3
-        就够，也可以少于三条。所有连线都是拟检验关系。
+      <p className="rd-path-summary">
+        当前 {draft.hypotheses.length} 条拟检验假设 ·{" "}
+        {draft.hypotheses.filter((h) => h.confirmed).length}{" "}
+        条由你确认。连线按假设呈现，变量角色不会自动产生关系。重新建议变量或修改调节对象后，请核对假设表述与依据。
       </p>
       <QuantitativeModel
         design={draft}
-        onVariable={(id) => setEditingVariable(id)}
+        onVariable={setEditingVariable}
         onHypothesis={(id) =>
           document
             .getElementById(`rd-hypothesis-${id}`)
             ?.querySelector<HTMLTextAreaElement>("textarea")
             ?.focus()
         }
+        onCreateHypotheses={draft.variables.length >= 2 ? onSuggest : undefined}
       />
       {selected && (
         <div className="rd-model-edit">
@@ -1156,6 +1241,7 @@ function QuantHypotheses({
               onChange={(e) =>
                 edit({
                   ...draft,
+                  confirmed: false,
                   variables: draft.variables.map((v) =>
                     v.id === selected.id
                       ? {
@@ -1165,12 +1251,17 @@ function QuantHypotheses({
                         }
                       : v,
                   ),
+                  hypotheses: draft.hypotheses.map((h) =>
+                    [h.from, h.to, h.moderatorId].includes(selected.id)
+                      ? { ...h, confirmed: false }
+                      : h,
+                  ),
                 })
               }
             >
-              {Object.entries(roleNames).map(([key, label]) => (
-                <option value={key} key={key}>
-                  {label}
+              {Object.entries(roleNames).map(([key, text]) => (
+                <option key={key} value={key}>
+                  {text}
                 </option>
               ))}
             </select>
@@ -1183,283 +1274,322 @@ function QuantHypotheses({
           </button>
         </div>
       )}
-      {draft.hypotheses.map((h, i) => (
-        <article
-          className="rd-hypothesis"
-          data-hypothesis-id={h.id}
-          id={`rd-hypothesis-${h.id}`}
-          key={h.id}
+      {draft.hypotheses.map((h, i) => {
+        const moderation = isModerationHypothesis(h),
+          target = direct.find((t) => t.id === h.moderatesId),
+          excluded = excludedModerators(h);
+        return (
+          <article
+            className="rd-hypothesis"
+            data-hypothesis-id={h.id}
+            id={`rd-hypothesis-${h.id}`}
+            key={h.id}
+          >
+            <div className="rd-card-top">
+              <strong>
+                H{i + 1} · {moderation ? "调节假设" : "关系路径"} ·{" "}
+                {h.confirmed ? "用户已确认，仍待检验" : "候选，待确认"}
+              </strong>
+              <button
+                className="text-button"
+                onClick={() => edit(removeHypothesis(draft, h.id))}
+              >
+                删除假设
+              </button>
+            </div>
+            {moderation ? (
+              <div className="rd-moderation-fields">
+                <label className="rd-field">
+                  被调节的关系
+                  <select
+                    aria-label="被调节的关系"
+                    value={h.moderatesId}
+                    onChange={(e) => {
+                      const t = direct.find((t) => t.id === e.target.value);
+                      if (t)
+                        patch(h.id, {
+                          moderatesId: t.id,
+                          from: t.from,
+                          to: t.to,
+                          text: replaceBoundNames(h.text, [
+                            [name(h.from), name(t.from)],
+                            [name(h.to), name(t.to)],
+                            ...(h.moderatesId
+                              ? [
+                                  [label(h.moderatesId), label(t.id)] as [
+                                    string,
+                                    string,
+                                  ],
+                                ]
+                              : []),
+                          ]),
+                        });
+                    }}
+                  >
+                    {direct
+                      .filter(
+                        (t) => ![t.from, t.to].includes(h.moderatorId ?? ""),
+                      )
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {label(t.id)}：{name(t.from)} → {name(t.to)}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="rd-field">
+                  调节变量
+                  <select
+                    aria-label="调节变量"
+                    value={h.moderatorId}
+                    onChange={(e) =>
+                      patch(h.id, {
+                        moderatorId: e.target.value,
+                        text: replaceBoundNames(h.text, [
+                          [name(h.moderatorId ?? ""), name(e.target.value)],
+                        ]),
+                      })
+                    }
+                  >
+                    {draft.variables
+                      .filter((v) => v.id !== h.from && v.id !== h.to)
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <p className="muted">
+                  {name(h.moderatorId ?? "")}调节
+                  {target ? label(target.id) : "待核查的目标关系"}
+                  ；虚线指向这条关系，不表示调节变量直接影响结果。
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="rd-relation-fields">
+                  <label className="rd-field">
+                    关系起点
+                    <select
+                      aria-label="关系起点"
+                      value={h.from}
+                      onChange={(e) =>
+                        changeEndpoint(h, "from", e.target.value)
+                      }
+                    >
+                      {draft.variables
+                        .filter((v) => v.id !== h.to && !excluded.has(v.id))
+                        .map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <span>→</span>
+                  <label className="rd-field">
+                    关系终点
+                    <select
+                      aria-label="关系终点"
+                      value={h.to}
+                      onChange={(e) => changeEndpoint(h, "to", e.target.value)}
+                    >
+                      {draft.variables
+                        .filter((v) => v.id !== h.from && !excluded.has(v.id))
+                        .map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+                {h.moderatorId && (
+                  <p className="rd-warning">
+                    旧版关系包含调节标记“{name(h.moderatorId)}
+                    ”，请核对具体假设。可添加指定目标的独立调节假设；历史原稿仍保留。
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        const next = { ...h, confirmed: false };
+                        delete next.moderatorId;
+                        edit({
+                          ...draft,
+                          confirmed: false,
+                          hypotheses: draft.hypotheses.map((x) =>
+                            x.id === h.id ? next : x,
+                          ),
+                        });
+                      }}
+                    >
+                      移除旧版调节标记
+                    </button>
+                  </p>
+                )}
+              </>
+            )}
+            <TextField
+              label={`H${i + 1} 假设表述`}
+              value={h.text}
+              onChange={(text) => patch(h.id, { text })}
+              maxLength={1600}
+            />
+            <TextField
+              label={`H${i + 1} 逻辑理由与方法限制`}
+              value={h.rationale}
+              onChange={(rationale) => patch(h.id, { rationale })}
+              maxLength={1600}
+            />
+            <EvidenceEditor
+              ids={h.evidenceIds}
+              project={project}
+              onChange={(evidenceIds) => patch(h.id, { evidenceIds })}
+            />
+            <label className="rd-check">
+              <input
+                type="checkbox"
+                checked={h.confirmed}
+                onChange={(e) => patch(h.id, { confirmed: e.target.checked })}
+              />
+              我确认将此关系列为待检验假设
+            </label>
+          </article>
+        );
+      })}
+      <div className="workspace-actions">
+        <button
+          className="button secondary"
+          disabled={draft.variables.length < 2 || draft.hypotheses.length >= 12}
+          onClick={() => begin("direct")}
         >
-          <div className="rd-card-top">
-            <strong>H{i + 1} · 待检验</strong>
+          添加待检验假设
+        </button>
+        <button
+          className="button secondary"
+          disabled={
+            !direct.length ||
+            draft.variables.length < 3 ||
+            draft.hypotheses.length >= 12
+          }
+          onClick={() => begin("moderation")}
+        >
+          添加调节假设
+        </button>
+      </div>
+      {creation && (
+        <section className="rd-new-hypothesis">
+          <h4>
+            {creation === "moderation"
+              ? "调节哪条关系？"
+              : "选择这条假设的起点和终点"}
+          </h4>
+          {creation === "direct" ? (
+            <div className="rd-moderation-fields">
+              <label className="rd-field">
+                新增关系起点
+                <select
+                  aria-label="新增关系起点"
+                  value={newFrom}
+                  onChange={(e) => setNewFrom(e.target.value)}
+                >
+                  <option value="">请选择</option>
+                  {draft.variables
+                    .filter((v) => v.id !== newTo)
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="rd-field">
+                新增关系终点
+                <select
+                  aria-label="新增关系终点"
+                  value={newTo}
+                  onChange={(e) => setNewTo(e.target.value)}
+                >
+                  <option value="">请选择</option>
+                  {draft.variables
+                    .filter((v) => v.id !== newFrom)
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <div className="rd-moderation-fields">
+              <label className="rd-field">
+                新增调节的目标关系
+                <select
+                  aria-label="新增调节的目标关系"
+                  value={newTarget}
+                  onChange={(e) => {
+                    setNewTarget(e.target.value);
+                    setNewModerator("");
+                  }}
+                >
+                  <option value="">请选择</option>
+                  {direct.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {label(t.id)}：{name(t.from)} → {name(t.to)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="rd-field">
+                新增调节变量
+                <select
+                  aria-label="新增调节变量"
+                  value={newModerator}
+                  onChange={(e) => setNewModerator(e.target.value)}
+                  disabled={!newTargetPath}
+                >
+                  <option value="">请选择</option>
+                  {draft.variables
+                    .filter(
+                      (v) =>
+                        newTargetPath &&
+                        ![newTargetPath.from, newTargetPath.to].includes(v.id),
+                    )
+                    .map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
+          )}
+          <div className="workspace-actions">
             <button
-              className="text-button"
-              onClick={() => edit(removeHypothesis(draft, h.id))}
+              className="button primary"
+              disabled={
+                creation === "direct"
+                  ? !newFrom || !newTo
+                  : !newTarget || !newModerator
+              }
+              onClick={add}
             >
-              删除假设
+              添加这条假设
+            </button>
+            <button className="text-button" onClick={() => setCreation(null)}>
+              取消添加
             </button>
           </div>
-          <div className="rd-relation-fields">
-            <label className="rd-field">
-              关系起点
-              <select
-                aria-label="关系起点"
-                value={h.from}
-                onChange={(e) => changeEndpoint(h, "from", e.target.value)}
-              >
-                {draft.variables
-                  .filter((v) => v.id !== h.to && v.id !== h.moderatorId)
-                  .map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <span>与</span>
-            <label className="rd-field">
-              关系终点
-              <select
-                aria-label="关系终点"
-                value={h.to}
-                onChange={(e) => changeEndpoint(h, "to", e.target.value)}
-              >
-                {draft.variables
-                  .filter((v) => v.id !== h.from && v.id !== h.moderatorId)
-                  .map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="rd-field">
-              调节变量（可不设）
-              <select
-                aria-label="调节变量（可不设）"
-                value={h.moderatorId ?? ""}
-                onChange={(e) => {
-                  const next = { ...h, confirmed: false };
-                  if (e.target.value) next.moderatorId = e.target.value;
-                  else delete next.moderatorId;
-                  edit({
-                    ...draft,
-                    hypotheses: draft.hypotheses.map((item) =>
-                      item.id === h.id ? next : item,
-                    ),
-                  });
-                }}
-              >
-                {<option value="">不设置</option>}
-                {draft.variables
-                  .filter((v) => v.id !== h.from && v.id !== h.to)
-                  .map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          </div>
-          <TextField
-            label={`H${i + 1} 假设表述`}
-            value={h.text}
-            onChange={(text) => patch(h.id, { text })}
-            maxLength={1600}
-          />
-          <TextField
-            label={`H${i + 1} 逻辑理由与方法限制`}
-            value={h.rationale}
-            onChange={(rationale) => patch(h.id, { rationale })}
-            maxLength={1600}
-          />
-          <EvidenceEditor
-            ids={h.evidenceIds}
-            project={project}
-            onChange={(evidenceIds) => patch(h.id, { evidenceIds })}
-          />
-          <label className="rd-check">
-            <input
-              type="checkbox"
-              checked={h.confirmed}
-              onChange={(e) => patch(h.id, { confirmed: e.target.checked })}
-            />
-            我确认将此关系列为待检验假设
-          </label>
-        </article>
-      ))}
-      {!draft.hypotheses.length && (
-        <p className="rd-empty-inline">尚未提出假设，模型不会自动补连线。</p>
+          <p className="muted">
+            仅在你选定关系并点击添加后绘制，不会按变量角色自动补线。
+          </p>
+        </section>
       )}
-      <button
-        className="button secondary"
-        disabled={draft.variables.length < 2 || draft.hypotheses.length >= 12}
-        onClick={add}
-      >
-        添加待检验假设
-      </button>
-      {draft.variables.length < 2 && (
-        <p className="muted">先在“核心变量”确认至少两个不同变量。</p>
-      )}
+      <p className="muted">
+        删除一条路径会同步移除指定它的调节假设，历史版本仍保留。横截面关系不等于因果。
+      </p>
     </>
-  );
-}
-
-/** Only actual variable IDs and hypotheses determine this SVG. No model call or generated picture. */
-export function QuantitativeModel({
-  design,
-  onVariable,
-  onHypothesis,
-}: {
-  design: QuantitativeDesign;
-  onVariable: (id: string) => void;
-  onHypothesis: (id: string) => void;
-}) {
-  const arrowId = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const roleColumn = { X: 0, M: 1, Y: 2, W: 1, control: 0 };
-  const roleCounts = [0, 0, 0];
-  const positions = new Map(
-    design.variables.map((v) => {
-      const col = roleColumn[v.role];
-      const row = roleCounts[col]++;
-      return [v.id, { x: 35 + col * 270, y: 120 + row * 145 }];
-    }),
-  );
-  const height = Math.max(280, Math.max(...roleCounts) * 145 + 130);
-  const nodeWidth = 190,
-    nodeHeight = 68;
-  return (
-    <figure className="rd-model-wrap">
-      <figcaption>
-        拟检验研究模型{" "}
-        <small>
-          点击变量或假设可以编辑 · 虚线表示调节关系 · 未确认项为候选
-        </small>
-      </figcaption>
-      <div className="rd-model-scroll">
-        <svg
-          className="rd-model"
-          role="img"
-          aria-label="根据变量和假设同步更新的拟检验研究模型"
-          viewBox={`0 0 800 ${height}`}
-          style={{ minWidth: 680 }}
-        >
-          <defs>
-            <marker
-              id={arrowId}
-              markerWidth="8"
-              markerHeight="8"
-              refX="7"
-              refY="4"
-              orient="auto"
-            >
-              <path d="M0 0L8 4L0 8z" fill="#627a8c" />
-            </marker>
-          </defs>
-          {design.hypotheses.map((h, i) => {
-            const a = positions.get(h.from),
-              b = positions.get(h.to);
-            if (!a || !b) return null;
-            const same = a.x === b.x,
-              forward = b.x >= a.x;
-            const sx = same ? a.x + nodeWidth : forward ? a.x + nodeWidth : a.x;
-            const tx = same ? b.x + nodeWidth : forward ? b.x : b.x + nodeWidth;
-            const sy = a.y + nodeHeight / 2,
-              ty = b.y + nodeHeight / 2;
-            const bend = same ? sx + 45 + i * 16 : (sx + tx) / 2;
-            // A direct X–Y edge arches above the middle column rather than crossing its mediator node.
-            const skipsMiddle = Math.abs(a.x - b.x) > 400;
-            const lane = Math.min(sy, ty) - 105 - (i % 3) * 16;
-            const path = skipsMiddle
-              ? `M${sx},${sy} C${sx + (forward ? 90 : -90)},${lane} ${tx + (forward ? -90 : 90)},${lane} ${tx},${ty}`
-              : `M${sx},${sy} C${bend},${sy + (same ? 18 : 0)} ${bend},${ty - (same ? 18 : 0)} ${tx},${ty}`;
-            const lx = same ? bend : (sx + tx) / 2,
-              ly = skipsMiddle
-                ? (sy + ty) / 2 - 87 - (i % 3) * 12
-                : (sy + ty) / 2 - 8 - (i % 2) * 12;
-            const w = h.moderatorId ? positions.get(h.moderatorId) : undefined;
-            return (
-              <g
-                key={h.id}
-                data-hypothesis-id={h.id}
-                className={
-                  h.confirmed
-                    ? "rd-model-edge confirmed"
-                    : "rd-model-edge candidate"
-                }
-                role="button"
-                tabIndex={0}
-                aria-label={`编辑假设 H${i + 1}：${h.text}`}
-                onClick={() => onHypothesis(h.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onHypothesis(h.id);
-                  }
-                }}
-              >
-                <path d={path} markerEnd={`url(#${arrowId})`} />
-                <path d={path} className="rd-model-hit" />
-                <text x={lx} y={ly} textAnchor="middle">
-                  H{i + 1}
-                  {h.confirmed ? "" : " · 候选"}
-                </text>
-                {w && (
-                  <path
-                    className="rd-moderation"
-                    d={`M${w.x + nodeWidth / 2},${w.y + nodeHeight} L${lx},${ly + 20}`}
-                  />
-                )}
-              </g>
-            );
-          })}
-          {design.variables.map((v) => {
-            const p = positions.get(v.id)!;
-            return (
-              <g
-                key={v.id}
-                data-variable-id={v.id}
-                className={
-                  v.confirmed
-                    ? "rd-model-node confirmed"
-                    : "rd-model-node candidate"
-                }
-                role="button"
-                tabIndex={0}
-                aria-label={`编辑变量 ${v.name}，${roleNames[v.role]}`}
-                transform={`translate(${p.x},${p.y})`}
-                onClick={() => onVariable(v.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onVariable(v.id);
-                  }
-                }}
-              >
-                <rect width={nodeWidth} height={nodeHeight} rx="16" />
-                <text
-                  x={nodeWidth / 2}
-                  y="24"
-                  textAnchor="middle"
-                  className="rd-model-role"
-                >
-                  {roleNames[v.role]}
-                </text>
-                <text x={nodeWidth / 2} y="49" textAnchor="middle">
-                  {v.name.length > 13 ? `${v.name.slice(0, 12)}…` : v.name}
-                </text>
-                <title>{v.name}</title>
-              </g>
-            );
-          })}
-          {!design.variables.length && (
-            <text x="400" y="130" textAnchor="middle">
-              确认变量后，模型将在这里同步显示
-            </text>
-          )}
-        </svg>
-      </div>
-    </figure>
   );
 }
 

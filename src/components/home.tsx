@@ -46,7 +46,7 @@ export function Home() {
     </div>
     <section className="journey-section" aria-labelledby="journey-title">
       <div className="section-heading"><div><span className="eyebrow">FOLLOW YOUR CURIOSITY</span><h2 id="journey-title">你的研究路径</h2></div><span className="section-aside">随时返回，也可以交叉探索</span></div>
-      <div className="journey-grid">{[{href:'/lab',label:'灵感探索',english:'IDEA'},{href:'/lab#concepts',label:'概念锚定',english:'CONCEPTS'},{href:'/lab#library-preparation',label:'图书馆导航',english:'LIBRARY'},{href:'/literature',label:'文献工作台',english:'LITERATURE'}].map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
+      <div className="journey-grid">{[{href:'/lab',label:'灵感探索',english:'IDEA'},{href:'/concepts',label:'概念锚定',english:'CONCEPTS'},{href:'/concepts#library-preparation',label:'图书馆导航',english:'LIBRARY'},{href:'/literature',label:'文献工作台',english:'LITERATURE'}].map((item, index) => <Link href={item.href} className={`journey-card frosted-surface tone-${index}`} key={item.href}>
         <div className="journey-card-top"><span>{item.english}</span><span className="circle-arrow"><Icon name="arrow-up" size={17}/></span></div>
         <span className="journey-number" aria-hidden="true">0{index + 1}</span><div className="journey-card-bottom"><h3>{item.label}</h3><p>{journeyCopy[index]}</p></div>
       </Link>)}</div>

@@ -306,3 +306,67 @@ test("无密钥/无确认方向/跨站/超量输入在调用前失败（无付�
     await api.dispose();
   }
 });
+
+test("隔离HTTP：双中介四段与指定路径调节完整返回；未知调节目标和含糊新关系拒绝（模拟）", async ({
+  journeyAPI: api,
+}) => {
+  const request = await input("quantitative", "", "question");
+  const initial = await post(api, request);
+  request.context.quantitative = {
+    ...initial.design,
+    variables: [
+      ["x", "模拟X", "X"],
+      ["m1", "模拟中介1", "M"],
+      ["m2", "模拟中介2", "M"],
+      ["y", "模拟Y", "Y"],
+      ["w", "模拟调节因素", "W"],
+    ].map(([id, name, role]) => ({
+      id,
+      name,
+      role,
+      explanation: "只验证数据链路",
+      rationale: "明确模拟",
+      evidenceIds: ["paper-a"],
+      uncertainty: "不代表真实论文",
+      confirmed: false,
+    })),
+  };
+  const before = JSON.stringify(request.context.quantitative);
+  const result = await post(api, {
+    ...request,
+    designStep: "hypotheses",
+    message: "PARALLEL_PATHS",
+  });
+  expect(result.design.hypotheses).toHaveLength(5);
+  expect(
+    result.design.hypotheses
+      .slice(0, 4)
+      .map((h: { from: string; to: string }) => [h.from, h.to]),
+  ).toEqual([
+    ["x", "m1"],
+    ["m1", "y"],
+    ["x", "m2"],
+    ["m2", "y"],
+  ]);
+  expect(result.design.hypotheses[4]).toMatchObject({
+    kind: "moderation",
+    moderatesId: "h2",
+    moderatorId: "w",
+    from: "m1",
+    to: "y",
+    confirmed: false,
+  });
+  expect(JSON.stringify(request.context.quantitative)).toBe(before);
+  request.context.quantitative = result.design;
+  const method = await post(api, { ...request, designStep: "method" });
+  expect(method.design.hypotheses).toEqual(result.design.hypotheses);
+  for (const message of ["FORGED_MODERATION", "MISSING_MODERATION_KIND"]) {
+    const failed = await api.post("/api/research-journey", {
+      data: { ...request, designStep: "hypotheses", message },
+    });
+    expect(failed.status()).toBe(502);
+  }
+  expect(request.context.quantitative!.hypotheses).toEqual(
+    result.design.hypotheses,
+  );
+});

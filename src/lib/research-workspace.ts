@@ -62,6 +62,10 @@ export type ResearchHypothesis = {
   id: string;
   from: string;
   to: string;
+  /** Absent on legacy direct relations; never infer a path from variable roles. */
+  kind?: "direct" | "moderation";
+  /** A moderation targets the exact hypothesis path, not an ordinary W→Y effect. */
+  moderatesId?: string;
   moderatorId?: string;
   text: string;
   rationale: string;
@@ -221,6 +225,11 @@ export function isResearchHypothesis(v: unknown): v is ResearchHypothesis {
     id(v.from) &&
     id(v.to) &&
     v.from !== v.to &&
+    (v.kind === undefined ||
+      ["direct", "moderation"].includes(String(v.kind))) &&
+    (v.kind === "moderation"
+      ? id(v.moderatorId) && id(v.moderatesId) && v.moderatesId !== v.id
+      : v.moderatesId === undefined) &&
     (v.moderatorId === undefined || id(v.moderatorId)) &&
     text(v.text, 1600) &&
     text(v.rationale, 1600) &&
@@ -263,10 +272,19 @@ export function isQuantitativeDesign(v: unknown): v is QuantitativeDesign {
   )
     return false;
   const variableIds = new Set(v.variables.map((x) => x.id));
-  return v.hypotheses.every(
+  const hypotheses = v.hypotheses;
+  return hypotheses.every(
     (h) =>
       variableIds.has(h.from) &&
       variableIds.has(h.to) &&
+      (h.kind !== "moderation" ||
+        hypotheses.some(
+          (target) =>
+            target.id === h.moderatesId &&
+            target.kind !== "moderation" &&
+            target.from === h.from &&
+            target.to === h.to,
+        )) &&
       (h.moderatorId === undefined ||
         (variableIds.has(h.moderatorId) &&
           h.moderatorId !== h.from &&
@@ -466,7 +484,7 @@ export function renameVariable(
   name: string,
 ): QuantitativeDesign {
   const before = design.variables.find((v) => v.id === variableId)?.name;
-  if (!before || !name.trim() || before === name) return design;
+  if (before === undefined || !name.trim() || before === name) return design;
   return {
     ...design,
     confirmed: false,
@@ -475,7 +493,11 @@ export function renameVariable(
     ),
     hypotheses: design.hypotheses.map((h) =>
       [h.from, h.to, h.moderatorId].includes(variableId)
-        ? { ...h, text: h.text.split(before).join(name), confirmed: false }
+        ? {
+            ...h,
+            text: before ? h.text.split(before).join(name) : h.text,
+            confirmed: false,
+          }
         : h,
     ),
   };
@@ -488,8 +510,10 @@ export function removeVariable(
     ...design,
     confirmed: false,
     variables: design.variables.filter((v) => v.id !== variableId),
-    hypotheses: design.hypotheses.filter(
-      (h) => ![h.from, h.to, h.moderatorId].includes(variableId),
+    hypotheses: pruneLinkedModerations(
+      design.hypotheses.filter(
+        (h) => ![h.from, h.to, h.moderatorId].includes(variableId),
+      ),
     ),
   };
 }
@@ -500,8 +524,91 @@ export function removeHypothesis(
   return {
     ...design,
     confirmed: false,
-    hypotheses: design.hypotheses.filter((h) => h.id !== hypothesisId),
+    hypotheses: pruneLinkedModerations(
+      design.hypotheses.filter((h) => h.id !== hypothesisId),
+    ),
   };
+}
+export const isModerationHypothesis = (h: ResearchHypothesis) =>
+  h.kind === "moderation";
+/** Legacy moderatorId belongs to that same explicitly recorded direct path. */
+export function hypothesisTarget(
+  design: QuantitativeDesign,
+  h: ResearchHypothesis,
+) {
+  if (!isModerationHypothesis(h)) return h.moderatorId ? h : null;
+  return (
+    design.hypotheses.find(
+      (target) =>
+        target.id === h.moderatesId &&
+        !isModerationHypothesis(target) &&
+        target.from === h.from &&
+        target.to === h.to,
+    ) ?? null
+  );
+}
+export function pruneLinkedModerations(hypotheses: ResearchHypothesis[]) {
+  return hypotheses.filter(
+    (h) =>
+      !isModerationHypothesis(h) ||
+      hypotheses.some(
+        (target) =>
+          target.id === h.moderatesId &&
+          !isModerationHypothesis(target) &&
+          target.from === h.from &&
+          target.to === h.to,
+      ),
+  );
+}
+/** An explicit endpoint edit also updates dependent moderation targets; no new relation is created. */
+export function updateHypothesisEndpoints(
+  design: QuantitativeDesign,
+  hypothesisId: string,
+  from: string,
+  to: string,
+): QuantitativeDesign {
+  const original = design.hypotheses.find((h) => h.id === hypothesisId);
+  if (
+    !original ||
+    isModerationHypothesis(original) ||
+    from === to ||
+    !design.variables.some((v) => v.id === from) ||
+    !design.variables.some((v) => v.id === to)
+  )
+    return design;
+  const name = (id: string) =>
+    design.variables.find((v) => v.id === id)?.name ?? "";
+  const replace = (text: string) => {
+    if (from !== original.from && name(original.from))
+      text = text.split(name(original.from)).join(name(from));
+    if (to !== original.to && name(original.to))
+      text = text.split(name(original.to)).join(name(to));
+    return text;
+  };
+  return {
+    ...design,
+    confirmed: false,
+    hypotheses: design.hypotheses.map((h) =>
+      h.id === hypothesisId ||
+      (isModerationHypothesis(h) && h.moderatesId === hypothesisId)
+        ? { ...h, from, to, text: replace(h.text), confirmed: false }
+        : h,
+    ),
+  };
+}
+
+export function hypothesisPathText(
+  design: QuantitativeDesign,
+  h: ResearchHypothesis,
+) {
+  const name = (id: string) =>
+    design.variables.find((v) => v.id === id)?.name ?? "变量待核对";
+  const target = hypothesisTarget(design, h);
+  if (isModerationHypothesis(h))
+    return target
+      ? `${name(h.moderatorId!)} 调节 H${design.hypotheses.indexOf(target) + 1}（${name(target.from)} → ${name(target.to)}）`
+      : "调节目标已移除，待核对";
+  return `${name(h.from)} → ${name(h.to)}${h.moderatorId ? `；${name(h.moderatorId)} 调节该关系（旧版合并记录，需核对）` : ""}`;
 }
 export function updateQualitativeTheme(
   design: QualitativeDesign,
@@ -538,7 +645,7 @@ export function researchDesignPlainText(
   if ("variables" in design)
     return (
       general +
-      `\n研究路径：定量研究\n\n核心变量\n${design.variables.map((v) => `${v.name}（${v.role === "control" ? "控制变量" : v.role}，${v.confirmed ? "用户已确认" : "候选"}）：${v.explanation}\n选择理由：${v.rationale}\n待核查：${v.uncertainty}`).join("\n\n")}\n\n拟检验假设\n${design.hypotheses.map((h, i) => `H${i + 1}（${h.confirmed ? "用户已确认，仍待检验" : "候选，待检验"}）：${h.text}\n逻辑依据：${h.rationale}`).join("\n\n")}\n\n初步方法：${design.method}\n研究对象：${design.target}\n样本获取：${design.sampling}\n操作化思路：${design.operationalization}\n分析建议：${design.analysis}\n方法限制：${design.limitations}\n\n所有关系为拟检验关系，用户确认不等于文献已验证或因果成立。`
+      `\n研究路径：定量研究\n\n核心变量\n${design.variables.map((v) => `${v.name}（${v.role === "control" ? "控制变量" : v.role}，${v.confirmed ? "用户已确认" : "候选"}）：${v.explanation}\n选择理由：${v.rationale}\n待核查：${v.uncertainty}`).join("\n\n")}\n\n拟检验假设\n${design.hypotheses.map((h, i) => `H${i + 1}（${h.confirmed ? "用户已确认，仍待检验" : "候选，待检验"}）：${h.text}\n模型关系：${hypothesisPathText(design, h)}\n逻辑依据：${h.rationale}`).join("\n\n")}\n\n初步方法：${design.method}\n研究对象：${design.target}\n样本获取：${design.sampling}\n操作化思路：${design.operationalization}\n分析建议：${design.analysis}\n方法限制：${design.limitations}\n\n所有关系为拟检验关系，用户确认不等于文献已验证或因果成立。`
     );
   return (
     general +

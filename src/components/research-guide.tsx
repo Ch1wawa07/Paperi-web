@@ -10,12 +10,18 @@ import { Icon } from './ui';
 type Props = {
   projectId:string; navigation: ResearchNavigation; papers: SavedPaper[]; seed: ResearchSeed | null; revision: number; disabled: boolean;
   onChange: (next: ResearchNavigation) => Promise<boolean>; onAsk: (message: string) => void;
-  conceptsOnly?: boolean; onPrepare?: () => void;
+  conceptsOnly?: boolean; libraryURL?: string; searchKeywords?: string;
 };
-export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disabled,onChange,onAsk,conceptsOnly=false,onPrepare}:Props) {
+export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disabled,onChange,onAsk,conceptsOnly=false,libraryURL="https://www.lib.szu.edu.cn/",searchKeywords=""}:Props) {
   const [editing,setEditing] = useState<{concept?:ResearchConcept;revision:number}|null>(null);
   const [error,setError] = useState('');
   const [showAll,setShowAll]=useState(false);
+  const [copyMessage,setCopyMessage]=useState('');
+  const selectedConcepts=n.concepts.filter(c=>c.status==='selected');
+  async function copyKeywords(){
+    try{await navigator.clipboard.writeText(selectedConcepts.map(c=>c.term).join(' '));setCopyMessage('已复制当前已选概念，可直接粘贴到图书馆检索。');}
+    catch{setCopyMessage('浏览器未允许复制，可选中上方概念名称手动复制。');}
+  }
   const groups=Object.groupBy(showAll?n.concepts:n.concepts.slice(0,12),c=>c.group||'学术视角');
   const guide = n.guides?.[n.stage] ?? (n.guide?.stage===n.stage?n.guide:null);
   const selected=papers.filter(p=>n.evidenceIds.includes(p.id));
@@ -31,7 +37,17 @@ export function ResearchGuidePanel({projectId,navigation:n,papers,revision,disab
     <div className="lab-panel-heading"><h2>{conceptsOnly?'把兴趣锚定为学术概念':researchStages.find(s=>s.id===n.stage)!.label}</h2><span className="seed-status">AI 建议 · 待核实</span></div>
     <p className="guide-hint">{conceptsOnly?'选择、排除或修改与你的观察相关的概念，再带着检索词去学校图书馆。':researchStages.find(s=>s.id===n.stage)!.hint}</p>
     {error&&<p className="guide-error" role="alert">{error}</p>}
-    <div className="selected-concepts-bar"><strong>已选概念 · {n.concepts.filter(c=>c.status==='selected').length}</strong><div>{n.concepts.filter(c=>c.status==='selected').map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目的探索档案，研究问题可以稍后确定。</p><Link className="button primary" onClick={conceptsOnly?onPrepare:undefined} href={conceptsOnly?'#library-preparation':{pathname:'/concepts',query:{project:projectId},hash:'library-preparation'}}>根据已选概念准备检索 →</Link></div>
+    <div id={conceptsOnly?'library-preparation':undefined} className="selected-concepts-bar"><strong>已选概念 · {selectedConcepts.length}</strong><div>{selectedConcepts.map(c=><span className="selected-concept" key={c.id}><button disabled={disabled} onClick={()=>setEditing({concept:c,revision})}>✓ {c.term}</button><button disabled={disabled} aria-label={`移除已选概念 ${c.term}`} onClick={()=>void update({...n,concepts:n.concepts.map(x=>x.id===c.id?{...x,status:'suggested'}:x)})}>×</button></span>)}</div><p>已自动保存在本项目。可直接使用已选概念检索，不需要先生成检索词。</p>
+      {conceptsOnly?<>
+        <div className="concept-library-actions library-entry">
+          <a className="button primary" href={libraryURL} target="_blank" rel="noopener noreferrer">{libraryURL==='https://www.lib.szu.edu.cn/'?'前往深圳大学图书馆 ↗':'前往学校图书馆 ↗'}</a>
+          <button className="button secondary" disabled={!selectedConcepts.length} onClick={()=>void copyKeywords()}>复制检索词</button>
+          <Link className="text-button" href="/literature?mode=import">进入文献工作台 →</Link>
+        </div>
+        {searchKeywords.trim()&&<details className="concept-search-advanced"><summary>高级检索词（可选）</summary><p>此前保存或建议的词组供参考，不会覆盖当前概念；可直接选中文字复制。</p><pre aria-label="已有检索词">{searchKeywords}</pre></details>}
+        {copyMessage&&<p className="guide-footnote" role="status">{copyMessage}</p>}
+      </>:<Link className="button primary" href={{pathname:'/concepts',query:{project:projectId},hash:'library-preparation'}}>进入概念锚定与图书馆导航 →</Link>}
+    </div>
     {<>
       <div className="guide-section-heading"><h3>候选概念</h3><button className="text-button" disabled={disabled||n.concepts.length>=24} onClick={()=>{setError('');setEditing({revision});}}><Icon name="plus" size={14}/>添加概念</button></div>
       {!n.concepts.length&&<p className="muted">先说说你的观察。这里会逐渐出现候选解释，不是已经验证的定义。</p>}

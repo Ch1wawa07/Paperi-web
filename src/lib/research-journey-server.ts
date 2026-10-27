@@ -6,6 +6,7 @@ import {
   isConfirmedDirection,
   isQualitativeDesign,
   isQuantitativeDesign,
+  pruneLinkedModerations,
   type QuantitativeDesign,
   type QualitativeDesign,
 } from "./research-workspace";
@@ -167,7 +168,7 @@ function instructions(task: JourneyTask, step: string) {
     ? {
         question: `只输出 {"question":"可测量的具体问题","value":"为什么值得研究（提议）","evidenceGap":"哪些依据仍待核对"}，不同时生成变量或假设。`,
         variables: `只输出 {"variables":[{"id":"稳定短id","name":"变量名","role":"X/Y/M/W/control之一","explanation":"通俗解释","rationale":"为什么候选，不编造量表出处","evidenceIds":["当前文献id，可空"],"uncertainty":"待核查","confirmed":false}]}，2–6项，每项解释/理由/待核查各最多100字，优先已选概念；没有意义不强塞M/W。不要生成假设。`,
-        hypotheses: `只输出 {"hypotheses":[{"id":"稳定短id","from":"当前变量id","to":"另一当前变量id","text":"完整、待检验的关系假设","rationale":"普通中文解释关系逻辑、证据与方法限制；不是已验证","evidenceIds":["当前文献id，可空"],"confirmed":false}]}。通常1–3条，允许0条。不引用不存在变量，moderatorId仅确有调节含义时填写真实变量id，不可null。不为了H3造关系。`,
+        hypotheses: `只输出 {"hypotheses":[{"id":"稳定短id","kind":"direct","from":"当前变量id","to":"另一当前变量id","text":"完整、待检验的关系假设，最多90字","rationale":"关系逻辑、证据和方法限制，最多90字；不是已验证","evidenceIds":["当前文献id，可空"],"confirmed":false}]}。简单问题通常1–3条，复杂模型可到8条，允许0条；不为数量、变量角色或画图凑关系。若提议中介机制，须分别提出有理由的X→M与M→Y路径；双中介须逐项交代各段，不能只有总述而省略路径。每段是实际待用户确认的假设，不是假装文献已证明。不能支持的路径不要生成，明确资料不足。调节假设另用kind:"moderation"、moderatorId:"真实调节变量id"、moderatesId:"同次列表中实际direct假设id"，from/to须与那条目标路径一致；其含义是W调节该路径，不是W→Y直接效应。不引用不存在的变量或目标，不填null，不强塞中介/调节。`,
         method: `只输出 {"method":"问卷或小实验建议和难度","target":"研究谁","sampling":"本科生可获取样本与限制，不编造统计效力保证","operationalization":"各变量可如何测量，具体量表需另核对","analysis":"相关/回归等条件和局限","limitations":"不可直接声称因果、伦理等"}。各字段最多180字，不生成正式问卷。`,
       }[step]
     : {
@@ -309,11 +310,13 @@ function designOutput(
       const ids = new Set(
         candidate.variables.map((v) => (isRecord(v) ? v.id : null)),
       );
-      candidate.hypotheses = candidate.hypotheses.filter(
-        (h) =>
-          ids.has(h.from) &&
-          ids.has(h.to) &&
-          (!h.moderatorId || ids.has(h.moderatorId)),
+      candidate.hypotheses = pruneLinkedModerations(
+        candidate.hypotheses.filter(
+          (h) =>
+            ids.has(h.from) &&
+            ids.has(h.to) &&
+            (!h.moderatorId || ids.has(h.moderatorId)),
+        ),
       );
     }
     if (
@@ -323,11 +326,19 @@ function designOutput(
           candidate.variables.length > 6 ||
           !candidate.variables.some((v) => v.role === "X") ||
           !candidate.variables.some((v) => v.role === "Y"))) ||
-      (step === "hypotheses" && candidate.hypotheses.length > 3)
+      (step === "hypotheses" && candidate.hypotheses.length > 8)
     )
       throw new AIError(
         502,
-        "变量或假设关系格式无效，未保存。请检查当前变量后重试。",
+        "变量、假设端点或调节目标关系无效，未保存。请核对当前变量与路径后重试。",
+      );
+    if (
+      step === "hypotheses" &&
+      candidate.hypotheses.some((h) => h.moderatorId && h.kind !== "moderation")
+    )
+      throw new AIError(
+        502,
+        "新的调节假设缺少明确的目标关系，请检查调节路径后重试。旧草稿未修改。",
       );
     candidate.variables = candidate.variables.map((v) => ({
       ...v,
@@ -413,9 +424,11 @@ export async function researchJourneyRequest(
       ? 3400
       : input.task === "directions"
         ? 3600
-        : ["quantitative", "qualitative"].includes(input.task)
-          ? 2800
-          : 2200,
+        : input.task === "quantitative" && step === "hypotheses"
+          ? 3600
+          : ["quantitative", "qualitative"].includes(input.task)
+            ? 2800
+            : 2200,
   );
   const c = input.context;
   if (input.task === "context")

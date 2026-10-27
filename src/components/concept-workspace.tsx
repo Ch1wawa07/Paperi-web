@@ -10,11 +10,9 @@ import {
   type Exploration,
 } from "@/lib/exploration";
 import type { Project } from "@/lib/projects";
-import { profileFingerprint } from "@/lib/workbench";
 import { emptyNavigation, mergeConcepts } from "@/lib/research-navigation";
 import { useProjects } from "./project-provider";
 import { ResearchGuidePanel } from "./research-guide";
-import { ResearchPreparation } from "./research-preparation";
 import { WorkspaceToolbar } from "./workspace-common";
 import { LoadingState } from "./ui";
 
@@ -68,13 +66,27 @@ function ConceptProject({ project }: { project: Project }) {
     message: string;
   } | null>(null);
   const [error, setError] = useState("");
-  const [preparedFingerprint, setPreparedFingerprint] = useState<string | null>(
-    null,
-  );
-  const fingerprint = profileFingerprint(project);
-  const keywordGuide = nav.guides?.literature?.keywords ?? nav.guide?.keywords;
-  const savedKeywords=project.workflow?.keywords;
-  const availableEnglish = savedKeywords?.fingerprint===fingerprint ? savedKeywords.en : !savedKeywords?.fingerprint ? keywordGuide?.en.join("\n")||"" : "";
+  const savedKeywords = project.workflow?.keywords;
+  const guideKeywords = nav.guides?.literature?.keywords ?? nav.guide?.keywords;
+  const searchKeywords =
+    savedKeywords &&
+    [
+      savedKeywords.zh,
+      savedKeywords.en,
+      savedKeywords.synonyms,
+      savedKeywords.expressions,
+    ].some((value) => value.trim())
+      ? [
+          ...new Set(
+            [
+              savedKeywords.zh,
+              savedKeywords.en,
+              savedKeywords.synonyms,
+              savedKeywords.expressions,
+            ].filter((value) => value.trim()),
+          ),
+        ].join("\n")
+      : [...(guideKeywords?.zh ?? []), ...(guideKeywords?.en ?? [])].join("\n");
   const [pending, setPending] = useState(false);
   const [unsaved, setUnsaved] = useState<AIReply | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -289,9 +301,6 @@ function ConceptProject({ project }: { project: Project }) {
               取消
             </button>
           )}
-          <Link className="text-button" href="/literature?mode=import">
-            已下载论文？直接导入 →
-          </Link>
         </div>
         <p className="guide-footnote" role="status">
           {status?.message ?? "正在检查 AI 配置…"}{" "}
@@ -320,10 +329,8 @@ function ConceptProject({ project }: { project: Project }) {
         revision={exploration.revision}
         disabled={busy || pending}
         conceptsOnly
-        onPrepare={() => {
-          if (!busy && !pending && !availableEnglish)
-            setPreparedFingerprint(fingerprint);
-        }}
+        libraryURL={project.workflow?.libraryURL}
+        searchKeywords={searchKeywords}
         onChange={(next) =>
           saveExploration(project.id, exploration.revision, {
             ...exploration,
@@ -332,13 +339,6 @@ function ConceptProject({ project }: { project: Project }) {
         }
         onAsk={(message) => void generate(message)}
       />
-      <div id="library-preparation">
-        <ResearchPreparation
-          key={project.id + ":keywords"}
-          project={project}
-          automatic={preparedFingerprint === fingerprint}
-        />
-      </div>
     </>
   );
 }

@@ -64,8 +64,11 @@ test("核心路径（AI明确模拟）：原话、十概念、双语检索词、
     .getByRole("button", { name: "选择概念", exact: true })
     .nth(0)
     .click();
-  await page.getByRole("link", { name: "根据已选概念准备检索" }).click();
-  await expect(page.getByLabel("英文核心关键词")).toHaveValue(
+  await expect(
+    page.getByRole("link", { name: "前往深圳大学图书馆" }),
+  ).toHaveCount(1);
+  await page.getByText("高级检索词（可选）", { exact: true }).click();
+  await expect(page.getByLabel("已有检索词")).toContainText(
     "fixture perspective",
   );
   const library = page
@@ -73,10 +76,7 @@ test("核心路径（AI明确模拟）：原话、十概念、双语检索词、
     .first();
   await expect(library).toHaveAttribute("href", "https://www.lib.szu.edu.cn/");
   await expect(library).toHaveAttribute("target", "_blank");
-  await page
-    .locator(".library-entry")
-    .getByRole("link", { name: "返回后导入文献" })
-    .click();
+  await page.getByRole("link", { name: "进入文献工作台" }).click();
   await page
     .getByLabel("选择题录或 PDF 文件")
     .setInputFiles([

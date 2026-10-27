@@ -28,6 +28,12 @@ createServer(async (request, response) => {
     if (input.task === 'quantitative') {
       if (step==='question') respond({question:'模拟大学生研究问题？',value:'测试价值，非学术判断',evidenceGap:'待真实资料核查'});
       else if (step==='variables') respond({variables:[{id:'x',name:'测试广告理解',role:'X'},{id:'y',name:'测试品牌态度',role:'Y'},{id:'m',name:'测试心理反应',role:'M'}].map(v=>({...v,explanation:'测试变量解释',rationale:'仅测试候选',evidenceIds:[e.id],uncertainty:'待核查',confirmed:false}))});
+      else if (step==='hypotheses' && ['PARALLEL_PATHS','FORGED_MODERATION','MISSING_MODERATION_KIND'].includes(input.message)) {
+        const paths=[['h1','x','m1'],['h2','m1','y'],['h3','x','m2'],['h4','m2','y']].map(([id,from,to])=>({id,kind:'direct',from,to,text:'显式模拟待检验路径',rationale:'只有测试数据，不是研究成果',evidenceIds:[e.id],confirmed:false}));
+        const moderation={id:'h5',kind:'moderation',from:'m1',to:'y',moderatorId:'w',moderatesId:input.message==='FORGED_MODERATION'?'unknown':'h2',text:'模拟W调节H2，待检验',rationale:'显式调节目标，不是W直接影响Y',evidenceIds:[e.id],confirmed:false};
+        if(input.message==='MISSING_MODERATION_KIND'){delete moderation.kind;delete moderation.moderatesId;}
+        respond({hypotheses:[...paths,moderation]});
+      }
       else if (step==='hypotheses') {const vars=c.quantitative.variables;respond({hypotheses:[{id:'h1',from:vars[0].id,to:vars[1].id,text:`${vars[0].name}与${vars[1].name}可能相关，待检验。`,rationale:'仅验证结构；横截面不能确证因果',evidenceIds:[e.id],confirmed:false},{id:'h2',from:vars[0].id,to:vars[2]?.id??vars[1].id,text:'测试第二个拟检验关系',rationale:'仅测试',evidenceIds:[e.id],confirmed:false}]});}
       else respond({method:'模拟问卷建议',target:'大学生测试群体',sampling:'可接触样本，非代表性保证',operationalization:'模拟测量思路，需核实量表',analysis:'模拟相关分析条件',limitations:'不能从横截面断言因果'});
       return;

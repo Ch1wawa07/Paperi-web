@@ -476,7 +476,7 @@ test("研究闭环（AI 明确模拟、PDF 使用真实解析器）：三篇材�
     .getByRole("button", { name: /假设与模型/ })
     .click();
   await page
-    .getByRole("button", { name: "AI 帮我梳理这一环节", exact: true })
+    .getByRole("button", { name: "梳理变量间的假设关系", exact: true })
     .click();
   await expect(page.locator(".rd-hypothesis")).toHaveCount(2);
   await expect(page.locator(".rd-model [data-hypothesis-id='h2']")).toHaveCount(
