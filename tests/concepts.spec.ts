@@ -275,6 +275,19 @@ test("五个概念可直接去图书馆、复制检索词；无 AI 仍继续，�
   );
   const advanced = page.locator(".concept-search-advanced");
   await expect(advanced).not.toHaveAttribute("open");
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(link).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await selected.screenshot({
+      path: `docs/screenshots/acceptance-fixes/concepts-${width}.png`,
+      animations: "disabled",
+    });
+  }
   await selected
     .getByRole("button", { name: "复制检索词", exact: true })
     .click();

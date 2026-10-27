@@ -622,33 +622,3 @@
     grid-column: auto;
   }
 }
-
-.concept-library-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-.concept-library-actions > .text-button {
-  font-size: 14px;
-}
-.concept-search-advanced {
-  margin-top: 14px;
-  padding: 14px 18px;
-  border: 1px solid #fff9;
-  border-radius: 18px;
-  background: linear-gradient(120deg, #e4eceba6, #eae3f1a3);
-  font-size: 14px;
-}
-.concept-search-advanced summary {
-  cursor: pointer;
-}
-.concept-search-advanced pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.7;
-  margin-top: 12px;
-}
