@@ -12,7 +12,10 @@ export type Paper = {
 };
 export type Category = { id: string; name: string };
 export type Attachment = { id:string; name:string; pages:number; characters:number; updatedAt:string };
-export type SavedPaper = { attachment?:Attachment; id: string; paper: Paper; categoryIds: string[]; note: string; savedAt: string; updatedAt: string };
+export type BibliographyOrigin = "pdf-body" | "pdf-info" | "filename" | "user";
+export type BibliographyAudit = { fields: Partial<Record<"title" | "authors" | "year" | "venue", BibliographyOrigin>>; confirmedAt?: string };
+export function isBibliographyAudit(v: unknown): v is BibliographyAudit { return isRecord(v) && isRecord(v.fields) && Object.entries(v.fields).every(([k,o])=>["title","authors","year","venue"].includes(k)&&["pdf-body","pdf-info","filename","user"].includes(String(o))) && (v.confirmedAt===undefined||date(v.confirmedAt)); }
+export type SavedPaper = { bibliography?: BibliographyAudit; attachment?:Attachment; id: string; paper: Paper; categoryIds: string[]; note: string; savedAt: string; updatedAt: string };
 export type Library = { revision: number; categories: Category[]; items: SavedPaper[] };
 export type SearchOptions = { query: string; provider: 'auto' | 'openalex' | 'crossref'; sort: 'relevance' | 'newest' | 'citations'; yearFrom: string; yearTo: string; journalsOnly: boolean; doiOnly: boolean; coreOnly: boolean; page: number };
 export type SearchResults = { query: string; provider: 'openalex' | 'crossref' | 'deepseek' | 'academic'; items: Paper[]; total: number; page: number; pageSize: number; notices: string[]; cached: boolean; hasMore: boolean };
@@ -77,7 +80,7 @@ export function isLibrary(v: unknown): v is Library {
   }
   const itemIds = new Set<string>(); const papers: Paper[] = [];
   for (const i of v.items) {
-    if (!isRecord(i) || !text(i.id, 100) || itemIds.has(String(i.id)) || !isPaper(i.paper) || papers.some(p => samePaper(p, i.paper as Paper)) ||
+    if (!isRecord(i) || (i.bibliography !== undefined && !isBibliographyAudit(i.bibliography)) || !text(i.id, 100) || itemIds.has(String(i.id)) || !isPaper(i.paper) || papers.some(p => samePaper(p, i.paper as Paper)) ||
       !Array.isArray(i.categoryIds) || i.categoryIds.length > 30 || new Set(i.categoryIds).size !== i.categoryIds.length || !i.categoryIds.every(c => typeof c === 'string' && ids.has(c)) ||
       typeof i.note !== 'string' || i.note.length > 4000 || !date(i.savedAt) || !date(i.updatedAt) || (i.attachment!==undefined&&(!isRecord(i.attachment)||!text(i.attachment.id,100)||!text(i.attachment.name,250)||!Number.isInteger(i.attachment.pages)||Number(i.attachment.pages)<1||!Number.isInteger(i.attachment.characters)||Number(i.attachment.characters)<0||!date(i.attachment.updatedAt)))) return false;
     itemIds.add(String(i.id)); papers.push(i.paper);

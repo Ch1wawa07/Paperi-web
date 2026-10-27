@@ -4,8 +4,9 @@ import {
   isPaper,
   type Paper,
   type Library,
+  type BibliographyAudit,
 } from "./literature";
-export type ImportRow = { paper: Paper; warnings: string[]; raw: string };
+export type ImportRow = { bibliography?: BibliographyAudit; paper: Paper; warnings: string[]; raw: string };
 export type ImportPreview = {
   rows: ImportRow[];
   failures: { record: number; reason: string; raw: string }[];

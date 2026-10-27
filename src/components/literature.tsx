@@ -29,6 +29,11 @@ import {
 import type { Project } from "@/lib/projects";
 import { StudyWorkspace } from "./study-workspace";
 import { ProjectHistory } from "./project-history";
+import {
+  BibliographyReview,
+  PDFDiagnostics,
+  originLabels,
+} from "./bibliography-review";
 import { pdfMetadataCandidates } from "@/lib/pdf-metadata";
 
 export function Literature({
@@ -88,6 +93,7 @@ function LibraryWorkspace({
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [editing, setEditing] = useState<SavedPaper | null>(null),
+    [reviewing, setReviewing] = useState(false),
     [query, setQuery] = useState(""),
     [category, setCategory] = useState(""),
     [tag, setTag] = useState(""),
@@ -150,19 +156,26 @@ function LibraryWorkspace({
               blob: file,
               name: file.name,
               pages: result.pages,
+              metadata: {
+                title: result.title,
+                author: result.author,
+                lines: result.lines,
+              },
               updatedAt: new Date().toISOString(),
             };
             const metadata = pdfMetadataCandidates(result.pages, {
               title: result.title,
               author: result.author,
+              lines: result.lines,
+              filename: file.name,
             });
             combined.rows.push({
               paper: importedPaper({
                 ...metadata.fields,
-                title:
-                  metadata.fields.title || file.name.replace(/\.pdf$/i, ""),
+                title: metadata.fields.title || "题名待核对",
                 authors: metadata.fields.authors || [],
               }),
+              bibliography: metadata.audit,
               warnings: [
                 `${file.name}：属性及正文识别仅为候选，请核对原文片段和字段。已提取 ${result.pages.length} 页、${result.pages.join("").length} 字。`,
               ],
@@ -275,6 +288,7 @@ function LibraryWorkspace({
             savedAt: now,
             updatedAt: now,
             ...(attachment ? { attachment } : {}),
+            ...(row.bibliography ? { bibliography: row.bibliography } : {}),
           });
       }
       if (next.items.length > 300)
@@ -349,7 +363,17 @@ function LibraryWorkspace({
         </p>
       )}
       {message && <p role="status">{message}</p>}
-      {mode === "library" && (
+      {mode === "library" && reviewing && (
+        <BibliographyReview
+          key={p.id}
+          project={p}
+          onClose={() => {
+            setReviewing(false);
+            setMessage("校对已结束，原PDF和旧分析保留。");
+          }}
+        />
+      )}
+      {mode === "library" && !reviewing && (
         <>
           <div className="workspace-actions">
             <input
@@ -371,6 +395,9 @@ function LibraryWorkspace({
               ))}
             </select>
             <span>{lib.items.length} 篇</span>
+            <button disabled={busy} onClick={() => setReviewing(true)}>
+              批量校对书目
+            </button>
           </div>
           <details>
             <summary>管理分类标签</summary>
@@ -461,6 +488,14 @@ function LibraryWorkspace({
                 <article className="paper-card frosted-surface" key={i.id}>
                   <span>{identityLabel(i.paper)}</span>
                   <h2>{i.paper.title}</h2>
+                  <small>
+                    {i.bibliography?.confirmedAt
+                      ? "已人工校对（非外部认证）"
+                      : "书目待核对"}
+                    {i.bibliography?.fields.title
+                      ? ` · 题名来自${originLabels[i.bibliography.fields.title]}`
+                      : ""}
+                  </small>
                   <p>
                     {i.paper.authors.join("；") || "作者未获取"} ·{" "}
                     {i.paper.year ?? "年份未获取"} ·{" "}
@@ -490,7 +525,11 @@ function LibraryWorkspace({
                     {i.attachment
                       ? `文件已保存 · 文字已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字`
                       : "已保存题录"}{" "}
-                    · 书目字段待原文核对 ·{" "}
+                    ·{" "}
+                    {i.bibliography?.confirmedAt
+                      ? "书目已人工校对，缺失字段待核对"
+                      : "书目字段待原文核对"}{" "}
+                    ·{" "}
                     {p.workflow?.analyses.some(
                       (a) => a.kind === "reading" && a.sourceIds.includes(i.id),
                     )
@@ -517,6 +556,7 @@ function LibraryWorkspace({
               ))}
             </div>
           )}
+          <PDFDiagnostics project={p} />
           <Link className="button secondary" href="/research">
             带着这些文献去梳理研究脉络
           </Link>
@@ -667,7 +707,33 @@ function LibraryWorkspace({
                         setPreview({
                           ...preview,
                           rows: preview.rows.map((r, i) =>
-                            i === index ? { ...r, paper } : r,
+                            i === index
+                              ? {
+                                  ...r,
+                                  paper,
+                                  bibliography: {
+                                    fields: {
+                                      ...r.bibliography?.fields,
+                                      ...Object.fromEntries(
+                                        (
+                                          [
+                                            "title",
+                                            "authors",
+                                            "year",
+                                            "venue",
+                                          ] as const
+                                        )
+                                          .filter(
+                                            (k) =>
+                                              JSON.stringify(paper[k]) !==
+                                              JSON.stringify(r.paper[k]),
+                                          )
+                                          .map((k) => [k, "user" as const]),
+                                      ),
+                                    },
+                                  },
+                                }
+                              : r,
                           ),
                         })
                       }
@@ -722,16 +788,14 @@ function LibraryWorkspace({
                           ...lib,
                           items: [
                             ...lib.items,
-                            ...preview.rows
-                              .slice(0, index)
-                              .map((r, j) => ({
-                                id: `preview-${j}`,
-                                paper: r.paper,
-                                categoryIds: [],
-                                note: "",
-                                savedAt: "",
-                                updatedAt: "",
-                              })),
+                            ...preview.rows.slice(0, index).map((r, j) => ({
+                              id: `preview-${j}`,
+                              paper: r.paper,
+                              categoryIds: [],
+                              note: "",
+                              savedAt: "",
+                              updatedAt: "",
+                            })),
                           ],
                         })
                           ? "skip"
@@ -948,6 +1012,19 @@ function PaperEditor({
       const next = {
         ...item,
         paper: edited,
+        bibliography: {
+          fields: {
+            ...item.bibliography?.fields,
+            ...Object.fromEntries(
+              (["title", "authors", "year", "venue"] as const)
+                .filter(
+                  (k) =>
+                    JSON.stringify(edited[k]) !== JSON.stringify(item.paper[k]),
+                )
+                .map((k) => [k, "user" as const]),
+            ),
+          },
+        },
         ...(detach ? { attachment: undefined } : {}),
         note,
         categoryIds: categories,
@@ -1104,6 +1181,11 @@ function PaperEditor({
                   blob: file,
                   name: file.name,
                   pages: result.pages,
+                  metadata: {
+                    title: result.title,
+                    author: result.author,
+                    lines: result.lines,
+                  },
                   updatedAt: new Date().toISOString(),
                 });
               } catch (e) {

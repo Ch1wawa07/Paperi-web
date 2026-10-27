@@ -827,3 +827,6 @@ body{background:radial-gradient(ellipse at 8% 12%,#dacdf5 0%,transparent 44%),ra
   line-height: 1.7;
   margin-top: 12px;
 }
+
+/* Local bibliography repair; no changes to the established Hero or research chat. */
+.bibliography-review small{font-size:12px;color:#655c76;font-weight:400}.pdf-diagnostics{margin:18px 0;padding:14px;border:1px solid #ffffffaa;border-radius:16px}.pdf-diagnostics label{display:block;margin:8px 0;font-size:13px}.pdf-diagnostics p{font-size:13px;line-height:1.7}

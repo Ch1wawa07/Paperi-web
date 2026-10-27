@@ -1,5 +1,8 @@
 import { pdfOperation, type PDFProgress } from "./pdf-operation";
+import { pdfTitleLines } from "./pdf-text";
+import type { PDFMetadata, PDFLine } from "./pdf-metadata";
 export type LocalPDF = {
+  metadata?: PDFMetadata;
   id: string;
   projectId: string;
   blob: Blob;
@@ -121,6 +124,7 @@ export async function extractPDF(
     if (doc.numPages > 150)
       throw new Error("当前支持最多 150 页的 PDF，请拆分。");
     const pages: string[] = [];
+    const lines: PDFLine[] = [];
     let count = 0;
     for (let i = 1; i <= doc.numPages; i++) {
       report(`正在提取文字：第 ${i} / ${doc.numPages} 页`, i, doc.numPages);
@@ -131,6 +135,7 @@ export async function extractPDF(
           "str" in x ? x.str + ("hasEOL" in x && x.hasEOL ? "\n" : " ") : "",
         )
         .join("");
+      if(i<=3) lines.push(...pdfTitleLines(content.items,i));
       count += text.length;
       if (count > 600000) throw new Error("全文文字超过 60 万字符，请拆分。");
       pages.push(text);
@@ -145,6 +150,7 @@ export async function extractPDF(
     const info = metadata.info as Record<string, unknown>;
     return {
       pages,
+      lines,
       title: typeof info.Title === "string" ? info.Title : "",
       author: typeof info.Author === "string" ? info.Author : "",
     };
