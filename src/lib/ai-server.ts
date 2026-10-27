@@ -1,11 +1,12 @@
 import 'server-only';
+import { completeSectionObjects } from './structured-sections';
 import { isRecord, isResearchSeed, readAIReply, type AIReply } from './exploration';
 import type { ResearchSeed } from './exploration';
 import { isPaper, type KeywordSuggestions, type Paper } from './literature';
 import { isStage, isNavigation, type ResearchConcept, type ResearchStage } from './research-navigation';
 
 export class AIError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public code?: string) { super(message); }
 }
 function configuration() {
   const key = process.env.AI_API_KEY?.trim() || process.env.DEEPSEEK_API_KEY?.trim();
@@ -99,7 +100,7 @@ design 设计衔接：只梳理用户已确认的问题、概念、文献与尚�
 directions 是与 reply、guide 同级的顶层字段，不能放进 guide。按当前阶段填写相关数组，其余填[]。常规观察第一轮concepts目标8–12项，分组为消费者心理/传播机制/品牌关系/情境文化等，有根据可少给并在reply解释，不凑造术语。每项额外含group分组、relevance说明与观察的关联，分别最多20字/40字。concepts最多12项，keywords每种语言最多4项且每项最多100字符；threads最多3项。只有questions阶段允许directions，每项格式为 {"title":"最多120字","description":"最多400字","concepts":["已选概念"],"rationale":"文献依据和可行性，最多400字","question":"最多400字","uncertainties":["待验证判断"],"evidenceIds":["提供的文献id"]}。不要为了填满数组编造内容。`;
 
 
-export async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800): Promise<unknown> {
+export async function requestStructured(system: string, messages: Input['messages'], signal: AbortSignal, maxTokens = 1800, options?: {partialSections?:boolean;diagnostic?:(event:{code:string;maxTokens:number;status?:number;finishReason?:string;contentChars?:number})=>void}): Promise<unknown> {
   const config = configuration();
   const release = reserve();
   try {
@@ -112,11 +113,12 @@ export async function requestStructured(system: string, messages: Input['message
       ] }),
     });
     if (!response.ok) {
+      options?.diagnostic?.({code:"PROVIDER_HTTP",maxTokens,status:response.status});
       await response.body?.cancel();
-      if (response.status === 402) throw new AIError(402, 'AI 服务账户余额不足。请在所用服务商控制台检查 API 余额，或换用已有额度的接口；你的提问仍已本地保存。');
-      if (response.status === 401 || response.status === 403) throw new AIError(502, 'AI 服务拒绝了接口凭证，请维护者检查密钥、模型权限和地址。');
+      if (response.status === 402) throw new AIError(402, 'AI 服务账户余额不足。请在所用服务商控制台检查 API 余额，或换用已有额度的接口；你的提问仍已本地保存。','AI_BALANCE');
+      if (response.status === 401 || response.status === 403) throw new AIError(502, 'AI 服务拒绝了接口凭证，请维护者检查密钥、模型权限和地址。','AI_CREDENTIALS');
       if (response.status === 400 || response.status === 404) throw new AIError(502, 'AI 服务拒绝请求（HTTP ' + response.status + '）。请核对 AI_MODEL、AI_BASE_URL（根地址，不含 chat/completions）及 JSON object 模式支持。未保存分析。');
-      if (response.status === 429) throw new AIError(429, 'AI 服务额度不足或请求过于频繁，请稍后再试并检查服务商额度。');
+      if (response.status === 429) throw new AIError(429, 'AI 服务额度不足或请求过于频繁，请稍后再试并检查服务商额度。','AI_RATE_LIMIT');
       throw new AIError(502, 'AI 服务暂时没有完成回复，请稍后重试。');
     }
     let data: unknown;
@@ -125,20 +127,27 @@ export async function requestStructured(system: string, messages: Input['message
     if (!isRecord(data) || !Array.isArray(data.choices) || !isRecord(data.choices[0]) || !isRecord(data.choices[0].message))
       throw new AIError(502, 'AI 响应协议不匹配：未返回 Chat Completions choices/message。请核对 AI_BASE_URL 和 AI_MODEL。');
     const choice = data.choices[0], message = choice.message as Record<string,unknown>;
-    if (choice.finish_reason === 'length') {
-      throw new AIError(502, `AI 输出达到本次 ${maxTokens} token 上限，被截断，未保存。若使用推理模型，推理也可能占用预算；请减少本次文献或检查模型模式后手动重试。不会自动重试扣费。`);
+    const content = typeof message.content === 'string' ? message.content.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'') : '';
+    const finishReason=['stop','length','content_filter'].includes(String(choice.finish_reason))?String(choice.finish_reason):'other';
+    options?.diagnostic?.({code:'MODEL_OUTPUT',maxTokens,finishReason,contentChars:content.length});
+    if(choice.finish_reason==='length'){
+      if(options?.partialSections){
+        const sections=completeSectionObjects(content);
+        if(sections.length)return {sections,outputTruncated:true};
+      }
+      throw new AIError(502,`AI 输出达到本次 ${maxTokens} token 上限，被截断，未取得完整板块。请检查模型模式后手动重试；不会自动重试扣费。`,'OUTPUT_TRUNCATED');
     }
-    if (choice.finish_reason !== 'stop')
-      throw new AIError(502, 'AI 未正常结束回答（结束状态不支持），未保存。请检查模型是否适配 JSON Chat Completions；不会自动重试。');
-    if (typeof message.content !== 'string' || !message.content.trim())
-      throw new AIError(502, message.reasoning_content ? 'AI 仅返回推理内容，没有最终分析。请核对模型模式和输出预算后重试；未将推理过程保存为分析。' : 'AI 返回空内容，未保存。请稍后手动重试。');
-    const content = message.content.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
-    try { return JSON.parse(content); }
-    catch { throw new AIError(502, 'AI 最终内容不是有效 JSON，结构解析失败，未保存。请手动重试；原始文献仍在。'); }
+    if(choice.finish_reason!=='stop')throw new AIError(502,'AI 未正常结束回答（结束状态不支持），未保存。请检查模型是否适配 JSON Chat Completions；不会自动重试。','AI_FINISH_REASON');
+    if(!content)throw new AIError(502,message.reasoning_content?'AI 仅返回推理内容，没有最终分析。请核对模型模式和输出预算后重试。':'AI 返回空内容，未保存。请稍后手动重试。','AI_EMPTY');
+    try{return JSON.parse(content);}
+    catch{
+      if(options?.partialSections){const sections=completeSectionObjects(content);if(sections.length)return {sections,invalidJSON:true};}
+      throw new AIError(502,'AI 最终内容不是有效 JSON，结构解析失败，未保存。请手动重试；原始文献仍在。','JSON_INVALID');
+    }
 
   } catch (e) {
     if (e instanceof AIError) throw e;
-    throw new AIError(504, 'AI 连接中断或超过等待时间。你的提问仍保留，可以手动重试。');
+    throw new AIError(504, 'AI 连接中断或超过等待时间。你的提问仍保留，可以手动重试。','AI_TIMEOUT');
   } finally { release(); }
 }
 

@@ -18,6 +18,10 @@ createServer(async (request, response) => {
     if (input.message === 'INVALID_JSON') { response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'not-json'}}]})); return; }
     if (input.message === 'TRUNCATED') { response.end(JSON.stringify({choices:[{finish_reason:'length',message:{content:'{"reply":'}}]})); return; }
     if (input.message === 'BAD_SHAPE') { respond({unexpected:'fixture bad shape'}); return; }
+    if(input.task==='context'&&input.message==='PDF_COMPARE'){
+      const second=c.evidence[1];
+      respond({sections:['总体研究什么','理论、主题与方法分组','已有发现、分歧与限制','可继续探索的切入口'].map(title=>({title,body:'这段整体归纳没有足够依据，不应直接采用。',evidenceIds:[e.id,second.id],quote:'不存在的整体支持引句',page:null,uncertainty:'仅本地对照夹具',facts:[{text:'第一篇合成材料的主题，非真实论文。',evidenceId:e.id,quote:e.abstract,page:null},{text:'第二篇合成材料的方法，非真实论文。',evidenceId:second.id,quote:second.abstract,page:null},{text:'错误地把第二篇的引句挂到第一篇，不应保留。',evidenceId:e.id,quote:second.abstract,page:null}]}))});return;
+    }
     if (input.task === 'context') {
       const quote = e.pages[0]?.text.slice(0, 80) || e.abstract || '';
       respond({sections:['总体研究什么','理论、主题与方法分组','已有发现、分歧与限制','可继续探索的切入口'].map((title,i)=>({title,body:'模拟跨篇归纳，仅验证产品流程，不是实际论文结论。',evidenceIds:[input.message==='FORGED'?'unknown':e.id],quote:input.message==='BADQUOTE'?'这是不存在于资料中的引句':quote,page:e.pages[0]?.page??null,uncertainty:'仅测试夹具，非真实AI能力',evidenceStatus:i===3?'proposal':'verified'}))}); return;
@@ -52,8 +56,16 @@ createServer(async (request, response) => {
       const message=input.question==='REASONING_ONLY'?{content:'',reasoning_content:'fixture reasoning only'}:{content:input.question==='INVALID_JSON'?'not json':'{"sections":['};
       response.end(JSON.stringify({choices:[{finish_reason:input.question==='TRUNCATED'?'length':'stop',message}]}));return;
     }
-    const titles=input.task==='reading'?['30 秒读懂','研究问题与动机','理论与核心概念','研究方法与过程','关键发现与结论','局限与研究启发','对当前项目的价值']:['测试候选方向'];
-    const sections=titles.map(title=>({title,body:'仅测试模型协议，不代表研究结论',evidenceIds:[input.question==='FORGED'?'unknown':e.id],quote:input.question==='BADQUOTE'?'不存在的原文':e.pages?.[0]?.text||e.abstract||e.title,page:e.pages?.[0]?.page??null,uncertainty:'测试限制'}));
+    const titles=input.task==='reading'?(input.readingTargets??['30 秒读懂','研究问题与动机','理论与核心概念','研究方法与过程','关键发现与结论','局限与研究启发','对当前项目的价值']):['测试候选方向'];
+    const sections=titles.map(title=>({title,body:'仅测试模型协议，不代表研究结论',evidenceIds:[input.question==='FORGED'?'unknown':e.id],quote:input.question==='BADQUOTE'?'不存在的原文':e.pages?.[0]?.text?.slice(0,80)||e.abstract||e.title,page:e.pages?.[0]?.page??null,uncertainty:'测试限制'}));
+    if(input.task==='reading'){
+      const result=e.pages?.find(p=>p.text.includes('合成结果'))??e.pages?.[0];
+      const conclusion=sections.find(s=>s.title==='关键发现与结论');
+      if(conclusion)conclusion.findings=[{question:'合成测试关系是否得到支持？',conclusion:'合成测试中该关系未获支持，不能据此断言完全没有效应。',support:'not-supported',quote:result?.text?.slice(0,120)||e.abstract||'',page:result?.page??null}];
+      if(input.question==='PDF_MISSING')sections.splice(2,1);
+      if(input.question==='PDF_WRONG_PAGE')sections[3].page=99;
+      if(input.question==='PDF_PARTIAL_TRUNCATED'){response.end(JSON.stringify({choices:[{finish_reason:'length',message:{content:'{"sections":['+sections.slice(0,2).map(s=>JSON.stringify(s)).join(',')+',{\"title\":\"unfinished'}}]}));return;}
+    }
     response.end(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections,...(input.task==='directions'?{synthesis:sections,cards:[{title:'测试方向A',question:'拟比较测试反应',value:'仅测试协议',method:'待实际核对',limitations:'测试夹具，非学术结论',evidenceIds:[e.id]}]}:{})})}}]}));return;
   }
   if(body.messages?.[0]?.content?.includes('你是 Paperi 人文社科研究助手')){

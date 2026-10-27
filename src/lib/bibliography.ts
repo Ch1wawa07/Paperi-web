@@ -251,7 +251,7 @@ export function duplicateOf(p: Paper, library: Library) {
     (i) =>
       (p.doi && i.paper.doi === p.doi) ||
       (p.openAlexId && i.paper.openAlexId === p.openAlexId) ||
-      (norm(p.title) === norm(i.paper.title) &&
+      (p.title!=="题名待核对" && norm(p.title) === norm(i.paper.title) &&
         p.year !== null &&
         p.year === i.paper.year &&
         p.authors.length > 0 &&

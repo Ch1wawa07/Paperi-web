@@ -13,8 +13,9 @@ import {
 import {
   isDirectionCard,
   isSections,
+  isReadingCurrent,
+  isFailedSection,
   pdfExcerpts,
-  sourceFingerprint,
   workflowEvidence,
   type DirectionCard,
   type ReadingSection,
@@ -84,6 +85,28 @@ export type JourneyResult = {
 const clipSections = (sections: ReadingSection[], max = 7) =>
   sections.slice(0, max).map((s) => ({
     ...s,
+    ...(s.facts
+      ? {
+          facts: s.facts
+            .slice(0, 3)
+            .map((f) => ({
+              ...f,
+              text: f.text.slice(0, 250),
+              quote: f.quote.slice(0, 500),
+            })),
+        }
+      : {}),
+    ...(s.findings
+      ? {
+          findings: s.findings
+            .slice(0, 4)
+            .map((f) => ({
+              ...f,
+              conclusion: f.conclusion.slice(0, 350),
+              quote: f.quote.slice(0, 500),
+            })),
+        }
+      : {}),
     body: s.body.slice(0, 700),
     quote: s.quote.slice(0, 500),
     uncertainty: s.uncertainty.slice(0, 700),
@@ -146,11 +169,14 @@ export async function buildResearchJourneyInput(
       attachmentStatus,
       readingStatus: !reading
         ? "none"
-        : reading.fingerprint === sourceFingerprint(p)
+        : isReadingCurrent(p, reading)
           ? "current"
           : "stale",
       reading: reading
-        ? clipSections(reading.sections, items.length > 10 ? 3 : 7).map((s) =>
+        ? clipSections(
+            reading.sections.filter((s) => !isFailedSection(s)),
+            items.length > 10 ? 3 : 7,
+          ).map((s) =>
             items.length > 10
               ? {
                   ...s,

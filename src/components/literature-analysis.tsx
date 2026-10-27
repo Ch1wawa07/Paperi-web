@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Project } from "@/lib/projects";
 import {
   emptyWorkflow,
-  pdfExcerpts,
+  selectPDFExcerpts,
+  readingFingerprint,
+  type PDFCoverage,
   cleanDirection,
   isFailedSection,
   isSections,
@@ -104,7 +106,9 @@ export async function requestWorkflow(
   sourceIds: string[],
   question: string,
   signal: AbortSignal,
-  report?: (stage:string)=>void,
+  report?: (stage: string) => void,
+  readingTargets?: string[],
+  onCoverage?: (coverage: PDFCoverage[]) => void,
 ): Promise<Analysis> {
   const items = (p.library?.items ?? []).filter((i) =>
     sourceIds.includes(i.id),
@@ -112,6 +116,7 @@ export async function requestWorkflow(
   if (items.length > 30)
     throw new Error("每次最多 30 篇，请取消部分选择后分组分析。");
   const evidence = [];
+  const coverage: PDFCoverage[] = [];
   let remaining = 60000;
   for (const i of items) {
     const pages: { page: number; text: string }[] = [];
@@ -121,12 +126,19 @@ export async function requestWorkflow(
         throw new Error(
           `《${i.paper.title}》的 PDF 在当前浏览器不可读，请重新附加，或移除 PDF 关联后使用摘要。`,
         );
-      const budget = Math.min(task === "reading" ? 40000 : 24000, Math.floor(60000 / items.length), remaining);
-      pages.push(...pdfExcerpts(file.pages, budget));
-      remaining -= pages.reduce((n,p)=>n+p.text.length,0);
+      const budget = Math.min(
+        task === "reading" ? 40000 : 24000,
+        Math.floor(60000 / items.length),
+        remaining,
+      );
+      const excerpt = selectPDFExcerpts(file.pages, budget, i.id);
+      pages.push(...excerpt.pages);
+      coverage.push(excerpt.coverage);
+      remaining -= pages.reduce((n, p) => n + p.text.length, 0);
     }
     evidence.push({ id: i.id, paper: i.paper, pages });
   }
+  onCoverage?.(coverage);
   report?.("资料已整理，正在等待 AI 返回完整分析…");
   const r = await fetch("/api/workflow", {
     method: "POST",
@@ -138,6 +150,7 @@ export async function requestWorkflow(
       direction: cleanDirection(p.workflow?.direction?.text ?? ""),
       question,
       evidence,
+      ...(readingTargets ? { readingTargets } : {}),
     }),
     signal: AbortSignal.any([signal, AbortSignal.timeout(100000)]),
   });
@@ -150,16 +163,41 @@ export async function requestWorkflow(
     )
   )
     throw new Error("分析格式或来源不完整，未保存。");
-  if ((data.synthesis!==undefined&&(!isSections(data.synthesis)||data.synthesis.some((s:ReadingSection)=>s.evidenceIds.some(id=>!sourceIds.includes(id))))) || (data.cards!==undefined&&(!Array.isArray(data.cards)||!data.cards.every(isDirectionCard)||data.cards.some((c:import("@/lib/workflow").DirectionCard)=>c.evidenceIds.some(id=>!sourceIds.includes(id))))))throw new Error("研究脉络或方向卡引用不完整，未保存。");
+  if (
+    (data.synthesis !== undefined &&
+      (!isSections(data.synthesis) ||
+        data.synthesis.some((s: ReadingSection) =>
+          s.evidenceIds.some((id) => !sourceIds.includes(id)),
+        ))) ||
+    (data.cards !== undefined &&
+      (!Array.isArray(data.cards) ||
+        !data.cards.every(isDirectionCard) ||
+        data.cards.some((c: import("@/lib/workflow").DirectionCard) =>
+          c.evidenceIds.some((id) => !sourceIds.includes(id)),
+        )))
+  )
+    throw new Error("研究脉络或方向卡引用不完整，未保存。");
   return {
     id: crypto.randomUUID(),
     kind: task,
-    fingerprint: sourceFingerprint(p,task!=="directions"),
+    fingerprint:
+      task === "reading"
+        ? readingFingerprint(p, sourceIds)
+        : sourceFingerprint(p, task !== "directions"),
+    coverage,
+    notices: Array.isArray(data.notices)
+      ? data.notices
+          .filter((n: unknown) => typeof n === "string")
+          .slice(0, 20)
+          .map((n: string) => n.slice(0, 600))
+      : [],
     sourceIds,
     createdAt: new Date().toISOString(),
     sections: data.sections,
-    ...(isSections(data.synthesis)?{synthesis:data.synthesis}:{}),
-    ...(Array.isArray(data.cards)&&data.cards.every(isDirectionCard)?{cards:data.cards}:{}),
+    ...(isSections(data.synthesis) ? { synthesis: data.synthesis } : {}),
+    ...(Array.isArray(data.cards) && data.cards.every(isDirectionCard)
+      ? { cards: data.cards }
+      : {}),
     inputSnapshot: JSON.stringify({
       observation: p.observation,
       concepts: selectedConcepts(p),
@@ -188,7 +226,9 @@ export function LiteratureAnalysis({
     [question, setQuestion] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
-    [direction, setDirection] = useState(cleanDirection(f.direction?.text ?? "")),
+    [direction, setDirection] = useState(
+      cleanDirection(f.direction?.text ?? ""),
+    ),
     [result, setResult] = useState<Analysis | null>(null);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
@@ -301,22 +341,39 @@ export function LiteratureAnalysis({
           </select>
         </label>
       )}
-      {mode === "reading" && (()=>{const i=p.library?.items.find(x=>x.id===selected);return <p className="source-notice">资料状态：{i?.attachment ? `PDF 已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字；将选取含方法、结果及首尾的限量正文` : i?.paper.abstract ? "已有摘要，可做摘要层面分析" : "只有题录，不能判断方法和结论，请补充摘要或 PDF"}。</p>})()}
+      {mode === "reading" &&
+        (() => {
+          const i = p.library?.items.find((x) => x.id === selected);
+          return (
+            <p className="source-notice">
+              资料状态：
+              {i?.attachment
+                ? `PDF 已提取 ${i.attachment.pages} 页 / ${i.attachment.characters} 字；将选取含方法、结果及首尾的限量正文`
+                : i?.paper.abstract
+                  ? "已有摘要，可做摘要层面分析"
+                  : "只有题录，不能判断方法和结论，请补充摘要或 PDF"}
+              。
+            </p>
+          );
+        })()}
       <p>
         只有书目时不分析具体方法与结论；摘要支持有限分析；PDF
         仅发送限量可提取文字节选并保留页码。点击分析才发送所选资料给已配置的
         AI。
       </p>
-      <details className="optional-question"><summary>可选：补充关注点</summary><label>
-        追问或本次关注点
-        <input
-          aria-label="追问或本次关注点"
-          maxLength={1200}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="例如：这些研究适合本科生怎样继续？"
-        />
-      </label></details>
+      <details className="optional-question">
+        <summary>可选：补充关注点</summary>
+        <label>
+          追问或本次关注点
+          <input
+            aria-label="追问或本次关注点"
+            maxLength={1200}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="例如：这些研究适合本科生怎样继续？"
+          />
+        </label>
+      </details>
       <button
         className="button primary"
         disabled={pending || busy || !p.library?.items.length}
@@ -347,7 +404,13 @@ export function LiteratureAnalysis({
           {analysis.sections.map((s, index) => (
             <details key={index} className="analysis-card" open>
               <summary>{s.title}</summary>
-              {isFailedSection(s) ? <p className="source-notice">这一维度尚无可核对依据，暂不能采纳；请补充原文或重新分析。</p> : <p>{s.body}</p>}
+              {isFailedSection(s) ? (
+                <p className="source-notice">
+                  这一维度尚无可核对依据，暂不能采纳；请补充原文或重新分析。
+                </p>
+              ) : (
+                <p>{s.body}</p>
+              )}
               {s.quote && (
                 <blockquote>
                   {s.quote}
@@ -368,7 +431,17 @@ export function LiteratureAnalysis({
                           direction: {
                             text: cleanDirection(`${s.title}\n${s.body}`),
                             evidenceIds: s.evidenceIds,
-                            fingerprint: sourceFingerprint({...p,workflow:{...f,direction:{text:cleanDirection(`${s.title}\n${s.body}`),evidenceIds:s.evidenceIds,fingerprint:""}}}),
+                            fingerprint: sourceFingerprint({
+                              ...p,
+                              workflow: {
+                                ...f,
+                                direction: {
+                                  text: cleanDirection(`${s.title}\n${s.body}`),
+                                  evidenceIds: s.evidenceIds,
+                                  fingerprint: "",
+                                },
+                              },
+                            }),
                           },
                         });
                       }}
@@ -449,7 +522,13 @@ export function LiteratureAnalysis({
       {mode === "context" && (
         <>
           <h3>我的研究方向</h3>
-          {f.direction && <div className="chosen-direction"><strong>{cleanDirection(f.direction.text).split("\n")[0]}</strong><Sources project={p} ids={f.direction.evidenceIds}/><p>方向由你选择；文献支持与待核实事项请单独核对。</p></div>}
+          {f.direction && (
+            <div className="chosen-direction">
+              <strong>{cleanDirection(f.direction.text).split("\n")[0]}</strong>
+              <Sources project={p} ids={f.direction.evidenceIds} />
+              <p>方向由你选择；文献支持与待核实事项请单独核对。</p>
+            </div>
+          )}
           <textarea
             className="direction-editor"
             aria-label="我的研究方向"

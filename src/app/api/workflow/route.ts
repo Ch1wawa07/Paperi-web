@@ -1,4 +1,31 @@
-import {AIError,readBoundedJSON} from '@/lib/ai-server';
-import {workflowRequest} from '@/lib/workflow-server';
-export const runtime='nodejs';
-export async function POST(request:Request){try{const origin=request.headers.get('origin');if(!origin||new URL(origin).origin!==origin||new URL(origin).host!==request.headers.get('host')||new URL(origin).protocol!==new URL(request.url).protocol)throw new AIError(403,'请从 Paperi 页面发起请求。');if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AIError(415,'需要 JSON 内容。');return Response.json(await workflowRequest(await readBoundedJSON(request,900000),request.signal),{headers:{'Cache-Control':'no-store'}});}catch(e){const error=e instanceof AIError?e:new AIError(500,'分析未完成，请重试。');return Response.json({error:error.message},{status:error.status});}}
+import { AIError, readBoundedJSON } from "@/lib/ai-server";
+import { workflowRequest } from "@/lib/workflow-server";
+export const runtime = "nodejs";
+export async function POST(request: Request) {
+  try {
+    const origin = request.headers.get("origin");
+    if (
+      !origin ||
+      new URL(origin).origin !== origin ||
+      new URL(origin).host !== request.headers.get("host") ||
+      new URL(origin).protocol !== new URL(request.url).protocol
+    )
+      throw new AIError(403, "请从 Paperi 页面发起请求。");
+    if (!request.headers.get("content-type")?.startsWith("application/json"))
+      throw new AIError(415, "需要 JSON 内容。");
+    return Response.json(
+      await workflowRequest(
+        await readBoundedJSON(request, 900000),
+        request.signal,
+      ),
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (e) {
+    const error =
+      e instanceof AIError ? e : new AIError(500, "分析未完成，请重试。");
+    return Response.json(
+      { error: error.message, ...(error.code ? { code: error.code } : {}) },
+      { status: error.status },
+    );
+  }
+}

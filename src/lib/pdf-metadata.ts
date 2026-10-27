@@ -44,7 +44,7 @@ export function literalAuthors(raw: string) {
       /(?:[,，;；]?\s*(?:\(|（|地址|通讯|通信|邮箱|邮编|E-?mail|讲师|教授|研究方向|博士|硕士|[\u3400-\u9fff]{2,12}大学))/i,
     )[0];
   if (
-    /CNKI|知网|Microsoft|WPS|admin|user|author|学院|研究所|@|https?:/i.test(
+    /CNKI|知网|Microsoft|WPS|admin|user|author|university|college|institute|department|未知|待核对|未获取|学院|研究所|@|https?:/i.test(
       prefix,
     )
   )
@@ -135,11 +135,16 @@ export function pdfMetadataCandidates(pages: string[], info: PDFMetadata = {}) {
       audit.fields.title = "filename";
     }
   }
-  const authorLine = lines.find((l) =>
-    /^(?:作者|研究生姓名|姓名)\s*[:：]/.test(l.text),
-  );
+  const authorLine = pages
+    .slice(0, 3)
+    .flatMap((p) => p.split(/\n/))
+    .map((t) => ({ text: t.trim() }))
+    .find((l) => /^(?:作\s*者|研究生姓名|姓\s*名)\s*[:：]/.test(l.text));
   const authors = literalAuthors(
-    authorLine?.text.replace(/^(?:作者|研究生姓名|姓名)\s*[:：]\s*/, "") ||
+    authorLine?.text.replace(
+      /^(?:作\s*者|研究生姓名|姓\s*名)\s*[:：]\s*/,
+      "",
+    ) ||
       info.author ||
       "",
   );
@@ -149,15 +154,26 @@ export function pdfMetadataCandidates(pages: string[], info: PDFMetadata = {}) {
   }
   // A name-only line immediately after the title can be used, but no institutional line.
   if (!fields.authors && fields.title) {
-    const at = layout.findIndex((l) => fields.title!.startsWith(l.text));
+    let at = layout.findIndex((l) => fields.title!.startsWith(l.text));
+    let titleBlock = at >= 0 ? layout[at].text : "";
+    const titleSize = at >= 0 ? layout[at].size : 0;
+    while (
+      at >= 0 &&
+      layout[at + 1]?.page === layout[at].page &&
+      fields.title.startsWith(titleBlock + layout[at + 1].text)
+    ) {
+      at++;
+      titleBlock += layout[at].text;
+    }
     const next = layout[at + 1];
     if (
       at >= 0 &&
       next &&
       next.page === layout[at].page &&
-      next.text.length < 70
+      next.text.length < 70 &&
+      (titleSize === 0 || next.size < titleSize * 0.9)
     ) {
-      const names = literalAuthors(next.text);
+      const names = literalAuthors(info.lines?.[at + 1]?.text ?? next.text);
       if (names.length) {
         fields.authors = names;
         audit.fields.authors = "pdf-body";

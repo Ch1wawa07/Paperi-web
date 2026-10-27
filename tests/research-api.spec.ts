@@ -370,3 +370,12 @@ test("隔离HTTP：双中介四段与指定路径调节完整返回；未知调�
     result.design.hypotheses,
   );
 });
+
+test("隔离HTTP：逐篇对照观点各核验自己的文献与引句，错误归属剔除，切口保留提议身份（模拟）",async({journeyAPI:api})=>{
+ const c=await input("context","PDF_COMPARE");
+ c.context.evidence.push({...c.context.evidence[0],id:"paper-b",title:"第二篇合成文献",abstract:"这是完全不同的第二段合成摘要，只验证逐篇来源归属，不是学术结论。"});
+ const response=await post(api,c);
+ expect(response.sections[0].facts).toHaveLength(2);
+ expect(response.sections[0].facts.map((f:{evidenceId:string})=>f.evidenceId)).toEqual(["paper-a","paper-b"]);
+ expect(response.sections[0].body).toContain("逐篇核对");expect(response.sections[3].evidenceStatus).toBe("proposal");expect(response.sections[3].facts).toEqual([]);
+});

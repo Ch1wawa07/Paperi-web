@@ -135,3 +135,18 @@ test("本地诊断不含全文、Blob、联系信息/凭证；字段有限、大
     }),
   ).toBe(true);
 });
+
+test("换行副题不当作者：跳过完整题名块，只读取后续较小字号的姓名行", () => {
+  const r = pdfMetadataCandidates(
+    ["测试题名主标题：\n副题文本是合成样本\n王小明\n摘要：合成测试。"],
+    {
+      lines: [
+        { page: 1, text: "测试题名主标题：", size: 22, y: 700 },
+        { page: 1, text: "副题文本是合成样本", size: 22, y: 670 },
+        { page: 1, text: "王小明", size: 10, y: 640 },
+      ],
+    },
+  );
+  expect(r.fields.title).toBe("测试题名主标题:副题文本是合成样本");
+  expect(r.fields.authors).toEqual(["王小明"]);
+});

@@ -43,3 +43,5 @@ npx playwright test --config playwright.dev.config.ts
 ```
 
 退役产品的 UI 测试保留在 `tests/retired-ui/`，不参与现产品验收。当前测试覆盖核心旅程、项目隔离、旧数据兼容、存储错误和 PDF 原件保护；真实模型质量需按交付记录在 Mac 验证。
+
+本轮中文 PDF 导入与精析修复、测试边界及 Mac ZIP 三步验收：[PDF_REPAIR_ACCEPTANCE](docs/PDF_REPAIR_ACCEPTANCE.md)。

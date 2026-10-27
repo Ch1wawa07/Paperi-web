@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Project } from "@/lib/projects";
 import {
   emptyWorkflow,
@@ -9,6 +10,9 @@ import {
   cleanDirection,
   isFailedSection,
   directionPlainText,
+  isReadingCurrent,
+  qualityReadingIds,
+  type PDFCoverage,
   type Analysis,
   type DirectionCard,
   type ReadingSection,
@@ -19,6 +23,7 @@ import {
   Sources,
   WorkflowSelection,
 } from "./literature-analysis";
+import { ReadingDetails } from "./reading-details";
 const blank = (): DirectionCard => ({
   title: "",
   question: "",
@@ -41,6 +46,7 @@ export function StudyWorkspace({
   project: Project;
   mode: "reading" | "context";
 }) {
+  const router = useRouter();
   const { saveWorkflow, saveLibrary, busy } = useProjects(),
     f = p.workflow ?? emptyWorkflow();
   const items = p.library?.items ?? [],
@@ -52,6 +58,7 @@ export function StudyWorkspace({
         : sessionStorage.getItem(`paperi.reading.${p.id}`);
     return items.some((i) => i.id === id) ? id! : (items[0]?.id ?? "");
   });
+  const [preparedCoverage, setPreparedCoverage] = useState<PDFCoverage[]>([]);
   const [result, setResult] = useState<Analysis | null>(null),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
@@ -81,30 +88,54 @@ export function StudyWorkspace({
     item = items.find((i) => i.id === selected);
   const stale =
     !!analysis &&
-    analysis.fingerprint !== sourceFingerprint(p, kind !== "directions");
+    (kind === "reading"
+      ? !isReadingCurrent(p, analysis)
+      : analysis.fingerprint !== sourceFingerprint(p, false));
   const chosenStale =
     !!f.direction &&
     (f.direction.fingerprint !== sourceFingerprint(p, false) ||
       f.direction.evidenceIds.some((id) => !items.some((i) => i.id === id)));
-  async function generate() {
+  const coverage = preparedCoverage.length
+    ? preparedCoverage
+    : (analysis?.coverage ?? []);
+  async function generate(target?: string) {
+    if (target && (!analysis || stale)) {
+      setError(
+        "此分析的原始资料已变化，请重新精析整篇，避免把新旧结论混在一起。",
+      );
+      return;
+    }
     if (f.analyses.length >= 100) {
       setError("分析历史已达上限，请先备份项目并分项目继续；没有覆盖旧成果。");
       return;
     }
     setError("");
+    setPreparedCoverage([]);
     setPending(true);
     setPhase("正在准备当前项目资料…");
     const c = new AbortController();
     controller.current = c;
     try {
-      const a = await requestWorkflow(
+      let a = await requestWorkflow(
         p,
         kind,
         kind === "reading" ? [selected] : workflowEvidence(p).map((i) => i.id),
         "",
         c.signal,
         setPhase,
+        target ? [target] : undefined,
+        setPreparedCoverage,
       );
+      if (target && analysis) {
+        a = {
+          ...a,
+          sections: analysis.sections.map((s) =>
+            s.title === target
+              ? (a.sections.find((next) => next.title === target) ?? s)
+              : s,
+          ),
+        };
+      }
       if (c.signal.aborted) return;
       setResult(a);
       if (
@@ -202,24 +233,33 @@ export function StudyWorkspace({
           {String(index + 1).padStart(2, "0")}
         </span>
         <h3>{s.title}</h3>
-        <p>
-          {isFailedSection(s)
-            ? "当前资料无法核对这一判断，需要补充原文或摘要。"
-            : s.body}
-        </p>
-        <details className="study-evidence">
-          <summary>
-            查看依据与信息边界{s.page ? ` · PDF 第 ${s.page} 页` : ""}
-          </summary>
-          {s.quote && (
-            <blockquote>
-              {s.quote}
-              {s.page && <small>PDF 第 {s.page} 页</small>}
-            </blockquote>
-          )}
-          <p>{s.uncertainty}</p>
-          <Sources project={p} ids={s.evidenceIds} />
-        </details>
+        {mode === "reading" ? (
+          <ReadingDetails section={s} project={p} sourceId={selected} />
+        ) : (
+          <>
+            <p>
+              {isFailedSection(s)
+                ? "当前资料无法核对这一判断，需要补充原文或摘要。"
+                : s.body}
+            </p>
+            <details className="study-evidence">
+              <summary>
+                查看依据与信息边界{s.page ? ` · PDF 第 ${s.page} 页` : ""}
+              </summary>
+              {s.quote && <blockquote>{s.quote}</blockquote>}
+              <p>{s.uncertainty}</p>
+              <Sources project={p} ids={s.evidenceIds} />
+            </details>
+          </>
+        )}
+        {mode === "reading" && (s.issue || isFailedSection(s)) && (
+          <button
+            disabled={busy || pending || stale}
+            onClick={() => void generate(s.title)}
+          >
+            只重试本节：{s.title}
+          </button>
+        )}
         {mode === "reading" && (
           <button
             disabled={busy || stale || isFailedSection(s)}
@@ -251,9 +291,11 @@ export function StudyWorkspace({
             <select
               aria-label="选择精析文献"
               value={selected}
+              disabled={pending || busy}
               onChange={(e) => {
                 setSelected(e.target.value);
                 setResult(null);
+                setPreparedCoverage([]);
                 sessionStorage.setItem(
                   `paperi.reading.${p.id}`,
                   e.target.value,
@@ -305,7 +347,9 @@ export function StudyWorkspace({
               ? "一键精析"
               : "梳理研究脉络"}
         </button>
-        <p>点击后仅调用一次已配置的 AI；无需填写追问。失败不会自动重试。</p>
+        <p>
+          点击后仅调用一次已配置的 AI，可能产生 API 费用；失败不会自动重试。
+        </p>
       </div>
       {pending && (
         <p role="status" className="pdf-progress">
@@ -343,6 +387,50 @@ export function StudyWorkspace({
           文献或研究内容已变化，下方分析基于旧资料，需要更新；旧分析仍保留。
         </p>
       )}
+      {mode === "reading" && analysis && (
+        <p role="status" className="source-notice">
+          精析进度：
+          {
+            analysis.sections.filter(
+              (s) => s.evidenceStatus === "verified" && !s.issue,
+            ).length
+          }{" "}
+          / 7 节通过基本检查（引句存在不等于解释正确）。
+          {analysis.sections.some((s) => s.issue)
+            ? "部分内容待核实，可按原因单独重试；不会自动重复调用。"
+            : "请对照原文核对关键结论。"}
+        </p>
+      )}
+      {analysis?.notices?.map((notice, i) => (
+        <p key={i} role="status" className="source-notice">
+          {notice}
+        </p>
+      ))}
+      {!!coverage.length && (
+        <details className="study-evidence">
+          <summary>本次实际节选覆盖（并非完整阅读）</summary>
+          {coverage.map((c) => (
+            <div key={c.paperId}>
+              <p>
+                PDF 共{c.totalPages}页；发送{c.characters}字符，预算{c.budget}
+                字符。覆盖：
+                {c.pages
+                  .map((p) => `${p.page}${p.full ? "" : "（部分）"}`)
+                  .join("、")}
+                页。
+              </p>
+              <p>
+                未发送页：
+                {c.omittedPages.join("、") ||
+                  "无整页遗漏；部分页面可能只取窗口"}
+              </p>
+              {c.notes.map((n, i) => (
+                <p key={i}>{n}</p>
+              ))}
+            </div>
+          ))}
+        </details>
+      )}
       {analysis && (
         <div className="study-reading-layout">
           <nav className="study-toc" aria-label="分析章节">
@@ -370,10 +458,26 @@ export function StudyWorkspace({
       )}
       {mode === "reading" && analysis && (
         <div className="study-actions">
-          <Link className="button primary" href="/research">
-            带着这篇文献去梳理研究脉络
+          <button
+            className="button primary"
+            disabled={busy || pending || !qualityReadingIds(p).length}
+            onClick={async () => {
+              const ids = qualityReadingIds(p);
+              if (
+                await saveWorkflow(p.id, f.revision, { ...f, selection: ids })
+              )
+                router.push("/research");
+            }}
+          >
+            带着通过检查的文献去梳理研究脉络
+          </button>
+          <Link className="button secondary" href="/research">
+            进入研究脉络，手动选择资料
           </Link>
-          <p>当前项目文献默认全部带入，可在研究脉络中调整。</p>
+          <p>
+            当前 {qualityReadingIds(p).length}{" "}
+            篇已校对书目且问题、方法、结论通过基本检查。只带入这些文献；可先用3篇，再补充至5篇，仍需人工核对解释。
+          </p>
         </div>
       )}
       {mode === "context" && (

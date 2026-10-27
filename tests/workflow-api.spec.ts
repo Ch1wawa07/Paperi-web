@@ -27,7 +27,8 @@ test("真实HTTP工作流适配：书目不调用AI、摘要quote核对、未知
     expect(bibliographic.status()).toBe(200);
     const d = await bibliographic.json();
     expect(d.sections).toHaveLength(7);
-    expect(d.sections[3].body).toContain("信息不足");
+    expect(d.sections[3].body).toContain("暂无可靠依据");
+    expect(d.sections[3].issue.code).toBe("PDF_INSUFFICIENT");
     const withAbstract = {
       ...body,
       evidence: [
@@ -54,9 +55,7 @@ test("真实HTTP工作流适配：书目不调用AI、摘要quote核对、未知
       data: { ...withAbstract, task: "review", question: "BADQUOTE" },
     });
     expect(badquote.status()).toBe(200);
-    expect((await badquote.json()).sections[0].body).toContain(
-      "结构草案",
-    );
+    expect((await badquote.json()).sections[0].body).toContain("结构草案");
     expect(
       (
         await r.post("/api/workflow", {

@@ -34,7 +34,7 @@ import {
   PDFDiagnostics,
   originLabels,
 } from "./bibliography-review";
-import { pdfMetadataCandidates } from "@/lib/pdf-metadata";
+import { pdfMetadataCandidates, plausibleTitle } from "@/lib/pdf-metadata";
 
 export function Literature({
   requestProject,
@@ -487,7 +487,14 @@ function LibraryWorkspace({
               {filtered.map((i) => (
                 <article className="paper-card frosted-surface" key={i.id}>
                   <span>{identityLabel(i.paper)}</span>
-                  <h2>{i.paper.title}</h2>
+                  <h2>
+                    {i.attachment &&
+                    !i.bibliography?.confirmedAt &&
+                    !plausibleTitle(i.paper.title)
+                      ? "题名待核对"
+                      : i.paper.title}
+                  </h2>
+                  {i.attachment && <small>PDF：{i.attachment.name}</small>}
                   <small>
                     {i.bibliography?.confirmedAt
                       ? "已人工校对（非外部认证）"

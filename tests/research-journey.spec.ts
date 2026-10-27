@@ -385,7 +385,7 @@ test("研究闭环（AI 明确模拟、PDF 使用真实解析器）：三篇材�
     .click();
   await page.getByRole("button", { name: "一键精析", exact: true }).click();
   await expect(page.locator(".study-section")).toHaveCount(7);
-  await page.getByRole("link", { name: /带着.*文献去梳理研究脉络/ }).click();
+  await page.getByRole("link", { name: "进入研究脉络，手动选择资料" }).click();
   await expect(page).toHaveURL(/\/research/);
   await expect(page.locator(".rj-evidence-status li")).toHaveCount(3);
   expect(calls).toHaveLength(0);

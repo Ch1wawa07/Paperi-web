@@ -749,6 +749,27 @@ function Journey({
                     <span className="study-section-number">0{i + 1}</span>
                     <h3>{s.title}</h3>
                     <p>{s.body}</p>
+                    {!!s.facts?.length && (
+                      <ul>
+                        {s.facts.map((fact, index) => (
+                          <li key={index}>
+                            <p>{fact.text}</p>
+                            <small>
+                              {p.library?.items.find(
+                                (i) => i.id === fact.evidenceId,
+                              )?.paper.title ?? "来源待核对"}
+                              {fact.page
+                                ? ` · PDF 第 ${fact.page} 页`
+                                : " · 摘要"}
+                            </small>
+                            <details className="study-evidence">
+                              <summary>核对这一观点的原文</summary>
+                              <blockquote>{fact.quote}</blockquote>
+                            </details>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     <span className="soft-badge">
                       {s.evidenceStatus === "proposal"
                         ? "AI 研究提议"

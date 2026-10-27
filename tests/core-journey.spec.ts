@@ -131,7 +131,7 @@ test("核心路径（AI明确模拟）：原话、十概念、双语检索词、
       json: { error: "本测试仅验收衔接，不应自动发起研究请求" },
     });
   });
-  await page.getByRole("link", { name: "带着这篇文献去梳理研究脉络" }).click();
+  await page.getByRole("link", { name: "进入研究脉络，手动选择资料" }).click();
   await expect(page).toHaveURL("/research");
   await expect(page.locator(".rj-evidence-status li")).toHaveCount(4);
   await expect(page.locator(".rj-context")).toContainText("已有精析");
