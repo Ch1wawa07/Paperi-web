@@ -13,8 +13,12 @@ export default async function Page({
   }>;
 }) {
   const { query, project, concepts, mode, history } = await searchParams;
-  if (mode === "context")
-    redirect(`/research${history === "1" ? "?history=1" : ""}`);
+  if (mode === "context") {
+    const params = new URLSearchParams();
+    if (history === "1") params.set("history", "1");
+    if (typeof project === "string") params.set("project", project);
+    redirect(`/research${params.size ? `?${params}` : ""}`);
+  }
   return (
     <Literature
       showHistory={history === "1"}

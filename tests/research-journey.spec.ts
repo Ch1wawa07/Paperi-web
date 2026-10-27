@@ -923,6 +923,95 @@ test("未失焦的讨论和方向编辑刷新仍可恢复，且不覆盖已确�
   ).toBe(p.workflow!.research!.directions[0].card.question);
 });
 
+test("AI 等待期间保护设计编辑，返回后恢复操作且保留其他步骤（明确模拟）", async ({
+  page,
+}) => {
+  const p = completedProject();
+  await seed(page, [p]);
+  let release = () => {};
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/research-journey", async (route) => {
+    const input = route.request().postDataJSON() as JourneyInput;
+    await waiting;
+    await route.fulfill({
+      json: {
+        design: { ...quantitative(input), updatedAt: new Date().toISOString() },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "我的研究设计", exact: true }).click();
+  const before = await state(page);
+  try {
+    await page
+      .getByRole("button", { name: "重新建议这一环节", exact: true })
+      .click();
+    await expect(page.locator(".rd-editor")).toHaveJSProperty("inert", true);
+    await page.keyboard.press("Tab");
+    expect(
+      await page
+        .locator(".rd-editor")
+        .evaluate((e) => e.contains(document.activeElement)),
+    ).toBe(false);
+    await expect(
+      page.getByRole("button", { name: "取消本次请求", exact: true }),
+    ).toBeEnabled();
+    expect((await state(page)).quantitative).toEqual(before.quantitative);
+  } finally {
+    release();
+  }
+  await expect(page.locator(".rd-editor")).toHaveJSProperty("inert", false);
+  await expect
+    .poll(async () => (await state(page)).quantitativeHistory.length)
+    .toBe(before.quantitativeHistory.length + 1);
+  expect((await state(page)).quantitative!.variables).toEqual(
+    before.quantitative!.variables,
+  );
+});
+
+test("空标题方向草稿和其他有效输入分别恢复，旧项目链接仍保留项目隔离（明确模拟）", async ({
+  page,
+}) => {
+  const p = completedProject();
+  p.workflow!.research!.stage = "directions";
+  await seed(page, [p, project("journey-b")]);
+  await page
+    .getByRole("button", { name: "编辑已确认方向", exact: true })
+    .click();
+  const original = await state(page);
+  await page.getByLabel("方向名称", { exact: true }).fill("");
+  await page.reload();
+  await expect(page.getByLabel("方向名称", { exact: true })).toHaveValue("");
+  expect((await state(page)).directions).toEqual(original.directions);
+  await page.evaluate(
+    ({ id, base }) => {
+      localStorage.setItem(
+        `paperi.research.inputs.${id}`,
+        JSON.stringify({
+          preferences: { base: base.preferences, value: "用户已写下的新偏好" },
+          directionDraft: {
+            base: base.directionDraft,
+            value: { card: { title: 42 } },
+          },
+        }),
+      );
+    },
+    { id: p.id, base: await state(page) },
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "继续研究什么", exact: true }).click();
+  await page.getByText("我的研究偏好与不考虑的角度", { exact: true }).click();
+  await expect(page.getByLabel("研究偏好", { exact: true })).toHaveValue(
+    "用户已写下的新偏好",
+  );
+  await page.goto("/literature?mode=context&project=journey-b&history=1");
+  await expect(page).toHaveURL(/\/research\?history=1&project=journey-b$/);
+  await expect(
+    page.getByText("链接属于另一个项目，请先在顶部切换项目。", { exact: true }),
+  ).toBeVisible();
+});
+
 for (const width of [1440, 390])
   test(`研究工作区视觉复验 ${width}px：紧凑字体、Hero 同源聊天、输入不遮挡、站内可读模型（明确模拟）`, async ({
     page,

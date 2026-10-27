@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Project } from "@/lib/projects";
+import { isRecord } from "@/lib/exploration";
 import {
   emptyWorkflow,
   workflowEvidence,
@@ -61,7 +62,10 @@ const recoveryKey = (id: string) => `paperi.research.inputs.${id}`;
 function recoveredState(p: Project) {
   const saved = researchState(p);
   try {
-    const raw = JSON.parse(localStorage.getItem(recoveryKey(p.id)) ?? "{}");
+    const raw: unknown = JSON.parse(
+      localStorage.getItem(recoveryKey(p.id)) ?? "{}",
+    );
+    if (!isRecord(raw)) return saved;
     const next = { ...saved };
     for (const key of [
       "discussionDraft",
@@ -69,11 +73,31 @@ function recoveredState(p: Project) {
       "directionDraft",
     ] as InputKey[]) {
       const field = raw[key];
-      if (field && JSON.stringify(field.base) === JSON.stringify(saved[key])) {
-        Object.assign(next, { [key]: field.value });
+      if (
+        isRecord(field) &&
+        JSON.stringify(field.base) === JSON.stringify(saved[key])
+      ) {
+        const candidate = { ...next, [key]: field.value };
+        const direction = candidate.directionDraft;
+        // An unfinished title is recoverable input; it is never accepted as a saved direction.
+        const checked =
+          isRecord(direction) &&
+          isRecord(direction.card) &&
+          typeof direction.card.title === "string" &&
+          !direction.card.title.trim()
+            ? {
+                ...candidate,
+                directionDraft: {
+                  ...direction,
+                  card: { ...direction.card, title: "未命名方向" },
+                },
+              }
+            : candidate;
+        if (isResearchWorkspace(checked))
+          Object.assign(next, { [key]: field.value });
       }
     }
-    return isResearchWorkspace(next) ? next : saved;
+    return next;
   } catch {
     return saved;
   }
@@ -779,7 +803,7 @@ function Journey({
               role="log"
               aria-label="项目研究对话"
             >
-              <article className="message message-assistant">
+              <article className="message message-assistant chat-message">
                 <div className="message-body">
                   <p>
                     你从“{p.observation || p.name}”出发
@@ -796,7 +820,10 @@ function Journey({
                 </div>
               </article>
               {r.messages.map((m) => (
-                <article key={m.id} className={`message message-${m.role}`}>
+                <article
+                  key={m.id}
+                  className={`message message-${m.role} chat-message ${m.role === "user" ? "chat-user" : ""}`}
+                >
                   <div className="message-body">
                     <p>{m.content}</p>
                     {m.fingerprint && m.fingerprint !== fingerprint && (

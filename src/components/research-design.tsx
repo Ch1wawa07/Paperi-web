@@ -345,7 +345,11 @@ function DesignHistory({
       <p>旧版本始终可回看。恢复时，当前版本也会保留。</p>
       <label>
         选择历史版本
-        <select aria-label="选择历史版本" value={index} onChange={(e) => setIndex(e.target.value)}>
+        <select
+          aria-label="选择历史版本"
+          value={index}
+          onChange={(e) => setIndex(e.target.value)}
+        >
           <option value="">选择一个版本</option>
           {history.map((d, i) => (
             <option value={i} key={`${d.id}-${d.updatedAt}-${i}`}>
@@ -426,6 +430,18 @@ function DesignEditor({
       : draft.themes.length > 0 &&
         draft.questions.length > 0 &&
         !draft.outlineNeedsReview);
+  const phaseHasContent =
+    step === 0
+      ? !!draft.question.trim()
+      : step === 3
+        ? !!(draft.method.trim() || draft.analysis.trim())
+        : isQuant(draft)
+          ? step === 1
+            ? draft.variables.length > 0
+            : draft.hypotheses.length > 0
+          : step === 1
+            ? draft.themes.length > 0
+            : draft.questions.length > 0;
   function edit(next: Design) {
     const d = { ...next, confirmed: false };
     draftRef.current = d;
@@ -526,7 +542,7 @@ function DesignEditor({
     if (dirty) void save();
   };
   return (
-    <div className="rd-editor">
+    <div className="rd-editor" inert={busy} aria-busy={busy}>
       <div className="rd-editor-status">
         <span className="soft-badge">
           {draft.confirmed ? "用户已确认 · 初步方案" : "AI 建议 / 用户编辑草稿"}
@@ -580,7 +596,7 @@ function DesignEditor({
           disabled={busy || directionChanged}
           onClick={() => void generate()}
         >
-          AI 帮我梳理这一环节
+          {phaseHasContent ? "重新建议这一环节" : "AI 帮我梳理这一环节"}
         </button>
       </div>
       <p className="rd-step-note">

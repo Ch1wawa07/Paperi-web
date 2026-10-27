@@ -459,3 +459,30 @@
 .rj-chat-sources > ul {
   padding-left: 18px;
 }
+
+/* Keep evidence labels legible on light glass and reuse the Lab's message surfaces. */
+.rj-section-grid .soft-badge,
+.rd-editor-status .soft-badge {
+  color: #405769;
+  background: #dce8edc9;
+  border: 1px solid #b5c9d17a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.rj-chat .lab-chat-heading .eyebrow {
+  color: #c2d7e2;
+}
+.rj-chat .message {
+  width: fit-content;
+}
+.rj-chat .message .message-body p {
+  font-size: 15px;
+  line-height: 1.8;
+}
+.app-shell:has(.research-journey) .global-feedback:not(:empty) {
+  position: static;
+  max-width: none;
+  margin: 0 0 12px;
+  padding: 9px 16px;
+  box-shadow: none;
+}
