@@ -1,4 +1,4 @@
-import { isGuide, isIds, isNavigation, type Guide, type ResearchNavigation } from './research-navigation';
+import { isGuide, isIds, isNavigation, isConceptSuggestion, isStage, type ResearchStage, type Guide, type ResearchNavigation } from './research-navigation';
 
 export type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; createdAt: string };
 export type Direction = {
@@ -27,12 +27,50 @@ export function isAIReply(v: unknown): v is AIReply {
 }
 /** Some JSON-object providers nest the explicitly returned directions under guide.
  * Move only that existing array; keep content, stage and evidence validation strict. */
-export function readAIReply(value: unknown): AIReply | null {
+export type ReplyDiagnostic = { code: "missing" | "invalid" | "dropped" | "stage_mismatch"; field: string };
+/** The server may normalize optional suggestions, while stored data remains strictly validated.
+ * A missing/mismatched stage or malformed evidence-bearing output is never repaired. */
+export function readAIReply(value: unknown, options?: {stage:ResearchStage;report:(issue:ReplyDiagnostic)=>void}): AIReply | null {
   let candidate = value;
   if (isRecord(value) && value.directions === undefined && isRecord(value.guide) && Array.isArray(value.guide.directions)) {
     candidate = { ...value, directions: value.guide.directions };
   }
-  return isAIReply(candidate) ? candidate : null;
+  if(!options)return isAIReply(candidate)?candidate:null;
+  const report=options.report;
+  if(!isRecord(candidate)){report({code:"invalid",field:"response"});return null;}
+  if(!text(candidate.reply,6000)){report({code:"invalid",field:"reply"});return null;}
+  const g=candidate.guide;
+  if(!isRecord(g)||!isStage(g.stage)){report({code:"missing",field:"guide.stage"});return null;}
+  if(g.stage!==options.stage){report({code:"stage_mismatch",field:"guide.stage"});return null;}
+  const directions=candidate.directions===undefined?[]:candidate.directions;
+  if(candidate.directions===undefined)report({code:"missing",field:"directions"});
+  if(!Array.isArray(directions)||directions.length>3||!directions.every(directionFields)){report({code:"invalid",field:"directions"});return null;}
+  // Threads carry factual attribution: do not silently discard invalid citation fields.
+  const threads=g.threads===undefined?[]:g.threads;
+  if(g.threads===undefined)report({code:"missing",field:"guide.threads"});
+  if(!isGuide({stage:g.stage,understanding:"",concepts:[],keywords:{zh:[],en:[]},threads})){report({code:"invalid",field:"guide.threads"});return null;}
+  let concepts:Guide["concepts"]=[];
+  if(Array.isArray(g.concepts)&&g.concepts.length<=12){
+    concepts=g.concepts.flatMap((c,i)=>{
+      if(isConceptSuggestion(c))return [c];
+      // Only purely presentational optional fields may default; do not invent explanations or caveats.
+      if(isRecord(c)){
+        const normalized={...c,everyday:c.everyday??"",group:typeof c.group==="string"&&c.group.trim()&&c.group.length<=40?c.group:undefined,relevance:typeof c.relevance==="string"&&c.relevance.length<=300?c.relevance:undefined};
+        if(isConceptSuggestion(normalized)){report({code:"dropped",field:`guide.concepts[${i}].optional`});return [normalized];}
+      }
+      report({code:"dropped",field:`guide.concepts[${i}]`});return [];
+    });
+  }else report({code:g.concepts===undefined?"missing":"dropped",field:"guide.concepts"});
+  const keywords:Guide["keywords"]={zh:[],en:[]};
+  for(const language of ["zh","en"] as const){
+    const words=isRecord(g.keywords)?g.keywords[language]:undefined;
+    if(Array.isArray(words)&&words.length<=6){keywords[language]=words.filter(w=>text(w,100));if(keywords[language].length!==words.length)report({code:"dropped",field:`guide.keywords.${language}`});}
+    else report({code:words===undefined?"missing":"dropped",field:`guide.keywords.${language}`});
+  }
+  const understanding=typeof g.understanding==="string"&&g.understanding.length<=1200?g.understanding:"";
+  if(understanding!==g.understanding)report({code:g.understanding===undefined?"missing":"dropped",field:"guide.understanding"});
+  const normalized={reply:candidate.reply,directions,guide:{stage:g.stage,understanding,concepts,keywords,threads}};
+  return isAIReply(normalized)?normalized:null;
 }
 export function isResearchSeed(v: unknown): v is ResearchSeed {
   return isRecord(v) && text(v.angle, 120) && text(v.workingQuestion, 400) && list(v.concepts, 80, 8) &&

@@ -93,6 +93,11 @@ createServer(async (request, response) => {
   if (text === 'UPSTREAM_UNAUTHORIZED') { response.statusCode = 401; response.end('{"error":"test-only-not-a-real-key"}'); return; }
   if (text === 'UPSTREAM_LIMIT') { response.statusCode = 429; response.end('{}'); return; }
   const generated=JSON.parse(reply(text,context));
+  if(text==='LAB_TURN_2'){delete generated.directions;delete generated.guide.keywords;delete generated.guide.concepts[0].everyday;}
+  if(text==='LAB_TURN_3'){delete generated.guide.concepts;delete generated.guide.understanding;delete generated.guide.threads;generated.guide.keywords={zh:[]};}
+  if(text==='LAB_BAD_STAGE')generated.guide.stage='concepts';
+  if(text==='LAB_NO_STAGE')delete generated.guide.stage;
+  if(text==='LAB_BAD_REFERENCE')generated.guide.threads=[{title:'合成错误引用',description:'不应采用',evidenceIds:['unknown'],uncertainty:'测试'}];
   if(text==='UPSTREAM_NESTED'){generated.guide.directions=generated.directions;delete generated.directions;}
   if(text==='UPSTREAM_BADREF')generated.guide.threads=[{title:'测试非法引用',description:'应被拒绝',evidenceIds:['not-provided'],uncertainty:'测试'}];
   response.end(JSON.stringify({ choices: [{ finish_reason: text === 'UPSTREAM_TRUNCATED' ? 'length' : 'stop', message: { content: text === 'UPSTREAM_EMPTY' ? '   ' : text === 'UPSTREAM_BADJSON' ? 'invalid-json' : JSON.stringify(generated) } }] }));
